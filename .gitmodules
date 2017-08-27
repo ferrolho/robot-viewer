@@ -1,0 +1,3 @@
+[submodule "collada-robots-collection"]
+	path = collada-robots-collection
+	url = git@github.com:ferrolho/collada-robots-collection.git
