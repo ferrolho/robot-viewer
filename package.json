@@ -1,0 +1,39 @@
+{
+  "name": "robot-viewer",
+  "version": "1.0.0",
+  "description": "An experimental online robot viewer",
+  "author": "Henrique Ferrolho <henrique.ferrolho@gmail.com> (https://github.com/ferrolho)",
+  "homepage": "https://github.com/ferrolho/robot-viewer#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ferrolho/robot-viewer.git"
+  },
+  "license": "ISC",
+  "keywords": [
+    "robotics"
+  ],
+  "dependencies": {
+    "detector-webgl": "^2.0.0",
+    "stats.js": "^0.17.0",
+    "three": "^0.87.1",
+    "three-orbitcontrols": "^1.2.1",
+    "tween.js": "^16.6.0"
+  },
+  "devDependencies": {
+    "babel-preset-es2015": "^6.24.1",
+    "babelify": "^7.3.0",
+    "grunt": "^1.0.1",
+    "grunt-browserify": "^5.2.0",
+    "grunt-concurrent": "^2.3.1",
+    "grunt-contrib-watch": "^1.0.0",
+    "grunt-http-server": "^2.0.0",
+    "grunt-standard": "^3.1.0"
+  },
+  "main": "index.js",
+  "scripts": {
+    "test": "standard"
+  },
+  "bugs": {
+    "url": "https://github.com/ferrolho/robot-viewer/issues"
+  }
+}
