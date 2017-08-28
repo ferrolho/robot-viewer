@@ -1,9 +1,10 @@
 const isWebglEnabled = require('detector-webgl')
 const THREE = require('three')
-const ColladaLoader = require('./loaders/ColladaLoader2')(THREE)
 const OrbitControls = require('three-orbitcontrols')
 const TWEEN = require('tween.js')
 const Stats = require('stats.js')
+
+require('./loaders/ColladaLoader2')(THREE)
 
 const stats = new Stats()
 document.body.appendChild(stats.dom)
@@ -55,7 +56,6 @@ light = new THREE.AmbientLight(0x404040)
 scene.add(light)
 
 function render () {
-  transformControls.update()
   renderer.render(scene, camera)
 }
 
@@ -79,69 +79,113 @@ var kinematics
 var kinematicsTween
 var tweenParameters = {}
 
+var models = [
+  'abb_irb1200_5_90',
+  'abb_irb120_3_58',
+  'abb_irb1600_6_12',
+  'abb_irb2400',
+  'abb_irb2600_12_165',
+  'abb_irb4400l_30_243',
+  'abb_irb4600_60_205',
+  'abb_irb52_7_120',
+  'abb_irb5400',
+  'abb_irb6640_185_280',
+  'abb_irb6640',
+  'abb_irb7600_150_350',
+  'kawada_hironx',
+  'kuka_kr10r1100sixx',
+  'kuka_kr120r2500pro',
+  'kuka_kr16_2',
+  'kuka_kr5_arc',
+  'kuka_lbr_iiwa_14_r820',
+  'universal_robot_ur10',
+  'universal_robot_ur3',
+  'universal_robot_ur5'
+]
+
 // instantiate a loader
-var loader = new THREE.ColladaLoader()
+const loader = new THREE.ColladaLoader()
 loader.options.convertUpAxis = true
-loader.load(
-  // resource URL
-  // './kawada-hironx.dae',
-  './lbr_iiwa_14_r820.dae',
 
-  // Function when resource is loaded
-  function (collada) {
-    dae = collada.scene
+loadModel(models[0])
 
-    dae.traverse(function (child) {
-      if (child instanceof THREE.Mesh) {
-        // model does not have normals
-        child.material.flatShading = true
-      }
-    })
+function loadModel (model) {
+  scene.remove(dae)
 
-    dae.scale.x = dae.scale.y = dae.scale.z = 5.0
-    dae.updateMatrix()
+  console.log(`Loading ${model}...`)
 
-    kinematics = collada.kinematics
-    scene.add(dae)
-    setupTween()
-    animate()
-  }
-)
+  loader.load(
+    // resource URL
+    `../collada-robots-collection/${model}.dae`,
 
-function setupTween () {
-  var duration = THREE.Math.randInt(1000, 5000)
+    // Function when resource is loaded
+    function (collada) {
+      dae = collada.scene
 
-  var target = {}
+      dae.traverse(function (child) {
+        if (child instanceof THREE.Mesh) {
+          // model does not have normals
+          child.material.flatShading = true
+        }
+      })
 
-  for (var prop in kinematics.joints) {
-    if (kinematics.joints.hasOwnProperty(prop)) {
-      if (!kinematics.joints[ prop ].static) {
-        var joint = kinematics.joints[ prop ]
+      dae.scale.x = dae.scale.y = dae.scale.z = 5.0
+      dae.updateMatrix()
 
-        var old = tweenParameters[ prop ]
-
-        var position = old || joint.zeroPosition
-
-        tweenParameters[ prop ] = position
-
-        target[ prop ] = THREE.Math.randInt(joint.limits.min, joint.limits.max)
-      }
+      kinematics = collada.kinematics
+      scene.add(dae)
+      setupTween()
+      animate()
     }
-  }
+  )
 
-  kinematicsTween = new TWEEN.Tween(tweenParameters).to(target, duration).easing(TWEEN.Easing.Quadratic.Out)
+  function setupTween () {
+    var duration = THREE.Math.randInt(1000, 5000)
 
-  kinematicsTween.onUpdate(function () {
+    var target = {}
+
     for (var prop in kinematics.joints) {
       if (kinematics.joints.hasOwnProperty(prop)) {
         if (!kinematics.joints[ prop ].static) {
-          kinematics.setJointValue(prop, this[ prop ])
+          var joint = kinematics.joints[ prop ]
+
+          var old = tweenParameters[ prop ]
+
+          var position = old || joint.zeroPosition
+
+          tweenParameters[ prop ] = position
+
+          target[ prop ] = THREE.Math.randInt(joint.limits.min, joint.limits.max)
         }
       }
     }
-  })
 
-  kinematicsTween.start()
+    kinematicsTween = new TWEEN.Tween(tweenParameters).to(target, duration).easing(TWEEN.Easing.Quadratic.Out)
 
-  setTimeout(setupTween, duration)
+    kinematicsTween.onUpdate(function () {
+      for (var prop in kinematics.joints) {
+        if (kinematics.joints.hasOwnProperty(prop)) {
+          if (!kinematics.joints[ prop ].static) {
+            kinematics.setJointValue(prop, this[ prop ])
+          }
+        }
+      }
+    })
+
+    kinematicsTween.start()
+
+    setTimeout(setupTween, duration)
+  }
+}
+
+var loadedRobotId = 0
+
+window.onkeyup = function (e) {
+  var key = e.keyCode ? e.keyCode : e.which
+
+  switch (key) {
+    case 81: // Q
+      loadModel(models[++loadedRobotId])
+      break
+  }
 }
