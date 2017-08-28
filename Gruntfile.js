@@ -24,7 +24,7 @@ module.exports = function (grunt) {
     },
     'http-server': {
       'dev': {
-        root: 'dist',
+        // root: 'dist',
         port: 8123,
         host: '0.0.0.0',
         openBrowser: true
