@@ -728,6 +728,11 @@ module.exports = function(THREE) {
 							data.skin = parseSkin( child );
 							break;
 
+						case 'morph':
+							data.id = parseId( child.getAttribute( 'source' ) );
+							console.warn( 'THREE.ColladaLoader: Morph target animation not supported yet.' );
+							break;
+
 					}
 
 				}
@@ -842,16 +847,22 @@ module.exports = function(THREE) {
 
 			function buildController( data ) {
 
-				var build = {};
-
-				build.id = data.id;
-				build.skin = buildSkin( data.skin );
-
-				// we enhance the 'sources' property of the corresponding geometry with our skin data
+				var build = {
+					id: data.id
+				};
 
 				var geometry = library.geometries[ build.id ];
-				geometry.sources.skinIndices = build.skin.indices;
-				geometry.sources.skinWeights = build.skin.weights;
+
+				if ( data.skin !== undefined ) {
+
+					build.skin = buildSkin( data.skin );
+
+					// we enhance the 'sources' property of the corresponding geometry with our skin data
+
+					geometry.sources.skinIndices = build.skin.indices;
+					geometry.sources.skinWeights = build.skin.weights;
+
+				}
 
 				return build;
 
@@ -2167,7 +2178,7 @@ module.exports = function(THREE) {
 
 				var data = {
 					name: xml.getAttribute( 'name' ) || '',
-					joints: [],
+					joints: {},
 					links: []
 				};
 
@@ -2216,8 +2227,7 @@ module.exports = function(THREE) {
 					switch ( child.nodeName ) {
 
 						case 'joint':
-							// data.joints.push( parseKinematicsJoint( child ) );
-							data.joints[child.getAttribute( 'sid' )] = parseKinematicsJoint( child );
+							data.joints[ child.getAttribute( 'sid' ) ] = parseKinematicsJoint( child );
 							break;
 
 						case 'link':
@@ -2455,10 +2465,8 @@ module.exports = function(THREE) {
 						case 'axis':
 							var param = child.getElementsByTagName( 'param' )[ 0 ];
 							data.axis = param.textContent;
-							// data.jointIndex = parseInt( data.axis.split( 'joint' ).pop().split( '.' )[ 0 ] );
 							var tmpJointIndex = data.axis.split( 'inst_' ).pop().split( 'axis' )[ 0 ];
-							tmpJointIndex = tmpJointIndex.substr(0, tmpJointIndex.length - 1);
-							data.jointIndex = tmpJointIndex;
+							data.jointIndex = tmpJointIndex.substr( 0, tmpJointIndex.length - 1 );
 							break;
 
 					}
