@@ -14,9 +14,6 @@ const stats = new Stats()
 stats.dom.id = 'statsjs'
 document.body.appendChild(stats.dom)
 
-// Initialize collapse button
-$('.button-collapse').sideNav()
-
 window.addEventListener('resize', onWindowResize, false)
 
 let RENDERER_WIDTH
@@ -34,11 +31,11 @@ renderer.setPixelRatio(window.devicePixelRatio)
 renderer.setSize(RENDERER_WIDTH, window.innerHeight)
 $('#threejs-container').append(renderer.domElement)
 
+const cameraTarget = new THREE.Vector3(0, 2, 0)
+
 // Camera
 const camera = new THREE.PerspectiveCamera(75, RENDERER_WIDTH / window.innerHeight)
 camera.position.set(5, 5, 5)
-
-const cameraTarget = new THREE.Vector3(0, 2, 0)
 
 // Orbit Controls
 const controls = new OrbitControls(camera, renderer.domElement)
@@ -55,6 +52,16 @@ const scene = new THREE.Scene()
 let castShadows = true
 
 $(document).ready(function () {
+  // Initialize collapse button
+  $('.button-collapse').sideNav()
+
+  $('#loader-modal').modal({
+    dismissible: false,
+    complete: function () {
+      $('#loader-modal .modal-content .progress .determinate').width(0)
+    }
+  })
+
   // Axis Helper
   const axis = new THREE.AxisHelper(5)
 
@@ -83,6 +90,8 @@ $(document).ready(function () {
   $('input[id=stats-switch][type=checkbox]').change(function () {
     $(this).is(':checked') ? $('#statsjs').show() : $('#statsjs').hide()
   })
+
+  loadModel('abb_irb52_7_120')
 })
 
 // Lights
@@ -132,53 +141,27 @@ function onWindowResize () {
   renderer.setSize(RENDERER_WIDTH, window.innerHeight)
 }
 
-var models = [
-  'abb_irb1200_5_90',
-  'abb_irb120_3_58',
-  'abb_irb1600_6_12',
-  'abb_irb2400',
-  'abb_irb2600_12_165',
-  'abb_irb4400l_30_243',
-  'abb_irb4600_60_205',
-  'abb_irb52_7_120',
-  'abb_irb5400',
-  'abb_irb6640_185_280',
-  'abb_irb6640',
-  'abb_irb7600_150_350',
-  'kawada_hironx',
-  'kuka_kr10r1100sixx',
-  'kuka_kr120r2500pro',
-  'kuka_kr16_2',
-  'kuka_kr5_arc',
-  'kuka_lbr_iiwa_14_r820',
-  'universal_robot_ur10',
-  'universal_robot_ur3',
-  'universal_robot_ur5'
-]
-
+const colladaModelsList = require('./js/ColladaRobotsList')
+setupModelsList(colladaModelsList)
 function setupModelsList (models) {
   for (const model of models) {
-    $('.models-list').append(`<li><a href="#!">${model}</a></li>`)
+    $('.models-list').append(`<li><a class="waves-effect modal-trigger" href="#loader-modal">${model}</a></li>`)
     $('.models-list').children().last().click(function () { loadModel(model); $('.button-collapse').sideNav('hide') })
   }
 }
-
-setupModelsList(models)
 
 // instantiate a loader
 const loader = new THREE.ColladaLoader()
 loader.options.convertUpAxis = true
 
-loadModel('kuka_lbr_iiwa_14_r820')
-
-let dae
 let kinematics
 const tweenParameters = {}
-
 const modelsInScene = []
 
 function loadModel (model) {
   console.log(`Loading ${model}...`)
+
+  $('#loader-modal').modal('open')
 
   loader.load(
     // resource URL
@@ -186,7 +169,7 @@ function loadModel (model) {
 
     // Function when resource is loaded
     function (collada) {
-      dae = collada.scene
+      const dae = collada.scene
 
       dae.traverse(function (child) {
         if (child instanceof THREE.Mesh) {
@@ -214,6 +197,13 @@ function loadModel (model) {
       modelsInScene.push(dae)
 
       setupTween()
+    },
+    // Function called when download progresses
+    function (xhr) {
+      const progress = xhr.loaded / xhr.total * 100
+      $('#loader-modal .modal-content p:last').text(parseInt(progress) + '%')
+      $('#loader-modal .modal-content .progress .determinate').width(`${progress}%`)
+      if (xhr.loaded === xhr.total) { $('#loader-modal').modal('close') }
     }
   )
 
