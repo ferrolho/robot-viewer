@@ -58,6 +58,7 @@ $(document).ready(function () {
   $('#loader-modal').modal({
     dismissible: false,
     complete: function () {
+      $('#loader-modal .modal-content p:last').text('0%')
       $('#loader-modal .modal-content .progress .determinate').width(0)
     }
   })
@@ -201,7 +202,7 @@ function loadModel (model) {
     // Function called when download progresses
     function (xhr) {
       const progress = xhr.loaded / xhr.total * 100
-      $('#loader-modal .modal-content p:last').text(parseInt(progress) + '%')
+      $('#loader-modal .modal-content p:last').text(`${parseInt(progress)}%`)
       $('#loader-modal .modal-content .progress .determinate').width(`${progress}%`)
       if (xhr.loaded === xhr.total) { $('#loader-modal').modal('close') }
     }
