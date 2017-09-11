@@ -1,4 +1,8 @@
-const isWebglEnabled = require('detector-webgl')
+/* global $, requestAnimationFrame */
+
+const Detector = require('./js/Detector')
+if (!Detector.webgl) Detector.addGetWebGLMessage()
+
 const THREE = require('three')
 const OrbitControls = require('three-orbitcontrols')
 const TWEEN = require('tween.js')
@@ -23,6 +27,8 @@ function updateRendererWidth () {
 
 // Renderer
 const renderer = new THREE.WebGLRenderer({ antialias: true })
+renderer.shadowMap.enabled = true
+renderer.shadowMap.type = THREE.PCFSoftShadowMap
 renderer.setClearColor(0xf0f0f0)
 renderer.setPixelRatio(window.devicePixelRatio)
 renderer.setSize(RENDERER_WIDTH, window.innerHeight)
@@ -30,40 +36,77 @@ $('#threejs-container').append(renderer.domElement)
 
 // Camera
 const camera = new THREE.PerspectiveCamera(75, RENDERER_WIDTH / window.innerHeight)
-camera.position.set(2, 1, 1)
+camera.position.set(5, 5, 5)
+
+const cameraTarget = new THREE.Vector3(0, 2, 0)
 
 // Orbit Controls
 const controls = new OrbitControls(camera, renderer.domElement)
+controls.target = cameraTarget
 controls.enableKeys = false
 controls.mouseButtons = { ORBIT: THREE.MOUSE.LEFT, PAN: THREE.MOUSE.MIDDLE, ZOOM: THREE.MOUSE.RIGHT }
 controls.zoomSpeed = 0.8
+
+camera.lookAt(cameraTarget)
 
 // Scene
 const scene = new THREE.Scene()
 
 // Axis Helper
-const axisHelper = new THREE.AxisHelper(5)
-scene.add(axisHelper)
+const axis = new THREE.AxisHelper(5)
 
-// Grid
+// Grid Helper
 const grid = new THREE.GridHelper()
 grid.material.color.setHex(0x000000)
 grid.material.opacity = 0.2
 grid.material.transparent = true
-scene.add(grid)
+
+$('#grid-switch').click(function () {
+  const switchIsOn = $('#grid-switch input[type=checkbox]')[0].checked
+  console.log(`Grid switch state: ${switchIsOn}`)
+
+  if (switchIsOn) {
+    console.log('Showing axis and grid...')
+    scene.add(axis)
+    scene.add(grid)
+  } else {
+    console.log('Hiding axis and grid...')
+    scene.remove(axis)
+    scene.remove(grid)
+  }
+})
 
 // Lights
 const ambientLight = new THREE.AmbientLight(0xcccccc, 0.6)
 scene.add(ambientLight)
 
 let directionalLight = new THREE.DirectionalLight(0xffffff, 0.8)
-directionalLight.position.set(1, 0, 0).normalize()
+directionalLight.castShadow = true
+directionalLight.position.set(20, 20, 0)
+const shadowCameraSize = 10
+directionalLight.shadow.camera.far = 50
+directionalLight.shadow.camera.bottom = -shadowCameraSize
+directionalLight.shadow.camera.left = -shadowCameraSize
+directionalLight.shadow.camera.right = shadowCameraSize
+directionalLight.shadow.camera.top = shadowCameraSize
+directionalLight.shadow.mapSize.width = 2048
+directionalLight.shadow.mapSize.height = 2048
 scene.add(directionalLight)
 
-function render () {
-  renderer.render(scene, camera)
-}
+// Create a plane that receives shadows (but does not cast them)
+var planeGeometry = new THREE.PlaneBufferGeometry(100, 100)
+// var planeMaterial = new THREE.MeshLambertMaterial()
+var planeMaterial = new THREE.ShadowMaterial({ opacity: 0.4 })
+var plane = new THREE.Mesh(planeGeometry, planeMaterial)
+plane.receiveShadow = true
+plane.rotateX(-90 * THREE.Math.DEG2RAD)
+scene.add(plane)
 
+// Create a helper for the shadow camera (optional)
+// var helper = new THREE.CameraHelper(directionalLight.shadow.camera)
+// scene.add(helper)
+
+animate()
 function animate () {
   requestAnimationFrame(animate)
 
@@ -121,7 +164,6 @@ loadModel('kuka_lbr_iiwa_14_r820')
 
 let dae
 let kinematics
-let kinematicsTween
 const tweenParameters = {}
 
 function loadModel (model) {
@@ -141,6 +183,9 @@ function loadModel (model) {
         if (child instanceof THREE.Mesh) {
           // model does not have normals
           child.material.flatShading = true
+
+          child.castShadow = true
+          child.receiveShadow = true
         }
       })
 
@@ -148,9 +193,9 @@ function loadModel (model) {
       dae.updateMatrix()
 
       kinematics = collada.kinematics
+
       scene.add(dae)
       setupTween()
-      animate()
     }
   )
 
@@ -175,7 +220,7 @@ function loadModel (model) {
       }
     }
 
-    kinematicsTween = new TWEEN.Tween(tweenParameters).to(target, duration).easing(TWEEN.Easing.Quadratic.Out)
+    const kinematicsTween = new TWEEN.Tween(tweenParameters).to(target, duration).easing(TWEEN.Easing.Quadratic.Out)
 
     kinematicsTween.onUpdate(function () {
       for (var prop in kinematics.joints) {

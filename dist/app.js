@@ -1,17 +1,4 @@
 (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
-'use strict';
-
-module.exports = (function() {
-  var c = document.createElement('canvas');
-  try {
-    return !!window.WebGLRenderingContext
-      && (!!c.getContext('experimental-webgl') || !!c.getContext('webgl'));
-  } catch (e) {
-    return null;
-  }
-}());
-
-},{}],2:[function(require,module,exports){
 // shim for using process in browser
 var process = module.exports = {};
 
@@ -197,14 +184,14 @@ process.chdir = function (dir) {
 };
 process.umask = function() { return 0; };
 
-},{}],3:[function(require,module,exports){
+},{}],2:[function(require,module,exports){
 // stats.js - http://github.com/mrdoob/stats.js
 (function(f,e){"object"===typeof exports&&"undefined"!==typeof module?module.exports=e():"function"===typeof define&&define.amd?define(e):f.Stats=e()})(this,function(){var f=function(){function e(a){c.appendChild(a.dom);return a}function u(a){for(var d=0;d<c.children.length;d++)c.children[d].style.display=d===a?"block":"none";l=a}var l=0,c=document.createElement("div");c.style.cssText="position:fixed;top:0;left:0;cursor:pointer;opacity:0.9;z-index:10000";c.addEventListener("click",function(a){a.preventDefault();
 u(++l%c.children.length)},!1);var k=(performance||Date).now(),g=k,a=0,r=e(new f.Panel("FPS","#0ff","#002")),h=e(new f.Panel("MS","#0f0","#020"));if(self.performance&&self.performance.memory)var t=e(new f.Panel("MB","#f08","#201"));u(0);return{REVISION:16,dom:c,addPanel:e,showPanel:u,begin:function(){k=(performance||Date).now()},end:function(){a++;var c=(performance||Date).now();h.update(c-k,200);if(c>g+1E3&&(r.update(1E3*a/(c-g),100),g=c,a=0,t)){var d=performance.memory;t.update(d.usedJSHeapSize/
 1048576,d.jsHeapSizeLimit/1048576)}return c},update:function(){k=this.end()},domElement:c,setMode:u}};f.Panel=function(e,f,l){var c=Infinity,k=0,g=Math.round,a=g(window.devicePixelRatio||1),r=80*a,h=48*a,t=3*a,v=2*a,d=3*a,m=15*a,n=74*a,p=30*a,q=document.createElement("canvas");q.width=r;q.height=h;q.style.cssText="width:80px;height:48px";var b=q.getContext("2d");b.font="bold "+9*a+"px Helvetica,Arial,sans-serif";b.textBaseline="top";b.fillStyle=l;b.fillRect(0,0,r,h);b.fillStyle=f;b.fillText(e,t,v);
 b.fillRect(d,m,n,p);b.fillStyle=l;b.globalAlpha=.9;b.fillRect(d,m,n,p);return{dom:q,update:function(h,w){c=Math.min(c,h);k=Math.max(k,h);b.fillStyle=l;b.globalAlpha=1;b.fillRect(0,0,r,m);b.fillStyle=f;b.fillText(g(h)+" "+e+" ("+g(c)+"-"+g(k)+")",t,v);b.drawImage(q,d+a,m,n-a,p,d,m,n-a,p);b.fillRect(d+n-a,m,a,p);b.fillStyle=l;b.globalAlpha=.9;b.fillRect(d+n-a,m,a,g((1-h/w)*p))}}};return f});
 
-},{}],4:[function(require,module,exports){
+},{}],3:[function(require,module,exports){
 var THREE = require('three')
 
 /**
@@ -1252,7 +1239,7 @@ Object.defineProperties( OrbitControls.prototype, {
 
 module.exports = OrbitControls
 
-},{"three":5}],5:[function(require,module,exports){
+},{"three":4}],4:[function(require,module,exports){
 (function (global, factory) {
 	typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports) :
 	typeof define === 'function' && define.amd ? define(['exports'], factory) :
@@ -45493,7 +45480,7 @@ module.exports = OrbitControls
 
 })));
 
-},{}],6:[function(require,module,exports){
+},{}],5:[function(require,module,exports){
 (function (process){
 /**
  * Tween.js - Licensed under the MIT license
@@ -46379,10 +46366,14 @@ TWEEN.Interpolation = {
 })(this);
 
 }).call(this,require('_process'))
-},{"_process":2}],7:[function(require,module,exports){
+},{"_process":1}],6:[function(require,module,exports){
 'use strict';
 
-var isWebglEnabled = require('detector-webgl');
+/* global $, requestAnimationFrame */
+
+var Detector = require('./js/Detector');
+if (!Detector.webgl) Detector.addGetWebGLMessage();
+
 var THREE = require('three');
 var OrbitControls = require('three-orbitcontrols');
 var TWEEN = require('tween.js');
@@ -46407,6 +46398,8 @@ function updateRendererWidth() {
 
 // Renderer
 var renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.setClearColor(0xf0f0f0);
 renderer.setPixelRatio(window.devicePixelRatio);
 renderer.setSize(RENDERER_WIDTH, window.innerHeight);
@@ -46414,40 +46407,77 @@ $('#threejs-container').append(renderer.domElement);
 
 // Camera
 var camera = new THREE.PerspectiveCamera(75, RENDERER_WIDTH / window.innerHeight);
-camera.position.set(2, 1, 1);
+camera.position.set(5, 5, 5);
+
+var cameraTarget = new THREE.Vector3(0, 2, 0);
 
 // Orbit Controls
 var controls = new OrbitControls(camera, renderer.domElement);
+controls.target = cameraTarget;
 controls.enableKeys = false;
 controls.mouseButtons = { ORBIT: THREE.MOUSE.LEFT, PAN: THREE.MOUSE.MIDDLE, ZOOM: THREE.MOUSE.RIGHT };
 controls.zoomSpeed = 0.8;
+
+camera.lookAt(cameraTarget);
 
 // Scene
 var scene = new THREE.Scene();
 
 // Axis Helper
-var axisHelper = new THREE.AxisHelper(5);
-scene.add(axisHelper);
+var axis = new THREE.AxisHelper(5);
 
-// Grid
+// Grid Helper
 var grid = new THREE.GridHelper();
 grid.material.color.setHex(0x000000);
 grid.material.opacity = 0.2;
 grid.material.transparent = true;
-scene.add(grid);
+
+$('#grid-switch').click(function () {
+  var switchIsOn = $('#grid-switch input[type=checkbox]')[0].checked;
+  console.log('Grid switch state: ' + switchIsOn);
+
+  if (switchIsOn) {
+    console.log('Showing axis and grid...');
+    scene.add(axis);
+    scene.add(grid);
+  } else {
+    console.log('Hiding axis and grid...');
+    scene.remove(axis);
+    scene.remove(grid);
+  }
+});
 
 // Lights
 var ambientLight = new THREE.AmbientLight(0xcccccc, 0.6);
 scene.add(ambientLight);
 
 var directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
-directionalLight.position.set(1, 0, 0).normalize();
+directionalLight.castShadow = true;
+directionalLight.position.set(20, 20, 0);
+var shadowCameraSize = 10;
+directionalLight.shadow.camera.far = 50;
+directionalLight.shadow.camera.bottom = -shadowCameraSize;
+directionalLight.shadow.camera.left = -shadowCameraSize;
+directionalLight.shadow.camera.right = shadowCameraSize;
+directionalLight.shadow.camera.top = shadowCameraSize;
+directionalLight.shadow.mapSize.width = 2048;
+directionalLight.shadow.mapSize.height = 2048;
 scene.add(directionalLight);
 
-function render() {
-  renderer.render(scene, camera);
-}
+// Create a plane that receives shadows (but does not cast them)
+var planeGeometry = new THREE.PlaneBufferGeometry(100, 100);
+// var planeMaterial = new THREE.MeshLambertMaterial()
+var planeMaterial = new THREE.ShadowMaterial({ opacity: 0.4 });
+var plane = new THREE.Mesh(planeGeometry, planeMaterial);
+plane.receiveShadow = true;
+plane.rotateX(-90 * THREE.Math.DEG2RAD);
+scene.add(plane);
 
+// Create a helper for the shadow camera (optional)
+// var helper = new THREE.CameraHelper(directionalLight.shadow.camera)
+// scene.add(helper)
+
+animate();
 function animate() {
   requestAnimationFrame(animate);
 
@@ -46510,7 +46540,6 @@ loadModel('kuka_lbr_iiwa_14_r820');
 
 var dae = void 0;
 var kinematics = void 0;
-var kinematicsTween = void 0;
 var tweenParameters = {};
 
 function loadModel(model) {
@@ -46530,6 +46559,9 @@ function loadModel(model) {
       if (child instanceof THREE.Mesh) {
         // model does not have normals
         child.material.flatShading = true;
+
+        child.castShadow = true;
+        child.receiveShadow = true;
       }
     });
 
@@ -46537,9 +46569,9 @@ function loadModel(model) {
     dae.updateMatrix();
 
     kinematics = collada.kinematics;
+
     scene.add(dae);
     setupTween();
-    animate();
   });
 
   function setupTween() {
@@ -46563,7 +46595,7 @@ function loadModel(model) {
       }
     }
 
-    kinematicsTween = new TWEEN.Tween(tweenParameters).to(target, duration).easing(TWEEN.Easing.Quadratic.Out);
+    var kinematicsTween = new TWEEN.Tween(tweenParameters).to(target, duration).easing(TWEEN.Easing.Quadratic.Out);
 
     kinematicsTween.onUpdate(function () {
       for (var prop in kinematics.joints) {
@@ -46581,7 +46613,78 @@ function loadModel(model) {
   }
 }
 
-},{"./loaders/ColladaLoader2":8,"detector-webgl":1,"stats.js":3,"three":5,"three-orbitcontrols":4,"tween.js":6}],8:[function(require,module,exports){
+},{"./js/Detector":7,"./loaders/ColladaLoader2":8,"stats.js":2,"three":4,"three-orbitcontrols":3,"tween.js":5}],7:[function(require,module,exports){
+'use strict';
+
+var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
+
+/**
+ * @author alteredq / http://alteredqualia.com/
+ * @author mr.doob / http://mrdoob.com/
+ */
+
+var Detector = {
+
+	canvas: !!window.CanvasRenderingContext2D,
+	webgl: function () {
+
+		try {
+
+			var canvas = document.createElement('canvas');return !!(window.WebGLRenderingContext && (canvas.getContext('webgl') || canvas.getContext('experimental-webgl')));
+		} catch (e) {
+
+			return false;
+		}
+	}(),
+	workers: !!window.Worker,
+	fileapi: window.File && window.FileReader && window.FileList && window.Blob,
+
+	getWebGLErrorMessage: function getWebGLErrorMessage() {
+
+		var element = document.createElement('div');
+		element.id = 'webgl-error-message';
+		element.style.fontFamily = 'monospace';
+		element.style.fontSize = '13px';
+		element.style.fontWeight = 'normal';
+		element.style.textAlign = 'center';
+		element.style.background = '#fff';
+		element.style.color = '#000';
+		element.style.padding = '1.5em';
+		element.style.width = '400px';
+		element.style.margin = '5em auto 0';
+
+		if (!this.webgl) {
+
+			element.innerHTML = window.WebGLRenderingContext ? ['Your graphics card does not seem to support <a href="http://khronos.org/webgl/wiki/Getting_a_WebGL_Implementation" style="color:#000">WebGL</a>.<br />', 'Find out how to get it <a href="http://get.webgl.org/" style="color:#000">here</a>.'].join('\n') : ['Your browser does not seem to support <a href="http://khronos.org/webgl/wiki/Getting_a_WebGL_Implementation" style="color:#000">WebGL</a>.<br/>', 'Find out how to get it <a href="http://get.webgl.org/" style="color:#000">here</a>.'].join('\n');
+		}
+
+		return element;
+	},
+
+	addGetWebGLMessage: function addGetWebGLMessage(parameters) {
+
+		var parent, id, element;
+
+		parameters = parameters || {};
+
+		parent = parameters.parent !== undefined ? parameters.parent : document.body;
+		id = parameters.id !== undefined ? parameters.id : 'oldie';
+
+		element = Detector.getWebGLErrorMessage();
+		element.id = id;
+
+		parent.appendChild(element);
+	}
+
+};
+
+// browserify support
+if ((typeof module === 'undefined' ? 'undefined' : _typeof(module)) === 'object') {
+
+	module.exports = Detector;
+}
+
+},{}],8:[function(require,module,exports){
 'use strict';
 
 /**
@@ -49719,4 +49822,4 @@ module.exports = function (THREE) {
 	};
 };
 
-},{}]},{},[7]);
+},{}]},{},[6]);
