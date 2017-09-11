@@ -46432,15 +46432,15 @@ grid.material.color.setHex(0x000000);
 grid.material.opacity = 0.2;
 grid.material.transparent = true;
 
-$('input[id=axis-switch][type=checkbox]').change(function () {
-  $(this).is(':checked') ? scene.add(axis) : scene.remove(axis);
-});
+$(document).ready(function () {
+  $('input[id=axis-switch][type=checkbox]').change(function () {
+    $(this).is(':checked') ? scene.add(axis) : scene.remove(axis);
+  });
 
-$('input[id=grid-switch][type=checkbox]').change(function () {
-  $(this).is(':checked') ? scene.add(grid) : scene.remove(grid);
+  $('input[id=grid-switch][type=checkbox]').change(function () {
+    $(this).is(':checked') ? scene.add(grid) : scene.remove(grid);
+  }).click();
 });
-
-$('input[id=grid-switch][type=checkbox]').click();
 
 // Lights
 var ambientLight = new THREE.AmbientLight(0xcccccc, 0.6);
