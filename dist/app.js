@@ -46391,25 +46391,30 @@ var Stats = require('stats.js');
 require('./loaders/ColladaLoader2')(THREE);
 
 var stats = new Stats();
-document.body.appendChild(stats.dom);
+// document.body.appendChild(stats.dom)
+
+// Initialize collapse button
+$('.button-collapse').sideNav();
 
 window.addEventListener('resize', onWindowResize, false);
+
+var RENDERER_WIDTH = window.innerWidth > 1200 ? window.innerWidth - $('.side-nav').width() : window.innerWidth;
 
 // Renderer
 var renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setClearColor(0xf0f0f0);
 renderer.setPixelRatio(window.devicePixelRatio);
-renderer.setSize(window.innerWidth, window.innerHeight);
-document.body.appendChild(renderer.domElement);
+renderer.setSize(RENDERER_WIDTH, window.innerHeight);
+$('#threejs-container').append(renderer.domElement);
 
 // Camera
-var camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight);
-camera.position.set(0, 10, 0);
+var camera = new THREE.PerspectiveCamera(75, RENDERER_WIDTH / window.innerHeight);
+camera.position.set(2, 1, 1);
 
 // Orbit Controls
 var controls = new OrbitControls(camera, renderer.domElement);
 controls.enableKeys = false;
-// controls.mouseButtons = { ORBIT: THREE.MOUSE.LEFT, PAN: THREE.MOUSE.MIDDLE, ZOOM: THREE.MOUSE.RIGHT }
+controls.mouseButtons = { ORBIT: THREE.MOUSE.LEFT, PAN: THREE.MOUSE.MIDDLE, ZOOM: THREE.MOUSE.RIGHT };
 controls.zoomSpeed = 0.8;
 
 // Scene
@@ -46427,17 +46432,12 @@ grid.material.transparent = true;
 scene.add(grid);
 
 // Lights
-// let light = new THREE.DirectionalLight(0xdddddd, 0.8)
-var light = new THREE.PointLight(0xffffff, 0.5);
-light.position.set(-10, 100, -10);
-scene.add(light);
+var ambientLight = new THREE.AmbientLight(0xcccccc, 0.6);
+scene.add(ambientLight);
 
-light = new THREE.PointLight(0xffffff, 0.5);
-light.position.set(-10, 100, 10);
-scene.add(light);
-
-light = new THREE.AmbientLight(0x404040);
-scene.add(light);
+var directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+directionalLight.position.set(1, 0, 0).normalize();
+scene.add(directionalLight);
 
 function render() {
   renderer.render(scene, camera);
@@ -46446,16 +46446,16 @@ function render() {
 function animate() {
   requestAnimationFrame(animate);
 
+  renderer.render(scene, camera);
   stats.update();
   TWEEN.update();
-
-  renderer.render(scene, camera);
 }
 
 function onWindowResize() {
-  camera.aspect = window.innerWidth / window.innerHeight;
+  RENDERER_WIDTH = window.innerWidth > 1200 ? window.innerWidth - $('.side-nav').width() : window.innerWidth;
+  camera.aspect = RENDERER_WIDTH / window.innerHeight;
   camera.updateProjectionMatrix();
-  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.setSize(RENDERER_WIDTH, window.innerHeight);
 }
 
 var dae;
@@ -46465,11 +46465,48 @@ var tweenParameters = {};
 
 var models = ['abb_irb1200_5_90', 'abb_irb120_3_58', 'abb_irb1600_6_12', 'abb_irb2400', 'abb_irb2600_12_165', 'abb_irb4400l_30_243', 'abb_irb4600_60_205', 'abb_irb52_7_120', 'abb_irb5400', 'abb_irb6640_185_280', 'abb_irb6640', 'abb_irb7600_150_350', 'kawada_hironx', 'kuka_kr10r1100sixx', 'kuka_kr120r2500pro', 'kuka_kr16_2', 'kuka_kr5_arc', 'kuka_lbr_iiwa_14_r820', 'universal_robot_ur10', 'universal_robot_ur3', 'universal_robot_ur5'];
 
+function setupModelsList(models) {
+  var _iteratorNormalCompletion = true;
+  var _didIteratorError = false;
+  var _iteratorError = undefined;
+
+  try {
+    var _loop = function _loop() {
+      var model = _step.value;
+
+      // $('.models-list').append(`<a href="#!" class="collection-item">${model}</a>`)
+      $('.models-list').append('<li><a href="#!">' + model + '</a></li>');
+      $('.models-list').children().last().click(function () {
+        loadModel(model);$('.button-collapse').sideNav('hide');
+      });
+    };
+
+    for (var _iterator = models[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
+      _loop();
+    }
+  } catch (err) {
+    _didIteratorError = true;
+    _iteratorError = err;
+  } finally {
+    try {
+      if (!_iteratorNormalCompletion && _iterator.return) {
+        _iterator.return();
+      }
+    } finally {
+      if (_didIteratorError) {
+        throw _iteratorError;
+      }
+    }
+  }
+}
+
+setupModelsList(models);
+
 // instantiate a loader
 var loader = new THREE.ColladaLoader();
 loader.options.convertUpAxis = true;
 
-loadModel(models[0]);
+loadModel('kuka_lbr_iiwa_14_r820');
 
 function loadModel(model) {
   scene.remove(dae);
@@ -46539,18 +46576,17 @@ function loadModel(model) {
   }
 }
 
-var loadedRobotId = 0;
+// var loadedRobotId = 0
 
-window.onkeyup = function (e) {
-  var key = e.keyCode ? e.keyCode : e.which;
+// window.onkeyup = function (e) {
+//   var key = e.keyCode ? e.keyCode : e.which
 
-  switch (key) {
-    case 81:
-      // Q
-      loadModel(models[++loadedRobotId]);
-      break;
-  }
-};
+//   switch (key) {
+//     case 81: // Q
+//       loadModel(models[loadedRobotId++])
+//       break
+//   }
+// }
 
 },{"./loaders/ColladaLoader2":8,"detector-webgl":1,"stats.js":3,"three":5,"three-orbitcontrols":4,"tween.js":6}],8:[function(require,module,exports){
 'use strict';
@@ -47213,6 +47249,11 @@ module.exports = function (THREE) {
 							data.skin = parseSkin(child);
 							break;
 
+						case 'morph':
+							data.id = parseId(child.getAttribute('source'));
+							console.warn('THREE.ColladaLoader: Morph target animation not supported yet.');
+							break;
+
 					}
 				}
 
@@ -47319,16 +47360,21 @@ module.exports = function (THREE) {
 
 			function buildController(data) {
 
-				var build = {};
-
-				build.id = data.id;
-				build.skin = buildSkin(data.skin);
-
-				// we enhance the 'sources' property of the corresponding geometry with our skin data
+				var build = {
+					id: data.id
+				};
 
 				var geometry = library.geometries[build.id];
-				geometry.sources.skinIndices = build.skin.indices;
-				geometry.sources.skinWeights = build.skin.weights;
+
+				if (data.skin !== undefined) {
+
+					build.skin = buildSkin(data.skin);
+
+					// we enhance the 'sources' property of the corresponding geometry with our skin data
+
+					geometry.sources.skinIndices = build.skin.indices;
+					geometry.sources.skinWeights = build.skin.weights;
+				}
 
 				return build;
 			}
@@ -48534,7 +48580,7 @@ module.exports = function (THREE) {
 
 				var data = {
 					name: xml.getAttribute('name') || '',
-					joints: [],
+					joints: {},
 					links: []
 				};
 
@@ -48579,7 +48625,6 @@ module.exports = function (THREE) {
 					switch (child.nodeName) {
 
 						case 'joint':
-							// data.joints.push( parseKinematicsJoint( child ) );
 							data.joints[child.getAttribute('sid')] = parseKinematicsJoint(child);
 							break;
 
@@ -48804,10 +48849,8 @@ module.exports = function (THREE) {
 						case 'axis':
 							var param = child.getElementsByTagName('param')[0];
 							data.axis = param.textContent;
-							// data.jointIndex = parseInt( data.axis.split( 'joint' ).pop().split( '.' )[ 0 ] );
 							var tmpJointIndex = data.axis.split('inst_').pop().split('axis')[0];
-							tmpJointIndex = tmpJointIndex.substr(0, tmpJointIndex.length - 1);
-							data.jointIndex = tmpJointIndex;
+							data.jointIndex = tmpJointIndex.substr(0, tmpJointIndex.length - 1);
 							break;
 
 					}

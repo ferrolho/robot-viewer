@@ -7,25 +7,30 @@ const Stats = require('stats.js')
 require('./loaders/ColladaLoader2')(THREE)
 
 const stats = new Stats()
-document.body.appendChild(stats.dom)
+// document.body.appendChild(stats.dom)
+
+// Initialize collapse button
+$('.button-collapse').sideNav();
 
 window.addEventListener('resize', onWindowResize, false)
+
+let RENDERER_WIDTH = window.innerWidth > 1200 ? window.innerWidth - $('.side-nav').width() : window.innerWidth
 
 // Renderer
 const renderer = new THREE.WebGLRenderer({ antialias: true })
 renderer.setClearColor(0xf0f0f0)
 renderer.setPixelRatio(window.devicePixelRatio)
-renderer.setSize(window.innerWidth, window.innerHeight)
-document.body.appendChild(renderer.domElement)
+renderer.setSize(RENDERER_WIDTH, window.innerHeight)
+$('#threejs-container').append(renderer.domElement)
 
 // Camera
-const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight)
-camera.position.set(0, 10, 0)
+const camera = new THREE.PerspectiveCamera(75, RENDERER_WIDTH / window.innerHeight)
+camera.position.set(2, 1, 1)
 
 // Orbit Controls
 const controls = new OrbitControls(camera, renderer.domElement)
 controls.enableKeys = false
-// controls.mouseButtons = { ORBIT: THREE.MOUSE.LEFT, PAN: THREE.MOUSE.MIDDLE, ZOOM: THREE.MOUSE.RIGHT }
+controls.mouseButtons = { ORBIT: THREE.MOUSE.LEFT, PAN: THREE.MOUSE.MIDDLE, ZOOM: THREE.MOUSE.RIGHT }
 controls.zoomSpeed = 0.8
 
 // Scene
@@ -43,17 +48,12 @@ grid.material.transparent = true
 scene.add(grid)
 
 // Lights
-// let light = new THREE.DirectionalLight(0xdddddd, 0.8)
-let light = new THREE.PointLight(0xffffff, 0.5)
-light.position.set(-10, 100, -10)
-scene.add(light)
+const ambientLight = new THREE.AmbientLight(0xcccccc, 0.6)
+scene.add(ambientLight)
 
-light = new THREE.PointLight(0xffffff, 0.5)
-light.position.set(-10, 100, 10)
-scene.add(light)
-
-light = new THREE.AmbientLight(0x404040)
-scene.add(light)
+let directionalLight = new THREE.DirectionalLight(0xffffff, 0.8)
+directionalLight.position.set(1, 0, 0).normalize()
+scene.add(directionalLight)
 
 function render () {
   renderer.render(scene, camera)
@@ -62,16 +62,16 @@ function render () {
 function animate () {
   requestAnimationFrame(animate)
 
+  renderer.render(scene, camera)
   stats.update()
   TWEEN.update()
-
-  renderer.render(scene, camera)
 }
 
 function onWindowResize () {
-  camera.aspect = window.innerWidth / window.innerHeight
+  RENDERER_WIDTH = window.innerWidth > 1200 ? window.innerWidth - $('.side-nav').width() : window.innerWidth
+  camera.aspect = RENDERER_WIDTH / window.innerHeight
   camera.updateProjectionMatrix()
-  renderer.setSize(window.innerWidth, window.innerHeight)
+  renderer.setSize(RENDERER_WIDTH, window.innerHeight)
 }
 
 var dae
@@ -103,11 +103,21 @@ var models = [
   'universal_robot_ur5'
 ]
 
+function setupModelsList (models) {
+  for (const model of models) {
+    // $('.models-list').append(`<a href="#!" class="collection-item">${model}</a>`)
+    $('.models-list').append(`<li><a href="#!">${model}</a></li>`)
+    $('.models-list').children().last().click(function () { loadModel(model); $('.button-collapse').sideNav('hide'); })
+  }
+}
+
+setupModelsList(models)
+
 // instantiate a loader
 const loader = new THREE.ColladaLoader()
 loader.options.convertUpAxis = true
 
-loadModel(models[0])
+loadModel('kuka_lbr_iiwa_14_r820')
 
 function loadModel (model) {
   scene.remove(dae)
@@ -178,14 +188,14 @@ function loadModel (model) {
   }
 }
 
-var loadedRobotId = 0
+// var loadedRobotId = 0
 
-window.onkeyup = function (e) {
-  var key = e.keyCode ? e.keyCode : e.which
+// window.onkeyup = function (e) {
+//   var key = e.keyCode ? e.keyCode : e.which
 
-  switch (key) {
-    case 81: // Q
-      loadModel(models[++loadedRobotId])
-      break
-  }
-}
+//   switch (key) {
+//     case 81: // Q
+//       loadModel(models[loadedRobotId++])
+//       break
+//   }
+// }

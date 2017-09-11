@@ -1,11 +1,35 @@
 <!DOCTYPE html>
 <html lang="en">
 	<head>
-		<meta charset="utf-8">
+		<meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
+		<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1.0"/>
 		<title>Robot Viewer</title>
-		<link rel="stylesheet" type="text/css" href="styles.css">
+
+		<!-- CSS  -->
+		<link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+		<link href="css/materialize.css" type="text/css" rel="stylesheet" media="screen,projection"/>
+		<link href="css/style.css" type="text/css" rel="stylesheet" media="screen,projection"/>
+		<link href="css/styles.css" rel="stylesheet" type="text/css">
 	</head>
 	<body>
+		<header>
+			<a href="#" data-activates="nav-mobile" class="button-collapse top-nav waves-effect waves-light circle hide-on-large-only"><i class="material-icons">menu</i></a>
+
+			<ul id="nav-mobile" class="side-nav fixed models-list">
+				<li><h5 style="padding: 0 16px">Robots</h5></li>
+			</ul>
+		</header>
+
+		<main>
+			<div id="threejs-container"></div>
+		</main>
+
+		<!--Import jQuery before materialize.js-->
+		<script type="text/javascript" src="https://code.jquery.com/jquery-3.2.1.min.js"></script>
+
+		<!-- Compiled and minified JavaScript -->
+		<script type="text/javascript" src="js/materialize.min.js"></script>
+
 		<script src="app.js"></script>
 	</body>
 </html>
