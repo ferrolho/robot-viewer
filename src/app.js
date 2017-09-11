@@ -61,20 +61,15 @@ grid.material.color.setHex(0x000000)
 grid.material.opacity = 0.2
 grid.material.transparent = true
 
-$('#grid-switch').click(function () {
-  const switchIsOn = $('#grid-switch input[type=checkbox]')[0].checked
-  console.log(`Grid switch state: ${switchIsOn}`)
-
-  if (switchIsOn) {
-    console.log('Showing axis and grid...')
-    scene.add(axis)
-    scene.add(grid)
-  } else {
-    console.log('Hiding axis and grid...')
-    scene.remove(axis)
-    scene.remove(grid)
-  }
+$('input[id=axis-switch][type=checkbox]').change(function () {
+  $(this).is(':checked') ? scene.add(axis) : scene.remove(axis)
 })
+
+$('input[id=grid-switch][type=checkbox]').change(function () {
+  $(this).is(':checked') ? scene.add(grid) : scene.remove(grid)
+})
+
+$('input[id=grid-switch][type=checkbox]').click()
 
 // Lights
 const ambientLight = new THREE.AmbientLight(0xcccccc, 0.6)
@@ -89,8 +84,8 @@ directionalLight.shadow.camera.bottom = -shadowCameraSize
 directionalLight.shadow.camera.left = -shadowCameraSize
 directionalLight.shadow.camera.right = shadowCameraSize
 directionalLight.shadow.camera.top = shadowCameraSize
-directionalLight.shadow.mapSize.width = 2048
-directionalLight.shadow.mapSize.height = 2048
+// directionalLight.shadow.mapSize.width = 2048
+// directionalLight.shadow.mapSize.height = 2048
 scene.add(directionalLight)
 
 // Create a plane that receives shadows (but does not cast them)
