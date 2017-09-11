@@ -145,7 +145,7 @@ const colladaModelsList = require('./js/ColladaRobotsList')
 setupModelsList(colladaModelsList)
 function setupModelsList (models) {
   for (const model of models) {
-    $('.models-list').append(`<li><a class="waves-effect modal-trigger" href="#loader-modal">${model}</a></li>`)
+    $('.models-list').append(`<li><a class="waves-effect" href="#!">${model}</a></li>`)
     $('.models-list').children().last().click(function () { loadModel(model); $('.button-collapse').sideNav('hide') })
   }
 }
