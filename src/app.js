@@ -1,4 +1,4 @@
-/* global $, requestAnimationFrame */
+/* global $, Materialize, requestAnimationFrame */
 
 const Detector = require('./js/Detector')
 if (!Detector.webgl) Detector.addGetWebGLMessage()
@@ -52,23 +52,37 @@ camera.lookAt(cameraTarget)
 // Scene
 const scene = new THREE.Scene()
 
-// Axis Helper
-const axis = new THREE.AxisHelper(5)
-
-// Grid Helper
-const grid = new THREE.GridHelper()
-grid.material.color.setHex(0x000000)
-grid.material.opacity = 0.2
-grid.material.transparent = true
+let castShadows = true
 
 $(document).ready(function () {
+  // Axis Helper
+  const axis = new THREE.AxisHelper(5)
+
   $('input[id=axis-switch][type=checkbox]').change(function () {
     $(this).is(':checked') ? scene.add(axis) : scene.remove(axis)
   })
 
+  // Grid Helper
+  const grid = new THREE.GridHelper()
+  grid.material.color.setHex(0x000000)
+  grid.material.opacity = 0.2
+  grid.material.transparent = true
+
   $('input[id=grid-switch][type=checkbox]').change(function () {
     $(this).is(':checked') ? scene.add(grid) : scene.remove(grid)
   }).click()
+
+  // Shadows
+  $('input[id=shadows-switch][type=checkbox]').change(function () {
+    castShadows = $(this).is(':checked')
+    Materialize.toast('Shadow changes will take effect on future robot models', 2000)
+  })
+
+  // Performance Monitor
+  $('#statsjs').hide()
+  $('input[id=stats-switch][type=checkbox]').change(function () {
+    $(this).is(':checked') ? $('#statsjs').show() : $('#statsjs').hide()
+  })
 })
 
 // Lights
@@ -179,8 +193,10 @@ function loadModel (model) {
           // model does not have normals
           child.material.flatShading = true
 
-          child.castShadow = true
-          child.receiveShadow = true
+          if (castShadows) {
+            child.castShadow = true
+            child.receiveShadow = true
+          }
         }
       })
 
