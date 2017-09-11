@@ -46429,6 +46429,7 @@ $(document).ready(function () {
   $('#loader-modal').modal({
     dismissible: false,
     complete: function complete() {
+      $('#loader-modal .modal-content p:last').text('0%');
       $('#loader-modal .modal-content .progress .determinate').width(0);
     }
   });
