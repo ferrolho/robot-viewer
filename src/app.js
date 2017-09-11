@@ -175,9 +175,9 @@ let dae
 let kinematics
 const tweenParameters = {}
 
-function loadModel (model) {
-  scene.remove(dae)
+const modelsInScene = []
 
+function loadModel (model) {
   console.log(`Loading ${model}...`)
 
   loader.load(
@@ -205,7 +205,14 @@ function loadModel (model) {
 
       kinematics = collada.kinematics
 
+      while (modelsInScene.length) {
+        scene.remove(modelsInScene[0])
+        modelsInScene.pop()
+      }
+
       scene.add(dae)
+      modelsInScene.push(dae)
+
       setupTween()
     }
   )
