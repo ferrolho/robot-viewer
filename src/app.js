@@ -7,14 +7,19 @@ const Stats = require('stats.js')
 require('./loaders/ColladaLoader2')(THREE)
 
 const stats = new Stats()
-// document.body.appendChild(stats.dom)
+stats.dom.id = 'statsjs'
+document.body.appendChild(stats.dom)
 
 // Initialize collapse button
-$('.button-collapse').sideNav();
+$('.button-collapse').sideNav()
 
 window.addEventListener('resize', onWindowResize, false)
 
-let RENDERER_WIDTH = window.innerWidth > 1200 ? window.innerWidth - $('.side-nav').width() : window.innerWidth
+let RENDERER_WIDTH
+updateRendererWidth()
+function updateRendererWidth () {
+  RENDERER_WIDTH = window.innerWidth > 992 ? window.innerWidth - $('.side-nav').width() : window.innerWidth
+}
 
 // Renderer
 const renderer = new THREE.WebGLRenderer({ antialias: true })
@@ -63,21 +68,17 @@ function animate () {
   requestAnimationFrame(animate)
 
   renderer.render(scene, camera)
-  stats.update()
   TWEEN.update()
+
+  stats.update()
 }
 
 function onWindowResize () {
-  RENDERER_WIDTH = window.innerWidth > 1200 ? window.innerWidth - $('.side-nav').width() : window.innerWidth
+  updateRendererWidth()
   camera.aspect = RENDERER_WIDTH / window.innerHeight
   camera.updateProjectionMatrix()
   renderer.setSize(RENDERER_WIDTH, window.innerHeight)
 }
-
-var dae
-var kinematics
-var kinematicsTween
-var tweenParameters = {}
 
 var models = [
   'abb_irb1200_5_90',
@@ -105,9 +106,8 @@ var models = [
 
 function setupModelsList (models) {
   for (const model of models) {
-    // $('.models-list').append(`<a href="#!" class="collection-item">${model}</a>`)
     $('.models-list').append(`<li><a href="#!">${model}</a></li>`)
-    $('.models-list').children().last().click(function () { loadModel(model); $('.button-collapse').sideNav('hide'); })
+    $('.models-list').children().last().click(function () { loadModel(model); $('.button-collapse').sideNav('hide') })
   }
 }
 
@@ -118,6 +118,11 @@ const loader = new THREE.ColladaLoader()
 loader.options.convertUpAxis = true
 
 loadModel('kuka_lbr_iiwa_14_r820')
+
+let dae
+let kinematics
+let kinematicsTween
+const tweenParameters = {}
 
 function loadModel (model) {
   scene.remove(dae)
@@ -150,18 +155,18 @@ function loadModel (model) {
   )
 
   function setupTween () {
-    var duration = THREE.Math.randInt(1000, 5000)
+    const duration = THREE.Math.randInt(1000, 5000)
 
-    var target = {}
+    const target = {}
 
-    for (var prop in kinematics.joints) {
+    for (const prop in kinematics.joints) {
       if (kinematics.joints.hasOwnProperty(prop)) {
         if (!kinematics.joints[ prop ].static) {
-          var joint = kinematics.joints[ prop ]
+          const joint = kinematics.joints[ prop ]
 
-          var old = tweenParameters[ prop ]
+          const old = tweenParameters[ prop ]
 
-          var position = old || joint.zeroPosition
+          const position = old || joint.zeroPosition
 
           tweenParameters[ prop ] = position
 
@@ -187,15 +192,3 @@ function loadModel (model) {
     setTimeout(setupTween, duration)
   }
 }
-
-// var loadedRobotId = 0
-
-// window.onkeyup = function (e) {
-//   var key = e.keyCode ? e.keyCode : e.which
-
-//   switch (key) {
-//     case 81: // Q
-//       loadModel(models[loadedRobotId++])
-//       break
-//   }
-// }
