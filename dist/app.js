@@ -46551,9 +46551,9 @@ var dae = void 0;
 var kinematics = void 0;
 var tweenParameters = {};
 
-function loadModel(model) {
-  scene.remove(dae);
+var modelsInScene = [];
 
+function loadModel(model) {
   console.log('Loading ' + model + '...');
 
   loader.load(
@@ -46581,7 +46581,14 @@ function loadModel(model) {
 
     kinematics = collada.kinematics;
 
+    while (modelsInScene.length) {
+      scene.remove(modelsInScene[0]);
+      modelsInScene.pop();
+    }
+
     scene.add(dae);
+    modelsInScene.push(dae);
+
     setupTween();
   });
 
