@@ -46385,9 +46385,6 @@ var stats = new Stats();
 stats.dom.id = 'statsjs';
 document.body.appendChild(stats.dom);
 
-// Initialize collapse button
-$('.button-collapse').sideNav();
-
 window.addEventListener('resize', onWindowResize, false);
 
 var RENDERER_WIDTH = void 0;
@@ -46405,11 +46402,11 @@ renderer.setPixelRatio(window.devicePixelRatio);
 renderer.setSize(RENDERER_WIDTH, window.innerHeight);
 $('#threejs-container').append(renderer.domElement);
 
+var cameraTarget = new THREE.Vector3(0, 2, 0);
+
 // Camera
 var camera = new THREE.PerspectiveCamera(75, RENDERER_WIDTH / window.innerHeight);
 camera.position.set(5, 5, 5);
-
-var cameraTarget = new THREE.Vector3(0, 2, 0);
 
 // Orbit Controls
 var controls = new OrbitControls(camera, renderer.domElement);
@@ -46426,6 +46423,16 @@ var scene = new THREE.Scene();
 var castShadows = true;
 
 $(document).ready(function () {
+  // Initialize collapse button
+  $('.button-collapse').sideNav();
+
+  $('#loader-modal').modal({
+    dismissible: false,
+    complete: function complete() {
+      $('#loader-modal .modal-content .progress .determinate').width(0);
+    }
+  });
+
   // Axis Helper
   var axis = new THREE.AxisHelper(5);
 
@@ -46454,6 +46461,8 @@ $(document).ready(function () {
   $('input[id=stats-switch][type=checkbox]').change(function () {
     $(this).is(':checked') ? $('#statsjs').show() : $('#statsjs').hide();
   });
+
+  loadModel('abb_irb52_7_120');
 });
 
 // Lights
@@ -46503,8 +46512,8 @@ function onWindowResize() {
   renderer.setSize(RENDERER_WIDTH, window.innerHeight);
 }
 
-var models = ['abb_irb1200_5_90', 'abb_irb120_3_58', 'abb_irb1600_6_12', 'abb_irb2400', 'abb_irb2600_12_165', 'abb_irb4400l_30_243', 'abb_irb4600_60_205', 'abb_irb52_7_120', 'abb_irb5400', 'abb_irb6640_185_280', 'abb_irb6640', 'abb_irb7600_150_350', 'kawada_hironx', 'kuka_kr10r1100sixx', 'kuka_kr120r2500pro', 'kuka_kr16_2', 'kuka_kr5_arc', 'kuka_lbr_iiwa_14_r820', 'universal_robot_ur10', 'universal_robot_ur3', 'universal_robot_ur5'];
-
+var colladaModelsList = require('./js/ColladaRobotsList');
+setupModelsList(colladaModelsList);
 function setupModelsList(models) {
   var _iteratorNormalCompletion = true;
   var _didIteratorError = false;
@@ -46514,7 +46523,7 @@ function setupModelsList(models) {
     var _loop = function _loop() {
       var model = _step.value;
 
-      $('.models-list').append('<li><a href="#!">' + model + '</a></li>');
+      $('.models-list').append('<li><a class="waves-effect modal-trigger" href="#loader-modal">' + model + '</a></li>');
       $('.models-list').children().last().click(function () {
         loadModel(model);$('.button-collapse').sideNav('hide');
       });
@@ -46539,22 +46548,18 @@ function setupModelsList(models) {
   }
 }
 
-setupModelsList(models);
-
 // instantiate a loader
 var loader = new THREE.ColladaLoader();
 loader.options.convertUpAxis = true;
 
-loadModel('kuka_lbr_iiwa_14_r820');
-
-var dae = void 0;
 var kinematics = void 0;
 var tweenParameters = {};
-
 var modelsInScene = [];
 
 function loadModel(model) {
   console.log('Loading ' + model + '...');
+
+  $('#loader-modal').modal('open');
 
   loader.load(
   // resource URL
@@ -46562,7 +46567,7 @@ function loadModel(model) {
 
   // Function when resource is loaded
   function (collada) {
-    dae = collada.scene;
+    var dae = collada.scene;
 
     dae.traverse(function (child) {
       if (child instanceof THREE.Mesh) {
@@ -46590,6 +46595,15 @@ function loadModel(model) {
     modelsInScene.push(dae);
 
     setupTween();
+  },
+  // Function called when download progresses
+  function (xhr) {
+    var progress = xhr.loaded / xhr.total * 100;
+    $('#loader-modal .modal-content p:last').text(parseInt(progress) + '%');
+    $('#loader-modal .modal-content .progress .determinate').width(progress + '%');
+    if (xhr.loaded === xhr.total) {
+      $('#loader-modal').modal('close');
+    }
   });
 
   function setupTween() {
@@ -46631,7 +46645,18 @@ function loadModel(model) {
   }
 }
 
-},{"./js/Detector":7,"./loaders/ColladaLoader2":8,"stats.js":2,"three":4,"three-orbitcontrols":3,"tween.js":5}],7:[function(require,module,exports){
+},{"./js/ColladaRobotsList":7,"./js/Detector":8,"./loaders/ColladaLoader2":9,"stats.js":2,"three":4,"three-orbitcontrols":3,"tween.js":5}],7:[function(require,module,exports){
+'use strict';
+
+var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
+
+var ColladaRobotsList = ['abb_irb1200_5_90', 'abb_irb120_3_58', 'abb_irb1600_6_12', 'abb_irb2400', 'abb_irb2600_12_165', 'abb_irb4400l_30_243', 'abb_irb4600_60_205', 'abb_irb52_7_120', 'abb_irb5400', 'abb_irb6640_185_280', 'abb_irb6640', 'abb_irb7600_150_350', 'kawada_hironx', 'kuka_kr10r1100sixx', 'kuka_kr120r2500pro', 'kuka_kr16_2', 'kuka_kr5_arc', 'kuka_lbr_iiwa_14_r820', 'universal_robot_ur10', 'universal_robot_ur3', 'universal_robot_ur5'];
+
+if ((typeof module === 'undefined' ? 'undefined' : _typeof(module)) === 'object') {
+  module.exports = ColladaRobotsList;
+}
+
+},{}],8:[function(require,module,exports){
 'use strict';
 
 var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
@@ -46702,7 +46727,7 @@ if ((typeof module === 'undefined' ? 'undefined' : _typeof(module)) === 'object'
 	module.exports = Detector;
 }
 
-},{}],8:[function(require,module,exports){
+},{}],9:[function(require,module,exports){
 'use strict';
 
 /**
