@@ -146,7 +146,7 @@ const colladaModelsList = require('./js/ColladaRobotsList')
 setupModelsList(colladaModelsList)
 function setupModelsList (models) {
   for (const model of models) {
-    $('.models-list').append(`<li><a class="waves-effect" href="#!">${model}</a></li>`)
+    $('.models-list').append(`<li id="${model}"><a class="waves-effect" href="#!">${model}</a></li>`)
     $('.models-list').children().last().click(function () { loadModel(model); $('.button-collapse').sideNav('hide') })
   }
 }
@@ -161,6 +161,9 @@ const modelsInScene = []
 
 function loadModel (model) {
   console.log(`Loading ${model}...`)
+
+  $('.models-list li').removeClass('active')
+  $(`.models-list #${model}`).addClass('active')
 
   $('#loader-modal').modal('open')
 
