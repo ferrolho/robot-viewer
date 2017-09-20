@@ -51,3 +51,11 @@ a.button-collapse.top-nav {
 a.button-collapse.top-nav i {
 	font-size: 32px;
 }
+
+ul li.active {
+	background-color: #26a69a !important;
+}
+
+ul li.active a {
+	color: #eafaf9;
+}
