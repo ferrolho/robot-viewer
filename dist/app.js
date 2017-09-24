@@ -46454,7 +46454,7 @@ $(document).ready(function () {
   // Shadows
   $('input[id=shadows-switch][type=checkbox]').change(function () {
     castShadows = $(this).is(':checked');
-    Materialize.toast('Shadow changes will take effect on future robot models', 2000);
+    updateShadowsState();
   });
 
   // Performance Monitor
@@ -46465,6 +46465,15 @@ $(document).ready(function () {
 
   loadModel('abb_irb52_7_120');
 });
+
+function updateShadowsState() {
+  dae.traverse(function (child) {
+    if (child instanceof THREE.Mesh) {
+      child.castShadow = castShadows;
+      child.receiveShadow = castShadows;
+    }
+  });
+}
 
 // Lights
 var ambientLight = new THREE.AmbientLight(0xcccccc, 0.6);
@@ -46553,6 +46562,7 @@ function setupModelsList(models) {
 var loader = new THREE.ColladaLoader();
 loader.options.convertUpAxis = true;
 
+var dae = void 0;
 var kinematics = void 0;
 var tweenParameters = {};
 var modelsInScene = [];
@@ -46571,19 +46581,16 @@ function loadModel(model) {
 
   // Function when resource is loaded
   function (collada) {
-    var dae = collada.scene;
+    dae = collada.scene;
 
     dae.traverse(function (child) {
       if (child instanceof THREE.Mesh) {
         // model does not have normals
         child.material.flatShading = true;
-
-        if (castShadows) {
-          child.castShadow = true;
-          child.receiveShadow = true;
-        }
       }
     });
+
+    updateShadowsState();
 
     dae.scale.x = dae.scale.y = dae.scale.z = 5.0;
     dae.updateMatrix();
