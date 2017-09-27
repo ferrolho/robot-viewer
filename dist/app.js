@@ -63482,19 +63482,16 @@ var tweenParameters = {};
 var modelsInScene = [];
 
 async function addCollada(collada) {
-  var dae = collada.scene;
+  dae = collada.scene;
 
   dae.traverse(function (child) {
     if (child instanceof THREE.Mesh) {
       // model does not have normals
       child.material.flatShading = true;
-
-      if (castShadows) {
-        child.castShadow = true;
-        child.receiveShadow = true;
-      }
     }
   });
+
+  updateShadowsState();
 
   dae.scale.x = dae.scale.y = dae.scale.z = 5.0;
   dae.updateMatrix();
