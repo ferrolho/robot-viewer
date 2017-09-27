@@ -11,6 +11,7 @@ var ColladaRobotsList = [
   'abb_irb6640',
   'abb_irb6640_185_280',
   'abb_irb7600_150_350',
+  'clearpath_dual_arm_husky',
   'kawada_hironx',
   'kuka_kr5_arc',
   'kuka_kr10r1100sixx',
