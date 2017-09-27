@@ -63377,7 +63377,7 @@ $(document).ready(function () {
     $(this).is(':checked') ? $('#statsjs').show() : $('#statsjs').hide();
   });
 
-  loadModel('abb_irb52_7_120');
+  loadModelZae('abb_irb52_7_120');
 });
 
 function updateShadowsState() {
@@ -63499,24 +63499,17 @@ async function addCollada(collada) {
   dae.scale.x = dae.scale.y = dae.scale.z = 5.0;
   dae.updateMatrix();
 
-  // Function when resource is loaded
-  function (collada) {
-    var dae = collada.scene;
+  kinematics = collada.kinematics;
 
-    dae.traverse(function (child) {
-      if (child instanceof THREE.Mesh) {
-        // model does not have normals
-        child.material.flatShading = true;
+  while (modelsInScene.length) {
+    scene.remove(modelsInScene.pop());
+  }
 
-        if (castShadows) {
-          child.castShadow = true;
-          child.receiveShadow = true;
-        }
-      }
-    });
+  scene.add(dae);
+  modelsInScene.push(dae);
 
-    dae.scale.x = dae.scale.y = dae.scale.z = 5.0;
-    dae.updateMatrix();
+  setupTween();
+}
 
 function loadModelZae(model) {
   console.log('Loading ' + model + '...');
@@ -66797,13 +66790,3 @@ module.exports = function (THREE) {
 };
 
 },{}]},{},[108]);
-
-  kinematics = collada.kinematics;
-  while (modelsInScene.length) {
-    scene.remove(modelsInScene.pop());
-  }
-
-  scene.add(dae);
-  modelsInScene.push(dae);
-  setupTween();
-}
