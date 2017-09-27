@@ -149,12 +149,12 @@ function onWindowResize () {
   renderer.setSize(RENDERER_WIDTH, window.innerHeight)
 }
 
-const colladaModelsList = require('./js/ColladaRobotsList')
-setupModelsList(colladaModelsList)
+const colladaRobotsList = require('./js/ColladaRobotsList')
+setupModelsList(colladaRobotsList)
 function setupModelsList (models) {
   for (const model of models) {
-    $('.models-list').append(`<li id="${model}"><a class="waves-effect" href="#!">${model}</a></li>`)
-    $('.models-list').children().last().click(function () { loadModelZae(model); $('.button-collapse').sideNav('hide') })
+    $(`#${model.brand}-models`).append(`<li id="${model.id}"><a class="waves-effect" href="#!">${model.name}</a></li>`)
+    $(`#${model.brand}-models`).children().last().click(function () { loadModelZae(model.id); $('.button-collapse').sideNav('hide') })
   }
 }
 
@@ -197,8 +197,8 @@ async function addCollada (collada) {
 function loadModelZae (model) {
   console.log(`Loading ${model}...`)
 
-  $('.models-list li').removeClass('active')
-  $(`.models-list #${model}`).addClass('active')
+  $('#models-list li').removeClass('active')
+  $(`#models-list #${model}`).addClass('active')
 
   $('#loader-modal').modal('open')
 
