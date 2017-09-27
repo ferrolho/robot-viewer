@@ -81,7 +81,7 @@ $(document).ready(function () {
   // Shadows
   $('input[id=shadows-switch][type=checkbox]').change(function () {
     castShadows = $(this).is(':checked')
-    Materialize.toast('Shadow changes will take effect on future robot models', 2000)
+    updateShadowsState()
   })
 
   // Performance Monitor
@@ -90,8 +90,17 @@ $(document).ready(function () {
     $(this).is(':checked') ? $('#statsjs').show() : $('#statsjs').hide()
   })
 
-  loadModel('abb_irb52_7_120')
+  loadModelZae('abb_irb52_7_120')
 })
+
+function updateShadowsState () {
+  dae.traverse(function (child) {
+    if (child instanceof THREE.Mesh) {
+      child.castShadow = castShadows
+      child.receiveShadow = castShadows
+    }
+  })
+}
 
 // Lights
 const ambientLight = new THREE.AmbientLight(0xcccccc, 0.6)
@@ -153,6 +162,7 @@ function setupModelsList (models) {
 const loader = new THREE.ColladaLoader()
 loader.options.convertUpAxis = true
 
+let dae
 let kinematics
 const tweenParameters = {}
 const modelsInScene = []
