@@ -3,8 +3,10 @@
 const Detector = require('./js/Detector')
 if (!Detector.webgl) Detector.addGetWebGLMessage()
 
+const JSZip = require('jszip')
+const JSZipUtils = require('jszip-utils')
 const THREE = require('three')
-const OrbitControls = require('three-orbitcontrols')
+const THREEOrbitControls = require('three-orbitcontrols')
 const TWEEN = require('tween.js')
 const Stats = require('stats.js')
 
@@ -38,7 +40,7 @@ const camera = new THREE.PerspectiveCamera(75, RENDERER_WIDTH / window.innerHeig
 camera.position.set(5, 5, 5)
 
 // Orbit Controls
-const controls = new OrbitControls(camera, renderer.domElement)
+const controls = new THREEOrbitControls(camera, renderer.domElement)
 controls.target = cameraTarget
 controls.enableKeys = false
 controls.mouseButtons = { ORBIT: THREE.MOUSE.LEFT, PAN: THREE.MOUSE.MIDDLE, ZOOM: THREE.MOUSE.RIGHT }
@@ -56,11 +58,7 @@ $(document).ready(function () {
   $('.button-collapse').sideNav()
 
   $('#loader-modal').modal({
-    dismissible: false,
-    complete: function () {
-      $('#loader-modal .modal-content p:last').text('0%')
-      $('#loader-modal .modal-content .progress .determinate').width(0)
-    }
+    dismissible: false
   })
 
   // Axis Helper
@@ -147,7 +145,7 @@ setupModelsList(colladaModelsList)
 function setupModelsList (models) {
   for (const model of models) {
     $('.models-list').append(`<li id="${model}"><a class="waves-effect" href="#!">${model}</a></li>`)
-    $('.models-list').children().last().click(function () { loadModel(model); $('.button-collapse').sideNav('hide') })
+    $('.models-list').children().last().click(function () { loadModelZae(model); $('.button-collapse').sideNav('hide') })
   }
 }
 
@@ -159,7 +157,37 @@ let kinematics
 const tweenParameters = {}
 const modelsInScene = []
 
-function loadModel (model) {
+async function addCollada (collada) {
+  const dae = collada.scene
+
+  dae.traverse(function (child) {
+    if (child instanceof THREE.Mesh) {
+      // model does not have normals
+      child.material.flatShading = true
+
+      if (castShadows) {
+        child.castShadow = true
+        child.receiveShadow = true
+      }
+    }
+  })
+
+  dae.scale.x = dae.scale.y = dae.scale.z = 5.0
+  dae.updateMatrix()
+
+  kinematics = collada.kinematics
+
+  while (modelsInScene.length) {
+    scene.remove(modelsInScene.pop())
+  }
+
+  scene.add(dae)
+  modelsInScene.push(dae)
+
+  setupTween()
+}
+
+function loadModelZae (model) {
   console.log(`Loading ${model}...`)
 
   $('.models-list li').removeClass('active')
@@ -167,85 +195,52 @@ function loadModel (model) {
 
   $('#loader-modal').modal('open')
 
-  loader.load(
-    // resource URL
-    `../collada-robots-collection/${model}.dae`,
-
-    // Function when resource is loaded
-    function (collada) {
-      const dae = collada.scene
-
-      dae.traverse(function (child) {
-        if (child instanceof THREE.Mesh) {
-          // model does not have normals
-          child.material.flatShading = true
-
-          if (castShadows) {
-            child.castShadow = true
-            child.receiveShadow = true
-          }
-        }
+  JSZipUtils.getBinaryContent(`../collada-robots-collection/${model}.zae`, function (err, data) {
+    if (err) throw err
+    JSZip.loadAsync(data).then(function (zip) {
+      zip.file(`${model}.dae`).async('string').then(function (content) {
+        addCollada(loader.parse(content)).then(function () {
+          $('#loader-modal').modal('close')
+        })
       })
+    })
+  })
+}
 
-      dae.scale.x = dae.scale.y = dae.scale.z = 5.0
-      dae.updateMatrix()
+function setupTween () {
+  const duration = THREE.Math.randInt(1000, 5000)
 
-      kinematics = collada.kinematics
+  const target = {}
 
-      while (modelsInScene.length) {
-        scene.remove(modelsInScene[0])
-        modelsInScene.pop()
+  for (const prop in kinematics.joints) {
+    if (kinematics.joints.hasOwnProperty(prop)) {
+      if (!kinematics.joints[ prop ].static) {
+        const joint = kinematics.joints[ prop ]
+
+        const old = tweenParameters[ prop ]
+
+        const position = old || joint.zeroPosition
+
+        tweenParameters[ prop ] = position
+
+        target[ prop ] = THREE.Math.randInt(joint.limits.min, joint.limits.max)
       }
-
-      scene.add(dae)
-      modelsInScene.push(dae)
-
-      setupTween()
-    },
-    // Function called when download progresses
-    function (xhr) {
-      const progress = xhr.loaded / xhr.total * 100
-      $('#loader-modal .modal-content p:last').text(`${parseInt(progress)}%`)
-      $('#loader-modal .modal-content .progress .determinate').width(`${progress}%`)
-      if (xhr.loaded === xhr.total) { $('#loader-modal').modal('close') }
     }
-  )
+  }
 
-  function setupTween () {
-    const duration = THREE.Math.randInt(1000, 5000)
+  const kinematicsTween = new TWEEN.Tween(tweenParameters).to(target, duration).easing(TWEEN.Easing.Quadratic.Out)
 
-    const target = {}
-
-    for (const prop in kinematics.joints) {
+  kinematicsTween.onUpdate(function () {
+    for (var prop in kinematics.joints) {
       if (kinematics.joints.hasOwnProperty(prop)) {
         if (!kinematics.joints[ prop ].static) {
-          const joint = kinematics.joints[ prop ]
-
-          const old = tweenParameters[ prop ]
-
-          const position = old || joint.zeroPosition
-
-          tweenParameters[ prop ] = position
-
-          target[ prop ] = THREE.Math.randInt(joint.limits.min, joint.limits.max)
+          kinematics.setJointValue(prop, this[ prop ])
         }
       }
     }
+  })
 
-    const kinematicsTween = new TWEEN.Tween(tweenParameters).to(target, duration).easing(TWEEN.Easing.Quadratic.Out)
+  kinematicsTween.start()
 
-    kinematicsTween.onUpdate(function () {
-      for (var prop in kinematics.joints) {
-        if (kinematics.joints.hasOwnProperty(prop)) {
-          if (!kinematics.joints[ prop ].static) {
-            kinematics.setJointValue(prop, this[ prop ])
-          }
-        }
-      }
-    })
-
-    kinematicsTween.start()
-
-    setTimeout(setupTween, duration)
-  }
+  setTimeout(setupTween, duration)
 }
