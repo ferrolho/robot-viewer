@@ -63368,7 +63368,7 @@ $(document).ready(function () {
   // Shadows
   $('input[id=shadows-switch][type=checkbox]').change(function () {
     castShadows = $(this).is(':checked');
-    Materialize.toast('Shadow changes will take effect on future robot models', 2000);
+    updateShadowsState();
   });
 
   // Performance Monitor
@@ -63379,6 +63379,15 @@ $(document).ready(function () {
 
   loadModel('abb_irb52_7_120');
 });
+
+function updateShadowsState() {
+  dae.traverse(function (child) {
+    if (child instanceof THREE.Mesh) {
+      child.castShadow = castShadows;
+      child.receiveShadow = castShadows;
+    }
+  });
+}
 
 // Lights
 var ambientLight = new THREE.AmbientLight(0xcccccc, 0.6);
@@ -63467,6 +63476,7 @@ function setupModelsList(models) {
 var loader = new THREE.ColladaLoader();
 loader.options.convertUpAxis = true;
 
+var dae = void 0;
 var kinematics = void 0;
 var tweenParameters = {};
 var modelsInScene = [];
@@ -63489,17 +63499,24 @@ async function addCollada(collada) {
   dae.scale.x = dae.scale.y = dae.scale.z = 5.0;
   dae.updateMatrix();
 
-  kinematics = collada.kinematics;
+  // Function when resource is loaded
+  function (collada) {
+    var dae = collada.scene;
 
-  while (modelsInScene.length) {
-    scene.remove(modelsInScene.pop());
-  }
+    dae.traverse(function (child) {
+      if (child instanceof THREE.Mesh) {
+        // model does not have normals
+        child.material.flatShading = true;
 
-  scene.add(dae);
-  modelsInScene.push(dae);
+        if (castShadows) {
+          child.castShadow = true;
+          child.receiveShadow = true;
+        }
+      }
+    });
 
-  setupTween();
-}
+    dae.scale.x = dae.scale.y = dae.scale.z = 5.0;
+    dae.updateMatrix();
 
 function loadModelZae(model) {
   console.log('Loading ' + model + '...');
@@ -66780,3 +66797,13 @@ module.exports = function (THREE) {
 };
 
 },{}]},{},[108]);
+
+  kinematics = collada.kinematics;
+  while (modelsInScene.length) {
+    scene.remove(modelsInScene.pop());
+  }
+
+  scene.add(dae);
+  modelsInScene.push(dae);
+  setupTween();
+}
