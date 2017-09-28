@@ -10,7 +10,6 @@ var ColladaRobotsList = [
   { brand: 'abb', name: 'IRB 4600', id: 'abb_irb4600_60_205' },
   { brand: 'abb', name: 'IRB 5400', id: 'abb_irb5400' },
   { brand: 'abb', name: 'IRB 6640', id: 'abb_irb6640' },
-  { brand: 'abb', name: 'IRB 6640', id: 'abb_irb6640_185_280' },
   { brand: 'abb', name: 'IRB 7600', id: 'abb_irb7600_150_350' },
 
   { brand: 'clearpath', name: 'Dual Arm Husky', id: 'clearpath_dual_arm_husky' },
@@ -28,6 +27,7 @@ var ColladaRobotsList = [
   { brand: 'universal', name: 'UR3',  id: 'universal_robot_ur3' },
   { brand: 'universal', name: 'UR5',  id: 'universal_robot_ur5' },
   { brand: 'universal', name: 'UR10', id: 'universal_robot_ur10' },
+
 ]
 
 if (typeof module === 'object') {
