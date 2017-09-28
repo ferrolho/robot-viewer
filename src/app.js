@@ -90,7 +90,7 @@ $(document).ready(function () {
     $(this).is(':checked') ? $('#statsjs').show() : $('#statsjs').hide()
   })
 
-  loadModelZae('abb_irb52_7_120')
+  loadModelZae('nasa_valkyrie')
 })
 
 function updateShadowsState () {
