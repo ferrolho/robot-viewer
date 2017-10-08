@@ -1,5 +1,7 @@
 /* global $, Materialize, requestAnimationFrame */
 
+import { Robot } from './js/Robot.js'
+
 const Detector = require('./js/Detector')
 if (!Detector.webgl) Detector.addGetWebGLMessage()
 
@@ -33,11 +35,11 @@ renderer.setPixelRatio(window.devicePixelRatio)
 renderer.setSize(RENDERER_WIDTH, window.innerHeight)
 $('#threejs-container').append(renderer.domElement)
 
-const cameraTarget = new THREE.Vector3(0, 2, 0)
+const cameraTarget = new THREE.Vector3(0, 0.4, 0)
 
 // Camera
-const camera = new THREE.PerspectiveCamera(75, RENDERER_WIDTH / window.innerHeight)
-camera.position.set(5, 5, 5)
+const camera = new THREE.PerspectiveCamera(75, RENDERER_WIDTH / window.innerHeight, 0.01, 100)
+camera.position.set(1, 1, 1)
 
 // Orbit Controls
 const controls = new THREEOrbitControls(camera, renderer.domElement)
@@ -51,25 +53,25 @@ camera.lookAt(cameraTarget)
 // Scene
 const scene = new THREE.Scene()
 
+// Global variables
 let castShadows = true
+let robot
 
 $(document).ready(function () {
   // Initialize collapse button
   $('.button-collapse').sideNav()
 
-  $('#loader-modal').modal({
-    dismissible: false
-  })
+  $('#loader-modal').modal({ dismissible: false })
 
   // Axis Helper
-  const axis = new THREE.AxisHelper(5)
+  const axis = new THREE.AxisHelper(1)
 
   $('input[id=axis-switch][type=checkbox]').change(function () {
     $(this).is(':checked') ? scene.add(axis) : scene.remove(axis)
   })
 
   // Grid Helper
-  const grid = new THREE.GridHelper()
+  const grid = new THREE.GridHelper(2)
   grid.material.color.setHex(0x000000)
   grid.material.opacity = 0.2
   grid.material.transparent = true
@@ -90,16 +92,50 @@ $(document).ready(function () {
     $(this).is(':checked') ? $('#statsjs').show() : $('#statsjs').hide()
   })
 
-  loadModelZae('nasa_valkyrie')
+  // Reset configuration
+  $('#reset-button').click(function () {
+    robot.configuration = robot.zeroConfiguration
+  })
+
+  // Random configuration
+  $('#random-button').click(function () {
+    robot.configuration = robot.randomConfiguration
+  })
+
+  // Reachability
+  $('#reachability-button').click(function () {
+    for (let i = 0; i < 1e4; i++) {
+      robot.configuration = robot.randomConfiguration
+
+      for (let i = 0; i < robot.tipLinks.length; i++) {
+        addSphere(robot.getLinkPose(robot.tipLinks[i]), sphereMaterials[i])
+      }
+
+      // await sleep(100)
+    }
+
+    console.log(`The cloud now has ${reachabilityClouds.children.length} particles.`)
+  })
+
+  // Clear clouds
+  $('#clear-clouds-button').click(function () {
+    scene.remove(reachabilityClouds)
+    reachabilityClouds = new THREE.Group()
+    scene.add(reachabilityClouds)
+
+    console.log(`The cloud now has ${reachabilityClouds.children.length} particles.`)
+  })
+
+  main()
 })
 
+function main () {
+  loadModelZae('abb_irb52_7_120')
+}
+
 function updateShadowsState () {
-  dae.traverse(function (child) {
-    if (child instanceof THREE.Mesh) {
-      child.castShadow = castShadows
-      child.receiveShadow = castShadows
-    }
-  })
+  plane.visible = castShadows
+  robot.updateShadowsState(castShadows)
 }
 
 // Lights
@@ -109,7 +145,7 @@ scene.add(ambientLight)
 let directionalLight = new THREE.DirectionalLight(0xffffff, 0.8)
 directionalLight.castShadow = true
 directionalLight.position.set(20, 20, 0)
-const shadowCameraSize = 10
+const shadowCameraSize = 2
 directionalLight.shadow.camera.far = 50
 directionalLight.shadow.camera.bottom = -shadowCameraSize
 directionalLight.shadow.camera.left = -shadowCameraSize
@@ -120,10 +156,9 @@ directionalLight.shadow.camera.top = shadowCameraSize
 scene.add(directionalLight)
 
 // Create a plane that receives shadows (but does not cast them)
-var planeGeometry = new THREE.PlaneBufferGeometry(100, 100)
-// var planeMaterial = new THREE.MeshLambertMaterial()
-var planeMaterial = new THREE.ShadowMaterial({ opacity: 0.4 })
-var plane = new THREE.Mesh(planeGeometry, planeMaterial)
+const planeGeometry = new THREE.PlaneBufferGeometry(10, 10)
+const planeMaterial = new THREE.ShadowMaterial({ opacity: 0.4 })
+const plane = new THREE.Mesh(planeGeometry, planeMaterial)
 plane.receiveShadow = true
 plane.rotateX(-90 * THREE.Math.DEG2RAD)
 scene.add(plane)
@@ -131,6 +166,12 @@ scene.add(plane)
 // Create a helper for the shadow camera (optional)
 // var helper = new THREE.CameraHelper(directionalLight.shadow.camera)
 // scene.add(helper)
+
+const geometry = new THREE.BoxGeometry(0.1, 0.01, 0.1)
+const material = new THREE.MeshLambertMaterial({ color: 0x00ff00, transparent: true, opacity: 0.4 })
+const cube = new THREE.Mesh(geometry, material)
+cube.position.set(0, 1.306, 0)
+// scene.add(cube)
 
 animate()
 function animate () {
@@ -162,27 +203,20 @@ function setupModelsList (models) {
 const loader = new THREE.ColladaLoader()
 loader.options.convertUpAxis = true
 
-let dae
-let kinematics
-const tweenParameters = {}
 const modelsInScene = []
 
-async function addCollada (collada) {
-  dae = collada.scene
+async function addCollada (modelId, collada) {
+  let dae = collada.scene
 
   dae.traverse(function (child) {
     if (child instanceof THREE.Mesh) {
-      // model does not have normals
+      // Most of the models do not have normals
       child.material.flatShading = true
     }
   })
 
-  updateShadowsState()
-
-  dae.scale.x = dae.scale.y = dae.scale.z = 5.0
+  dae.scale.x = dae.scale.y = dae.scale.z = 1.0
   dae.updateMatrix()
-
-  kinematics = collada.kinematics
 
   while (modelsInScene.length) {
     scene.remove(modelsInScene.pop())
@@ -191,7 +225,32 @@ async function addCollada (collada) {
   scene.add(dae)
   modelsInScene.push(dae)
 
-  setupTween()
+  const tipLinks = $.grep(colladaRobotsList, function (e) { return e.id === modelId })[0].tipLinks
+
+  robot = new Robot(dae, collada.kinematics, tipLinks)
+
+  updateShadowsState()
+}
+
+function sleep (ms) {
+  return new Promise(resolve => setTimeout(resolve, ms))
+}
+
+const sphereGeometry = new THREE.SphereGeometry(0.01, 3, 2)
+const sphereMaterials = [
+  new THREE.MeshLambertMaterial({ color: 0xff0000, transparent: true, opacity: 0.4 }),
+  new THREE.MeshLambertMaterial({ color: 0xff00ff, transparent: true, opacity: 0.4 }),
+  new THREE.MeshLambertMaterial({ color: 0xffff00, transparent: true, opacity: 0.4 }),
+  new THREE.MeshLambertMaterial({ color: 0x00ffff, transparent: true, opacity: 0.4 })
+]
+
+let reachabilityClouds = new THREE.Group()
+scene.add(reachabilityClouds)
+
+function addSphere (pose, material) {
+  const sphere = new THREE.Mesh(sphereGeometry, material)
+  sphere.position.setFromMatrixPosition(pose)
+  reachabilityClouds.add(sphere)
 }
 
 function loadModelZae (model) {
@@ -206,48 +265,10 @@ function loadModelZae (model) {
     if (err) throw err
     JSZip.loadAsync(data).then(function (zip) {
       zip.file(`${model}.dae`).async('string').then(function (content) {
-        addCollada(loader.parse(content)).then(function () {
+        addCollada(model, loader.parse(content)).then(function (result) {
           $('#loader-modal').modal('close')
         })
       })
     })
   })
-}
-
-function setupTween () {
-  const duration = THREE.Math.randInt(1000, 5000)
-
-  const target = {}
-
-  for (const prop in kinematics.joints) {
-    if (kinematics.joints.hasOwnProperty(prop)) {
-      if (!kinematics.joints[ prop ].static) {
-        const joint = kinematics.joints[ prop ]
-
-        const old = tweenParameters[ prop ]
-
-        const position = old || joint.zeroPosition
-
-        tweenParameters[ prop ] = position
-
-        target[ prop ] = THREE.Math.randInt(joint.limits.min, joint.limits.max)
-      }
-    }
-  }
-
-  const kinematicsTween = new TWEEN.Tween(tweenParameters).to(target, duration).easing(TWEEN.Easing.Quadratic.Out)
-
-  kinematicsTween.onUpdate(function () {
-    for (var prop in kinematics.joints) {
-      if (kinematics.joints.hasOwnProperty(prop)) {
-        if (!kinematics.joints[ prop ].static) {
-          kinematics.setJointValue(prop, this[ prop ])
-        }
-      }
-    }
-  })
-
-  kinematicsTween.start()
-
-  setTimeout(setupTween, duration)
 }
