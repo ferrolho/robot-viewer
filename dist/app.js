@@ -63285,9 +63285,10 @@ function config (name) {
 },{}],108:[function(require,module,exports){
 'use strict';
 
-/* global $, Materialize, requestAnimationFrame */
+var _Robot = require('./js/Robot.js');
 
-var Detector = require('./js/Detector');
+var Detector = require('./js/Detector'); /* global $, Materialize, requestAnimationFrame */
+
 if (!Detector.webgl) Detector.addGetWebGLMessage();
 
 var JSZip = require('jszip');
@@ -63320,11 +63321,11 @@ renderer.setPixelRatio(window.devicePixelRatio);
 renderer.setSize(RENDERER_WIDTH, window.innerHeight);
 $('#threejs-container').append(renderer.domElement);
 
-var cameraTarget = new THREE.Vector3(0, 2, 0);
+var cameraTarget = new THREE.Vector3(0, 0.4, 0);
 
 // Camera
-var camera = new THREE.PerspectiveCamera(75, RENDERER_WIDTH / window.innerHeight);
-camera.position.set(5, 5, 5);
+var camera = new THREE.PerspectiveCamera(75, RENDERER_WIDTH / window.innerHeight, 0.01, 100);
+camera.position.set(1, 1, 1);
 
 // Orbit Controls
 var controls = new THREEOrbitControls(camera, renderer.domElement);
@@ -63338,25 +63339,25 @@ camera.lookAt(cameraTarget);
 // Scene
 var scene = new THREE.Scene();
 
+// Global variables
 var castShadows = true;
+var robot = void 0;
 
 $(document).ready(function () {
   // Initialize collapse button
   $('.button-collapse').sideNav();
 
-  $('#loader-modal').modal({
-    dismissible: false
-  });
+  $('#loader-modal').modal({ dismissible: false });
 
   // Axis Helper
-  var axis = new THREE.AxisHelper(5);
+  var axis = new THREE.AxisHelper(1);
 
   $('input[id=axis-switch][type=checkbox]').change(function () {
     $(this).is(':checked') ? scene.add(axis) : scene.remove(axis);
   });
 
   // Grid Helper
-  var grid = new THREE.GridHelper();
+  var grid = new THREE.GridHelper(2);
   grid.material.color.setHex(0x000000);
   grid.material.opacity = 0.2;
   grid.material.transparent = true;
@@ -63377,16 +63378,50 @@ $(document).ready(function () {
     $(this).is(':checked') ? $('#statsjs').show() : $('#statsjs').hide();
   });
 
-  loadModelZae('nasa_valkyrie');
+  // Reset configuration
+  $('#reset-button').click(function () {
+    robot.configuration = robot.zeroConfiguration;
+  });
+
+  // Random configuration
+  $('#random-button').click(function () {
+    robot.configuration = robot.randomConfiguration;
+  });
+
+  // Reachability
+  $('#reachability-button').click(function () {
+    for (var i = 0; i < 1e4; i++) {
+      robot.configuration = robot.randomConfiguration;
+
+      for (var _i = 0; _i < robot.tipLinks.length; _i++) {
+        addSphere(robot.getLinkPose(robot.tipLinks[_i]), sphereMaterials[_i]);
+      }
+
+      // await sleep(100)
+    }
+
+    console.log('The cloud now has ' + reachabilityClouds.children.length + ' particles.');
+  });
+
+  // Clear clouds
+  $('#clear-clouds-button').click(function () {
+    scene.remove(reachabilityClouds);
+    reachabilityClouds = new THREE.Group();
+    scene.add(reachabilityClouds);
+
+    console.log('The cloud now has ' + reachabilityClouds.children.length + ' particles.');
+  });
+
+  main();
 });
 
+function main() {
+  loadModelZae('abb_irb52_7_120');
+}
+
 function updateShadowsState() {
-  dae.traverse(function (child) {
-    if (child instanceof THREE.Mesh) {
-      child.castShadow = castShadows;
-      child.receiveShadow = castShadows;
-    }
-  });
+  plane.visible = castShadows;
+  robot.updateShadowsState(castShadows);
 }
 
 // Lights
@@ -63396,7 +63431,7 @@ scene.add(ambientLight);
 var directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
 directionalLight.castShadow = true;
 directionalLight.position.set(20, 20, 0);
-var shadowCameraSize = 10;
+var shadowCameraSize = 2;
 directionalLight.shadow.camera.far = 50;
 directionalLight.shadow.camera.bottom = -shadowCameraSize;
 directionalLight.shadow.camera.left = -shadowCameraSize;
@@ -63407,8 +63442,7 @@ directionalLight.shadow.camera.top = shadowCameraSize;
 scene.add(directionalLight);
 
 // Create a plane that receives shadows (but does not cast them)
-var planeGeometry = new THREE.PlaneBufferGeometry(100, 100);
-// var planeMaterial = new THREE.MeshLambertMaterial()
+var planeGeometry = new THREE.PlaneBufferGeometry(10, 10);
 var planeMaterial = new THREE.ShadowMaterial({ opacity: 0.4 });
 var plane = new THREE.Mesh(planeGeometry, planeMaterial);
 plane.receiveShadow = true;
@@ -63418,6 +63452,12 @@ scene.add(plane);
 // Create a helper for the shadow camera (optional)
 // var helper = new THREE.CameraHelper(directionalLight.shadow.camera)
 // scene.add(helper)
+
+var geometry = new THREE.BoxGeometry(0.1, 0.01, 0.1);
+var material = new THREE.MeshLambertMaterial({ color: 0x00ff00, transparent: true, opacity: 0.4 });
+var cube = new THREE.Mesh(geometry, material);
+cube.position.set(0, 1.306, 0);
+// scene.add(cube)
 
 animate();
 function animate() {
@@ -63476,27 +63516,20 @@ function setupModelsList(models) {
 var loader = new THREE.ColladaLoader();
 loader.options.convertUpAxis = true;
 
-var dae = void 0;
-var kinematics = void 0;
-var tweenParameters = {};
 var modelsInScene = [];
 
-async function addCollada(collada) {
-  dae = collada.scene;
+async function addCollada(modelId, collada) {
+  var dae = collada.scene;
 
   dae.traverse(function (child) {
     if (child instanceof THREE.Mesh) {
-      // model does not have normals
+      // Most of the models do not have normals
       child.material.flatShading = true;
     }
   });
 
-  updateShadowsState();
-
-  dae.scale.x = dae.scale.y = dae.scale.z = 5.0;
+  dae.scale.x = dae.scale.y = dae.scale.z = 1.0;
   dae.updateMatrix();
-
-  kinematics = collada.kinematics;
 
   while (modelsInScene.length) {
     scene.remove(modelsInScene.pop());
@@ -63505,7 +63538,31 @@ async function addCollada(collada) {
   scene.add(dae);
   modelsInScene.push(dae);
 
-  setupTween();
+  var tipLinks = $.grep(colladaRobotsList, function (e) {
+    return e.id === modelId;
+  })[0].tipLinks;
+
+  robot = new _Robot.Robot(dae, collada.kinematics, tipLinks);
+
+  updateShadowsState();
+}
+
+function sleep(ms) {
+  return new Promise(function (resolve) {
+    return setTimeout(resolve, ms);
+  });
+}
+
+var sphereGeometry = new THREE.SphereGeometry(0.01, 3, 2);
+var sphereMaterials = [new THREE.MeshLambertMaterial({ color: 0xff0000, transparent: true, opacity: 0.4 }), new THREE.MeshLambertMaterial({ color: 0xff00ff, transparent: true, opacity: 0.4 }), new THREE.MeshLambertMaterial({ color: 0xffff00, transparent: true, opacity: 0.4 }), new THREE.MeshLambertMaterial({ color: 0x00ffff, transparent: true, opacity: 0.4 })];
+
+var reachabilityClouds = new THREE.Group();
+scene.add(reachabilityClouds);
+
+function addSphere(pose, material) {
+  var sphere = new THREE.Mesh(sphereGeometry, material);
+  sphere.position.setFromMatrixPosition(pose);
+  reachabilityClouds.add(sphere);
 }
 
 function loadModelZae(model) {
@@ -63520,7 +63577,7 @@ function loadModelZae(model) {
     if (err) throw err;
     JSZip.loadAsync(data).then(function (zip) {
       zip.file(model + '.dae').async('string').then(function (content) {
-        addCollada(loader.parse(content)).then(function () {
+        addCollada(model, loader.parse(content)).then(function (result) {
           $('#loader-modal').modal('close');
         });
       });
@@ -63528,50 +63585,12 @@ function loadModelZae(model) {
   });
 }
 
-function setupTween() {
-  var duration = THREE.Math.randInt(1000, 5000);
-
-  var target = {};
-
-  for (var prop in kinematics.joints) {
-    if (kinematics.joints.hasOwnProperty(prop)) {
-      if (!kinematics.joints[prop].static) {
-        var joint = kinematics.joints[prop];
-
-        var old = tweenParameters[prop];
-
-        var position = old || joint.zeroPosition;
-
-        tweenParameters[prop] = position;
-
-        target[prop] = THREE.Math.randInt(joint.limits.min, joint.limits.max);
-      }
-    }
-  }
-
-  var kinematicsTween = new TWEEN.Tween(tweenParameters).to(target, duration).easing(TWEEN.Easing.Quadratic.Out);
-
-  kinematicsTween.onUpdate(function () {
-    for (var prop in kinematics.joints) {
-      if (kinematics.joints.hasOwnProperty(prop)) {
-        if (!kinematics.joints[prop].static) {
-          kinematics.setJointValue(prop, this[prop]);
-        }
-      }
-    }
-  });
-
-  kinematicsTween.start();
-
-  setTimeout(setupTween, duration);
-}
-
-},{"./js/ColladaRobotsList":109,"./js/Detector":110,"./loaders/ColladaLoader2":111,"jszip":21,"jszip-utils":11,"stats.js":101,"three":105,"three-orbitcontrols":104,"tween.js":106}],109:[function(require,module,exports){
+},{"./js/ColladaRobotsList":109,"./js/Detector":110,"./js/Robot.js":111,"./loaders/ColladaLoader2":112,"jszip":21,"jszip-utils":11,"stats.js":101,"three":105,"three-orbitcontrols":104,"tween.js":106}],109:[function(require,module,exports){
 'use strict';
 
 var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
 
-var ColladaRobotsList = [{ brand: 'abb', name: 'IRB 52', id: 'abb_irb52_7_120' }, { brand: 'abb', name: 'IRB 120', id: 'abb_irb120_3_58' }, { brand: 'abb', name: 'IRB 1200', id: 'abb_irb1200_5_90' }, { brand: 'abb', name: 'IRB 1600', id: 'abb_irb1600_6_12' }, { brand: 'abb', name: 'IRB 2400', id: 'abb_irb2400' }, { brand: 'abb', name: 'IRB 2600', id: 'abb_irb2600_12_165' }, { brand: 'abb', name: 'IRB 4400', id: 'abb_irb4400l_30_243' }, { brand: 'abb', name: 'IRB 4600', id: 'abb_irb4600_60_205' }, { brand: 'abb', name: 'IRB 5400', id: 'abb_irb5400' }, { brand: 'abb', name: 'IRB 6640', id: 'abb_irb6640' }, { brand: 'abb', name: 'IRB 7600', id: 'abb_irb7600_150_350' }, { brand: 'clearpath', name: 'Dual Arm Husky', id: 'clearpath_dual_arm_husky' }, { brand: 'kawada', name: 'HiroNX', id: 'kawada_hironx' }, { brand: 'kuka', name: 'KR 5 arc', id: 'kuka_kr5_arc' }, { brand: 'kuka', name: 'KR 10 R1100 sixx', id: 'kuka_kr10r1100sixx' }, { brand: 'kuka', name: 'KR 16-2', id: 'kuka_kr16_2' }, { brand: 'kuka', name: 'KR 120 R2500 pro', id: 'kuka_kr120r2500pro' }, { brand: 'kuka', name: 'LBR iiwa 14 R820', id: 'kuka_lbr_iiwa_14_r820' }, { brand: 'nasa', name: 'Valkyrie', id: 'nasa_valkyrie' }, { brand: 'universal', name: 'UR3', id: 'universal_robot_ur3' }, { brand: 'universal', name: 'UR5', id: 'universal_robot_ur5' }, { brand: 'universal', name: 'UR10', id: 'universal_robot_ur10' }];
+var ColladaRobotsList = [{ brand: 'abb', name: 'IRB 52', id: 'abb_irb52_7_120', tipLinks: ['tool0'] }, { brand: 'abb', name: 'IRB 120', id: 'abb_irb120_3_58', tipLinks: ['tool0'] }, { brand: 'abb', name: 'IRB 1200', id: 'abb_irb1200_5_90', tipLinks: ['tool0'] }, { brand: 'abb', name: 'IRB 1600', id: 'abb_irb1600_6_12', tipLinks: ['tool0'] }, { brand: 'abb', name: 'IRB 2400', id: 'abb_irb2400', tipLinks: ['tool0'] }, { brand: 'abb', name: 'IRB 2600', id: 'abb_irb2600_12_165', tipLinks: ['tool0'] }, { brand: 'abb', name: 'IRB 4400', id: 'abb_irb4400l_30_243', tipLinks: ['tool0'] }, { brand: 'abb', name: 'IRB 4600', id: 'abb_irb4600_60_205', tipLinks: ['tool0'] }, { brand: 'abb', name: 'IRB 5400', id: 'abb_irb5400', tipLinks: ['tool0'] }, { brand: 'abb', name: 'IRB 6640', id: 'abb_irb6640', tipLinks: ['tool0'] }, { brand: 'abb', name: 'IRB 7600', id: 'abb_irb7600_150_350', tipLinks: ['tool0'] }, { brand: 'clearpath', name: 'Dual Arm Husky', id: 'clearpath_dual_arm_husky', tipLinks: [] }, { brand: 'kawada', name: 'HiroNX', id: 'kawada_hironx', tipLinks: ['LHAND_JOINT0_Link', 'RHAND_JOINT0_Link'] }, { brand: 'kuka', name: 'KR 5 arc', id: 'kuka_kr5_arc', tipLinks: ['tool0'] }, { brand: 'kuka', name: 'KR 10 R1100 sixx', id: 'kuka_kr10r1100sixx', tipLinks: ['tool0'] }, { brand: 'kuka', name: 'KR 16-2', id: 'kuka_kr16_2', tipLinks: ['tool0'] }, { brand: 'kuka', name: 'KR 120 R2500 pro', id: 'kuka_kr120r2500pro', tipLinks: ['tool0'] }, { brand: 'kuka', name: 'LBR iiwa 14 R820', id: 'kuka_lbr_iiwa_14_r820', tipLinks: ['tool0'] }, { brand: 'nasa', name: 'Valkyrie', id: 'nasa_valkyrie', tipLinks: ['leftPalm', 'rightPalm', 'leftFoot', 'rightFoot'] }, { brand: 'universal', name: 'UR3', id: 'universal_robot_ur3', tipLinks: ['tool0'] }, { brand: 'universal', name: 'UR5', id: 'universal_robot_ur5', tipLinks: ['tool0'] }, { brand: 'universal', name: 'UR10', id: 'universal_robot_ur10', tipLinks: ['tool0'] }];
 
 if ((typeof module === 'undefined' ? 'undefined' : _typeof(module)) === 'object') {
   module.exports = ColladaRobotsList;
@@ -63649,6 +63668,123 @@ if ((typeof module === 'undefined' ? 'undefined' : _typeof(module)) === 'object'
 }
 
 },{}],111:[function(require,module,exports){
+'use strict';
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+var THREE = require('three');
+
+var Robot = exports.Robot = function () {
+  function Robot(dae, kinematics, tipLinks) {
+    _classCallCheck(this, Robot);
+
+    this._dae = dae;
+    this._kinematics = kinematics;
+    this._tipLinks = tipLinks;
+
+    this.printLinkNames();
+
+    this._degreesOfFreedom = 0;
+
+    for (var prop in this._kinematics.joints) {
+      if (this._kinematics.joints.hasOwnProperty(prop)) {
+        if (!this._kinematics.joints[prop].static) {
+          this._degreesOfFreedom++;
+        }
+      }
+    }
+  }
+
+  _createClass(Robot, [{
+    key: 'printLinkNames',
+    value: function printLinkNames() {
+      this._dae.traverse(function (child) {
+        if (child instanceof THREE.Group) {
+          console.log(child.name);
+        }
+      });
+    }
+  }, {
+    key: 'getLinkPose',
+    value: function getLinkPose(linkName) {
+      this._dae.updateMatrixWorld();
+      return this._dae.getObjectByName(linkName).matrixWorld;
+    }
+  }, {
+    key: 'updateShadowsState',
+    value: function updateShadowsState(castShadows) {
+      this._dae.traverse(function (child) {
+        if (child instanceof THREE.Mesh) {
+          child.castShadow = castShadows;
+          child.receiveShadow = castShadows;
+        }
+      });
+    }
+  }, {
+    key: 'degreesOfFreedom',
+    get: function get() {
+      return this._degreesOfFreedom;
+    },
+    set: function set(value) {
+      throw new Error('You cannot change the degrees of freedom of a robot.');
+    }
+  }, {
+    key: 'tipLinks',
+    get: function get() {
+      return this._tipLinks;
+    }
+  }, {
+    key: 'zeroConfiguration',
+    get: function get() {
+      return new Array(this._degreesOfFreedom + 1).join('0').split('').map(parseFloat);
+    }
+  }, {
+    key: 'randomConfiguration',
+    get: function get() {
+      var q = [];
+
+      for (var prop in this._kinematics.joints) {
+        if (this._kinematics.joints.hasOwnProperty(prop)) {
+          var joint = this._kinematics.joints[prop];
+          if (!joint.static) {
+            q.push(THREE.Math.randFloat(joint.limits.min, joint.limits.max));
+          }
+        }
+      }
+
+      return q;
+    }
+  }, {
+    key: 'configuration',
+    set: function set(q) {
+      try {
+        if (q.length !== this.degreesOfFreedom) {
+          throw new Error('set configuration (q): q must be the same size as the robot DoF.');
+        } else {
+          for (var prop in this._kinematics.joints) {
+            if (this._kinematics.joints.hasOwnProperty(prop)) {
+              if (!this._kinematics.joints[prop].static) {
+                this._kinematics.setJointValue(prop, q.shift());
+              }
+            }
+          }
+        }
+      } catch (e) {
+        console.log(e.name + ': ' + e.message);
+      }
+    }
+  }]);
+
+  return Robot;
+}();
+
+},{"three":105}],112:[function(require,module,exports){
 'use strict';
 
 /**
