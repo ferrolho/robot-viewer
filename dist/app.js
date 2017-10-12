@@ -63324,7 +63324,7 @@ $('#threejs-container').append(renderer.domElement);
 var cameraTarget = new THREE.Vector3(0, 0.4, 0);
 
 // Camera
-var camera = new THREE.PerspectiveCamera(75, RENDERER_WIDTH / window.innerHeight, 0.01, 100);
+var camera = new THREE.PerspectiveCamera(75, RENDERER_WIDTH / window.innerHeight, 0.01);
 camera.position.set(1, 1, 1);
 
 // Orbit Controls
@@ -63388,32 +63388,57 @@ $(document).ready(function () {
     robot.configuration = robot.randomConfiguration;
   });
 
+  var pointCloudsInScene = [];
+
   // Reachability
   $('#reachability-button').click(function () {
+    while (pointCloudsInScene.length) {
+      scene.remove(pointCloudsInScene.shift());
+    }
+
     for (var i = 0; i < 1e4; i++) {
       robot.configuration = robot.randomConfiguration;
 
-      for (var _i = 0; _i < robot.tipLinks.length; _i++) {
-        addSphere(robot.getLinkPose(robot.tipLinks[_i]), sphereMaterials[_i]);
+      for (var j = 0; j < robot.tipLinks.length; j++) {
+        var point = new THREE.Vector3();
+        point.setFromMatrixPosition(robot.getLinkPose(robot.tipLinks[j]));
+        pointsGeometries[j].vertices.push(point);
       }
-
-      // await sleep(100)
     }
 
-    console.log('The cloud now has ' + reachabilityClouds.children.length + ' particles.');
+    var totalPoints = 0;
+    for (var _j = 0; _j < robot.tipLinks.length; _j++) {
+      totalPoints += pointsGeometries[_j].vertices.length;
+      var pointCloud = new THREE.Points(pointsGeometries[_j], pointsMaterials[_j]);
+      scene.add(pointCloud);
+      pointCloudsInScene.push(pointCloud);
+    }
+
+    console.log('The cloud now has ' + totalPoints + ' particles.');
   });
 
   // Clear clouds
   $('#clear-clouds-button').click(function () {
-    scene.remove(reachabilityClouds);
-    reachabilityClouds = new THREE.Group();
-    scene.add(reachabilityClouds);
+    while (pointCloudsInScene.length) {
+      scene.remove(pointCloudsInScene.shift());
+    }
 
-    console.log('The cloud now has ' + reachabilityClouds.children.length + ' particles.');
+    pointsGeometries = [new THREE.Geometry(), new THREE.Geometry(), new THREE.Geometry(), new THREE.Geometry()];
+
+    var totalPoints = 0;
+    for (var j = 0; j < robot.tipLinks.length; j++) {
+      totalPoints += pointsGeometries[j].vertices.length;
+    }
+
+    console.log('The cloud now has ' + totalPoints + ' particles.');
   });
 
   main();
 });
+
+var pointsMaterials = [new THREE.PointsMaterial({ color: 0xff0000, transparent: true, opacity: 0.5, size: 0.01 }), new THREE.PointsMaterial({ color: 0xff00ff, transparent: true, opacity: 0.5, size: 0.01 }), new THREE.PointsMaterial({ color: 0xffff00, transparent: true, opacity: 0.5, size: 0.01 }), new THREE.PointsMaterial({ color: 0x00ffff, transparent: true, opacity: 0.5, size: 0.01 })];
+
+var pointsGeometries = [new THREE.Geometry(), new THREE.Geometry(), new THREE.Geometry(), new THREE.Geometry()];
 
 function main() {
   loadModelZae('abb_irb52_7_120');
@@ -63553,18 +63578,6 @@ function sleep(ms) {
   });
 }
 
-var sphereGeometry = new THREE.SphereGeometry(0.01, 3, 2);
-var sphereMaterials = [new THREE.MeshLambertMaterial({ color: 0xff0000, transparent: true, opacity: 0.4 }), new THREE.MeshLambertMaterial({ color: 0xff00ff, transparent: true, opacity: 0.4 }), new THREE.MeshLambertMaterial({ color: 0xffff00, transparent: true, opacity: 0.4 }), new THREE.MeshLambertMaterial({ color: 0x00ffff, transparent: true, opacity: 0.4 })];
-
-var reachabilityClouds = new THREE.Group();
-scene.add(reachabilityClouds);
-
-function addSphere(pose, material) {
-  var sphere = new THREE.Mesh(sphereGeometry, material);
-  sphere.position.setFromMatrixPosition(pose);
-  reachabilityClouds.add(sphere);
-}
-
 function loadModelZae(model) {
   console.log('Loading ' + model + '...');
 
@@ -63688,7 +63701,7 @@ var Robot = exports.Robot = function () {
     this._kinematics = kinematics;
     this._tipLinks = tipLinks;
 
-    this.printLinkNames();
+    // this.printLinkNames()
 
     this._degreesOfFreedom = 0;
 
