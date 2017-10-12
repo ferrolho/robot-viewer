@@ -38,7 +38,7 @@ $('#threejs-container').append(renderer.domElement)
 const cameraTarget = new THREE.Vector3(0, 0.4, 0)
 
 // Camera
-const camera = new THREE.PerspectiveCamera(75, RENDERER_WIDTH / window.innerHeight, 0.01, 100)
+const camera = new THREE.PerspectiveCamera(75, RENDERER_WIDTH / window.innerHeight, 0.01)
 camera.position.set(1, 1, 1)
 
 // Orbit Controls
@@ -102,32 +102,68 @@ $(document).ready(function () {
     robot.configuration = robot.randomConfiguration
   })
 
+  let pointCloudsInScene = []
+
   // Reachability
   $('#reachability-button').click(function () {
+    while (pointCloudsInScene.length) { scene.remove(pointCloudsInScene.shift()) }
+
     for (let i = 0; i < 1e4; i++) {
       robot.configuration = robot.randomConfiguration
 
-      for (let i = 0; i < robot.tipLinks.length; i++) {
-        addSphere(robot.getLinkPose(robot.tipLinks[i]), sphereMaterials[i])
+      for (let j = 0; j < robot.tipLinks.length; j++) {
+        const point = new THREE.Vector3()
+        point.setFromMatrixPosition(robot.getLinkPose(robot.tipLinks[j]))
+        pointsGeometries[j].vertices.push(point)
       }
-
-      // await sleep(100)
     }
 
-    console.log(`The cloud now has ${reachabilityClouds.children.length} particles.`)
+    let totalPoints = 0
+    for (let j = 0; j < robot.tipLinks.length; j++) {
+      totalPoints += pointsGeometries[j].vertices.length
+      let pointCloud = new THREE.Points(pointsGeometries[j], pointsMaterials[j])
+      scene.add(pointCloud)
+      pointCloudsInScene.push(pointCloud)
+    }
+
+    console.log(`The cloud now has ${totalPoints} particles.`)
   })
 
   // Clear clouds
   $('#clear-clouds-button').click(function () {
-    scene.remove(reachabilityClouds)
-    reachabilityClouds = new THREE.Group()
-    scene.add(reachabilityClouds)
+    while (pointCloudsInScene.length) { scene.remove(pointCloudsInScene.shift()) }
 
-    console.log(`The cloud now has ${reachabilityClouds.children.length} particles.`)
+    pointsGeometries = [
+      new THREE.Geometry(),
+      new THREE.Geometry(),
+      new THREE.Geometry(),
+      new THREE.Geometry()
+    ]
+
+    let totalPoints = 0
+    for (let j = 0; j < robot.tipLinks.length; j++) {
+      totalPoints += pointsGeometries[j].vertices.length
+    }
+
+    console.log(`The cloud now has ${totalPoints} particles.`)
   })
 
   main()
 })
+
+const pointsMaterials = [
+  new THREE.PointsMaterial({ color: 0xff0000, transparent: true, opacity: 0.5, size: 0.01 }),
+  new THREE.PointsMaterial({ color: 0xff00ff, transparent: true, opacity: 0.5, size: 0.01 }),
+  new THREE.PointsMaterial({ color: 0xffff00, transparent: true, opacity: 0.5, size: 0.01 }),
+  new THREE.PointsMaterial({ color: 0x00ffff, transparent: true, opacity: 0.5, size: 0.01 })
+]
+
+let pointsGeometries = [
+  new THREE.Geometry(),
+  new THREE.Geometry(),
+  new THREE.Geometry(),
+  new THREE.Geometry()
+]
 
 function main () {
   loadModelZae('abb_irb52_7_120')
@@ -234,23 +270,6 @@ async function addCollada (modelId, collada) {
 
 function sleep (ms) {
   return new Promise(resolve => setTimeout(resolve, ms))
-}
-
-const sphereGeometry = new THREE.SphereGeometry(0.01, 3, 2)
-const sphereMaterials = [
-  new THREE.MeshLambertMaterial({ color: 0xff0000, transparent: true, opacity: 0.4 }),
-  new THREE.MeshLambertMaterial({ color: 0xff00ff, transparent: true, opacity: 0.4 }),
-  new THREE.MeshLambertMaterial({ color: 0xffff00, transparent: true, opacity: 0.4 }),
-  new THREE.MeshLambertMaterial({ color: 0x00ffff, transparent: true, opacity: 0.4 })
-]
-
-let reachabilityClouds = new THREE.Group()
-scene.add(reachabilityClouds)
-
-function addSphere (pose, material) {
-  const sphere = new THREE.Mesh(sphereGeometry, material)
-  sphere.position.setFromMatrixPosition(pose)
-  reachabilityClouds.add(sphere)
 }
 
 function loadModelZae (model) {
