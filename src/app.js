@@ -102,7 +102,15 @@ $(document).ready(function () {
     robot.configuration = robot.randomConfiguration
   })
 
+  let rawPoints = [[], [], [], []]
   let pointCloudsInScene = []
+
+  const pointsMaterials = [
+    new THREE.PointsMaterial({ color: 0xff0000, transparent: true, opacity: 0.5, size: 0.01 }),
+    new THREE.PointsMaterial({ color: 0xff00ff, transparent: true, opacity: 0.5, size: 0.01 }),
+    new THREE.PointsMaterial({ color: 0xffff00, transparent: true, opacity: 0.5, size: 0.01 }),
+    new THREE.PointsMaterial({ color: 0x00ffff, transparent: true, opacity: 0.5, size: 0.01 })
+  ]
 
   // Reachability
   $('#reachability-button').click(function () {
@@ -114,14 +122,19 @@ $(document).ready(function () {
       for (let j = 0; j < robot.tipLinks.length; j++) {
         const point = new THREE.Vector3()
         point.setFromMatrixPosition(robot.getLinkPose(robot.tipLinks[j]))
-        pointsGeometries[j].vertices.push(point)
+        rawPoints[j].push(point)
       }
     }
 
     let totalPoints = 0
     for (let j = 0; j < robot.tipLinks.length; j++) {
-      totalPoints += pointsGeometries[j].vertices.length
-      let pointCloud = new THREE.Points(pointsGeometries[j], pointsMaterials[j])
+      totalPoints += rawPoints[j].length
+
+      let geometry = new THREE.Geometry()
+      for (const point of rawPoints[j]) { geometry.vertices.push(point) }
+
+      let pointCloud = new THREE.Points(geometry, pointsMaterials[j])
+
       scene.add(pointCloud)
       pointCloudsInScene.push(pointCloud)
     }
@@ -131,18 +144,12 @@ $(document).ready(function () {
 
   // Clear clouds
   $('#clear-clouds-button').click(function () {
+    rawPoints = [[], [], [], []]
     while (pointCloudsInScene.length) { scene.remove(pointCloudsInScene.shift()) }
-
-    pointsGeometries = [
-      new THREE.Geometry(),
-      new THREE.Geometry(),
-      new THREE.Geometry(),
-      new THREE.Geometry()
-    ]
 
     let totalPoints = 0
     for (let j = 0; j < robot.tipLinks.length; j++) {
-      totalPoints += pointsGeometries[j].vertices.length
+      totalPoints += rawPoints[j].length
     }
 
     console.log(`The cloud now has ${totalPoints} particles.`)
@@ -150,20 +157,6 @@ $(document).ready(function () {
 
   main()
 })
-
-const pointsMaterials = [
-  new THREE.PointsMaterial({ color: 0xff0000, transparent: true, opacity: 0.5, size: 0.01 }),
-  new THREE.PointsMaterial({ color: 0xff00ff, transparent: true, opacity: 0.5, size: 0.01 }),
-  new THREE.PointsMaterial({ color: 0xffff00, transparent: true, opacity: 0.5, size: 0.01 }),
-  new THREE.PointsMaterial({ color: 0x00ffff, transparent: true, opacity: 0.5, size: 0.01 })
-]
-
-let pointsGeometries = [
-  new THREE.Geometry(),
-  new THREE.Geometry(),
-  new THREE.Geometry(),
-  new THREE.Geometry()
-]
 
 function main () {
   loadModelZae('abb_irb52_7_120')

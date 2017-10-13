@@ -63388,7 +63388,10 @@ $(document).ready(function () {
     robot.configuration = robot.randomConfiguration;
   });
 
+  var rawPoints = [[], [], [], []];
   var pointCloudsInScene = [];
+
+  var pointsMaterials = [new THREE.PointsMaterial({ color: 0xff0000, transparent: true, opacity: 0.5, size: 0.01 }), new THREE.PointsMaterial({ color: 0xff00ff, transparent: true, opacity: 0.5, size: 0.01 }), new THREE.PointsMaterial({ color: 0xffff00, transparent: true, opacity: 0.5, size: 0.01 }), new THREE.PointsMaterial({ color: 0x00ffff, transparent: true, opacity: 0.5, size: 0.01 })];
 
   // Reachability
   $('#reachability-button').click(function () {
@@ -63402,14 +63405,41 @@ $(document).ready(function () {
       for (var j = 0; j < robot.tipLinks.length; j++) {
         var point = new THREE.Vector3();
         point.setFromMatrixPosition(robot.getLinkPose(robot.tipLinks[j]));
-        pointsGeometries[j].vertices.push(point);
+        rawPoints[j].push(point);
       }
     }
 
     var totalPoints = 0;
     for (var _j = 0; _j < robot.tipLinks.length; _j++) {
-      totalPoints += pointsGeometries[_j].vertices.length;
-      var pointCloud = new THREE.Points(pointsGeometries[_j], pointsMaterials[_j]);
+      totalPoints += rawPoints[_j].length;
+
+      var _geometry = new THREE.Geometry();
+      var _iteratorNormalCompletion = true;
+      var _didIteratorError = false;
+      var _iteratorError = undefined;
+
+      try {
+        for (var _iterator = rawPoints[_j][Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
+          var _point = _step.value;
+          _geometry.vertices.push(_point);
+        }
+      } catch (err) {
+        _didIteratorError = true;
+        _iteratorError = err;
+      } finally {
+        try {
+          if (!_iteratorNormalCompletion && _iterator.return) {
+            _iterator.return();
+          }
+        } finally {
+          if (_didIteratorError) {
+            throw _iteratorError;
+          }
+        }
+      }
+
+      var pointCloud = new THREE.Points(_geometry, pointsMaterials[_j]);
+
       scene.add(pointCloud);
       pointCloudsInScene.push(pointCloud);
     }
@@ -63419,15 +63449,14 @@ $(document).ready(function () {
 
   // Clear clouds
   $('#clear-clouds-button').click(function () {
+    rawPoints = [[], [], [], []];
     while (pointCloudsInScene.length) {
       scene.remove(pointCloudsInScene.shift());
     }
 
-    pointsGeometries = [new THREE.Geometry(), new THREE.Geometry(), new THREE.Geometry(), new THREE.Geometry()];
-
     var totalPoints = 0;
     for (var j = 0; j < robot.tipLinks.length; j++) {
-      totalPoints += pointsGeometries[j].vertices.length;
+      totalPoints += rawPoints[j].length;
     }
 
     console.log('The cloud now has ' + totalPoints + ' particles.');
@@ -63435,10 +63464,6 @@ $(document).ready(function () {
 
   main();
 });
-
-var pointsMaterials = [new THREE.PointsMaterial({ color: 0xff0000, transparent: true, opacity: 0.5, size: 0.01 }), new THREE.PointsMaterial({ color: 0xff00ff, transparent: true, opacity: 0.5, size: 0.01 }), new THREE.PointsMaterial({ color: 0xffff00, transparent: true, opacity: 0.5, size: 0.01 }), new THREE.PointsMaterial({ color: 0x00ffff, transparent: true, opacity: 0.5, size: 0.01 })];
-
-var pointsGeometries = [new THREE.Geometry(), new THREE.Geometry(), new THREE.Geometry(), new THREE.Geometry()];
 
 function main() {
   loadModelZae('abb_irb52_7_120');
@@ -63504,13 +63529,13 @@ function onWindowResize() {
 var colladaRobotsList = require('./js/ColladaRobotsList');
 setupModelsList(colladaRobotsList);
 function setupModelsList(models) {
-  var _iteratorNormalCompletion = true;
-  var _didIteratorError = false;
-  var _iteratorError = undefined;
+  var _iteratorNormalCompletion2 = true;
+  var _didIteratorError2 = false;
+  var _iteratorError2 = undefined;
 
   try {
     var _loop = function _loop() {
-      var model = _step.value;
+      var model = _step2.value;
 
       $('#' + model.brand + '-models').append('<li id="' + model.id + '"><a class="waves-effect" href="#!">' + model.name + '</a></li>');
       $('#' + model.brand + '-models').children().last().click(function () {
@@ -63518,20 +63543,20 @@ function setupModelsList(models) {
       });
     };
 
-    for (var _iterator = models[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
+    for (var _iterator2 = models[Symbol.iterator](), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
       _loop();
     }
   } catch (err) {
-    _didIteratorError = true;
-    _iteratorError = err;
+    _didIteratorError2 = true;
+    _iteratorError2 = err;
   } finally {
     try {
-      if (!_iteratorNormalCompletion && _iterator.return) {
-        _iterator.return();
+      if (!_iteratorNormalCompletion2 && _iterator2.return) {
+        _iterator2.return();
       }
     } finally {
-      if (_didIteratorError) {
-        throw _iteratorError;
+      if (_didIteratorError2) {
+        throw _iteratorError2;
       }
     }
   }
