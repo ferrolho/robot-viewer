@@ -155,6 +155,48 @@ $(document).ready(function () {
     console.log(`The cloud now has ${totalPoints} particles.`)
   })
 
+  // Reset configuration
+  $('#run-ik-button').click(function () {
+    addSphereAtPose(robot.getLinkPose(robot.tipLinks[0]))
+    addSphereAtXYZ(0, 0.9615, 0.815)
+
+    const goal = new THREE.Vector3(0, 0.9615, 0.815)
+
+    let best = { fitness: undefined, q: undefined }
+
+    let iteration = 0
+    let done = false
+    while (!done) {
+      console.log(`Iteration ${iteration++}`)
+
+      const q = robot.randomConfiguration
+      robot.configuration = q
+
+      const tipPosition = new THREE.Vector3()
+      tipPosition.setFromMatrixPosition(robot.getLinkPose(robot.tipLinks[0]))
+
+      const fitness = tipPosition.distanceToSquared(goal)
+
+      if (!best.fitness || fitness < best.fitness) {
+        best.fitness = fitness
+        best.q = q
+
+        addSphereAtPose(robot.getLinkPose(robot.tipLinks[0]))
+
+        console.log(`Best fitness: ${best.fitness}`)
+      }
+
+      // console.log(`Tip position: (${tipPosition.x}, ${tipPosition.y}, ${tipPosition.z})`)
+      console.log(`Distance to goal: ${tipPosition.distanceTo(goal)}`)
+
+      if (iteration > 10000) { done = true }
+    }
+
+    console.log(best)
+
+    robot.configuration = best.q
+  })
+
   main()
 })
 
@@ -201,6 +243,26 @@ const material = new THREE.MeshLambertMaterial({ color: 0x00ff00, transparent: t
 const cube = new THREE.Mesh(geometry, material)
 cube.position.set(0, 1.306, 0)
 // scene.add(cube)
+
+const sphereGeometry = new THREE.SphereGeometry(0.01)
+const sphereMaterialRed = new THREE.MeshLambertMaterial({ color: 0xff0000, transparent: true, opacity: 0.8 })
+const sphereMaterialBlue = new THREE.MeshLambertMaterial({ color: 0x0000ff, transparent: true, opacity: 0.8 })
+
+function addSphereAtPose (pose) {
+  const sphere = new THREE.Mesh(sphereGeometry, sphereMaterialRed)
+  sphere.position.setFromMatrixPosition(pose)
+  scene.add(sphere)
+
+  console.log(`Added sphere at (${sphere.position.x}, ${sphere.position.y}, ${sphere.position.z})`)
+}
+
+function addSphereAtXYZ (x, y, z) {
+  const sphere = new THREE.Mesh(sphereGeometry, sphereMaterialBlue)
+  sphere.position.set(x, y, z)
+  scene.add(sphere)
+
+  console.log(`Added sphere at (${x}, ${y}, ${z})`)
+}
 
 animate()
 function animate () {

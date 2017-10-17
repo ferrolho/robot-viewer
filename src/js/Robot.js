@@ -17,6 +17,8 @@ export class Robot {
         }
       }
     }
+
+    this._q = this.zeroConfiguration
   }
 
   printLinkNames () {
@@ -51,6 +53,10 @@ export class Robot {
     })
   }
 
+  get configuration () {
+    return this._q
+  }
+
   get zeroConfiguration () {
     return new Array(this._degreesOfFreedom + 1).join('0').split('').map(parseFloat)
   }
@@ -71,6 +77,8 @@ export class Robot {
   }
 
   set configuration (q) {
+    q = q.slice(0)
+
     try {
       if (q.length !== this.degreesOfFreedom) {
         throw new Error('set configuration (q): q must be the same size as the robot DoF.')

@@ -63462,6 +63462,50 @@ $(document).ready(function () {
     console.log('The cloud now has ' + totalPoints + ' particles.');
   });
 
+  // Reset configuration
+  $('#run-ik-button').click(function () {
+    addSphereAtPose(robot.getLinkPose(robot.tipLinks[0]));
+    addSphereAtXYZ(0, 0.9615, 0.815);
+
+    var goal = new THREE.Vector3(0, 0.9615, 0.815);
+
+    var best = { fitness: undefined, q: undefined };
+
+    var iteration = 0;
+    var done = false;
+    while (!done) {
+      console.log('Iteration ' + iteration++);
+
+      var q = robot.randomConfiguration;
+      robot.configuration = q;
+
+      var tipPosition = new THREE.Vector3();
+      tipPosition.setFromMatrixPosition(robot.getLinkPose(robot.tipLinks[0]));
+
+      var fitness = tipPosition.distanceToSquared(goal);
+
+      if (!best.fitness || fitness < best.fitness) {
+        best.fitness = fitness;
+        best.q = q;
+
+        addSphereAtPose(robot.getLinkPose(robot.tipLinks[0]));
+
+        console.log('Best fitness: ' + best.fitness);
+      }
+
+      // console.log(`Tip position: (${tipPosition.x}, ${tipPosition.y}, ${tipPosition.z})`)
+      console.log('Distance to goal: ' + tipPosition.distanceTo(goal));
+
+      if (iteration > 10000) {
+        done = true;
+      }
+    }
+
+    console.log(best);
+
+    robot.configuration = best.q;
+  });
+
   main();
 });
 
@@ -63508,6 +63552,26 @@ var material = new THREE.MeshLambertMaterial({ color: 0x00ff00, transparent: tru
 var cube = new THREE.Mesh(geometry, material);
 cube.position.set(0, 1.306, 0);
 // scene.add(cube)
+
+var sphereGeometry = new THREE.SphereGeometry(0.01);
+var sphereMaterialRed = new THREE.MeshLambertMaterial({ color: 0xff0000, transparent: true, opacity: 0.8 });
+var sphereMaterialBlue = new THREE.MeshLambertMaterial({ color: 0x0000ff, transparent: true, opacity: 0.8 });
+
+function addSphereAtPose(pose) {
+  var sphere = new THREE.Mesh(sphereGeometry, sphereMaterialRed);
+  sphere.position.setFromMatrixPosition(pose);
+  scene.add(sphere);
+
+  console.log('Added sphere at (' + sphere.position.x + ', ' + sphere.position.y + ', ' + sphere.position.z + ')');
+}
+
+function addSphereAtXYZ(x, y, z) {
+  var sphere = new THREE.Mesh(sphereGeometry, sphereMaterialBlue);
+  sphere.position.set(x, y, z);
+  scene.add(sphere);
+
+  console.log('Added sphere at (' + x + ', ' + y + ', ' + z + ')');
+}
 
 animate();
 function animate() {
@@ -63737,6 +63801,8 @@ var Robot = exports.Robot = function () {
         }
       }
     }
+
+    this._q = this.zeroConfiguration;
   }
 
   _createClass(Robot, [{
@@ -63778,6 +63844,30 @@ var Robot = exports.Robot = function () {
       return this._tipLinks;
     }
   }, {
+    key: 'configuration',
+    get: function get() {
+      return this._q;
+    },
+    set: function set(q) {
+      q = q.slice(0);
+
+      try {
+        if (q.length !== this.degreesOfFreedom) {
+          throw new Error('set configuration (q): q must be the same size as the robot DoF.');
+        } else {
+          for (var prop in this._kinematics.joints) {
+            if (this._kinematics.joints.hasOwnProperty(prop)) {
+              if (!this._kinematics.joints[prop].static) {
+                this._kinematics.setJointValue(prop, q.shift());
+              }
+            }
+          }
+        }
+      } catch (e) {
+        console.log(e.name + ': ' + e.message);
+      }
+    }
+  }, {
     key: 'zeroConfiguration',
     get: function get() {
       return new Array(this._degreesOfFreedom + 1).join('0').split('').map(parseFloat);
@@ -63797,25 +63887,6 @@ var Robot = exports.Robot = function () {
       }
 
       return q;
-    }
-  }, {
-    key: 'configuration',
-    set: function set(q) {
-      try {
-        if (q.length !== this.degreesOfFreedom) {
-          throw new Error('set configuration (q): q must be the same size as the robot DoF.');
-        } else {
-          for (var prop in this._kinematics.joints) {
-            if (this._kinematics.joints.hasOwnProperty(prop)) {
-              if (!this._kinematics.joints[prop].static) {
-                this._kinematics.setJointValue(prop, q.shift());
-              }
-            }
-          }
-        }
-      } catch (e) {
-        console.log(e.name + ': ' + e.message);
-      }
     }
   }]);
 
