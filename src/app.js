@@ -161,40 +161,7 @@ $(document).ready(function () {
     addSphereAtXYZ(0, 0.9615, 0.815)
 
     const goal = new THREE.Vector3(0, 0.9615, 0.815)
-
-    let best = { fitness: undefined, q: undefined }
-
-    let iteration = 0
-    let done = false
-    while (!done) {
-      console.log(`Iteration ${iteration++}`)
-
-      const q = robot.randomConfiguration
-      robot.configuration = q
-
-      const tipPosition = new THREE.Vector3()
-      tipPosition.setFromMatrixPosition(robot.getLinkPose(robot.tipLinks[0]))
-
-      const fitness = tipPosition.distanceToSquared(goal)
-
-      if (!best.fitness || fitness < best.fitness) {
-        best.fitness = fitness
-        best.q = q
-
-        addSphereAtPose(robot.getLinkPose(robot.tipLinks[0]))
-
-        console.log(`Best fitness: ${best.fitness}`)
-      }
-
-      // console.log(`Tip position: (${tipPosition.x}, ${tipPosition.y}, ${tipPosition.z})`)
-      console.log(`Distance to goal: ${tipPosition.distanceTo(goal)}`)
-
-      if (iteration > 10000) { done = true }
-    }
-
-    console.log(best)
-
-    robot.configuration = best.q
+    robot.moveTipToPose(goal, addSphereAtPose)
   })
 
   main()
