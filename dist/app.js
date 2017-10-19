@@ -63468,42 +63468,7 @@ $(document).ready(function () {
     addSphereAtXYZ(0, 0.9615, 0.815);
 
     var goal = new THREE.Vector3(0, 0.9615, 0.815);
-
-    var best = { fitness: undefined, q: undefined };
-
-    var iteration = 0;
-    var done = false;
-    while (!done) {
-      console.log('Iteration ' + iteration++);
-
-      var q = robot.randomConfiguration;
-      robot.configuration = q;
-
-      var tipPosition = new THREE.Vector3();
-      tipPosition.setFromMatrixPosition(robot.getLinkPose(robot.tipLinks[0]));
-
-      var fitness = tipPosition.distanceToSquared(goal);
-
-      if (!best.fitness || fitness < best.fitness) {
-        best.fitness = fitness;
-        best.q = q;
-
-        addSphereAtPose(robot.getLinkPose(robot.tipLinks[0]));
-
-        console.log('Best fitness: ' + best.fitness);
-      }
-
-      // console.log(`Tip position: (${tipPosition.x}, ${tipPosition.y}, ${tipPosition.z})`)
-      console.log('Distance to goal: ' + tipPosition.distanceTo(goal));
-
-      if (iteration > 10000) {
-        done = true;
-      }
-    }
-
-    console.log(best);
-
-    robot.configuration = best.q;
+    robot.moveTipToPose(goal, addSphereAtPose);
   });
 
   main();
@@ -63829,6 +63794,140 @@ var Robot = exports.Robot = function () {
           child.receiveShadow = castShadows;
         }
       });
+    }
+  }, {
+    key: 'moveTipToPose',
+    value: function moveTipToPose(goal, addSphereAtPose) {
+      var _this = this;
+
+      var generationSize = 20;
+      var randsPerGen = 3;
+
+      var generation = [];
+      for (var i = 0; i < generationSize; i++) {
+        var randomQ = this.randomConfiguration;
+        this.configuration = randomQ;
+
+        var tipPosition = new THREE.Vector3();
+        tipPosition.setFromMatrixPosition(this.getLinkPose(this.tipLinks[0]));
+
+        var fitness = tipPosition.distanceToSquared(goal);
+
+        generation.push({ fitness: fitness, q: randomQ });
+      }
+      console.log(generation);
+
+      var iteration = 0;
+      var done = false;
+      while (!done) {
+        console.log('Iteration ' + iteration++);
+
+        // Get the best individual of this generation.
+        var best = generation[0];
+        for (var _i = 1; _i < generation.length; _i++) {
+          if (generation[_i].fitness < best.fitness) {
+            best = generation[_i];
+          }
+        }
+
+        this.configuration = best.q;
+        // addSphereAtPose(this.getLinkPose(this.tipLinks[0]))
+        console.log('Best fitness: ' + best.fitness);
+
+        if (best.fitness <= Math.pow(1e-3, 2)) {
+          console.log('SOLUTION FOUND !');
+          done = true;
+        } else if (iteration > 1e4) {
+          console.log('Iterations limit reached.');
+          done = true;
+        } else {
+          (function () {
+            var selectIndividualWithRoulette = function selectIndividualWithRoulette() {
+              var randomRouletteSpin = THREE.Math.randFloat(0, rouletteSize);
+
+              var selectedIndividualId = -1;
+              for (var _i2 = 0; _i2 < generation.length; _i2++) {
+                var rouletteSliceSize = 1 / generation[_i2].fitness;
+
+                if (randomRouletteSpin < rouletteSliceSize) {
+                  selectedIndividualId = _i2;
+                  break;
+                } else {
+                  randomRouletteSpin -= rouletteSliceSize;
+                }
+              }
+
+              return selectedIndividualId;
+            };
+
+            // Create next generation.
+            var newGeneration = [];
+
+            var rouletteSize = 0;
+            var _iteratorNormalCompletion = true;
+            var _didIteratorError = false;
+            var _iteratorError = undefined;
+
+            try {
+              for (var _iterator = generation[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
+                var individual = _step.value;
+
+                rouletteSize += 1 / individual.fitness;
+              }
+            } catch (err) {
+              _didIteratorError = true;
+              _iteratorError = err;
+            } finally {
+              try {
+                if (!_iteratorNormalCompletion && _iterator.return) {
+                  _iterator.return();
+                }
+              } finally {
+                if (_didIteratorError) {
+                  throw _iteratorError;
+                }
+              }
+            }
+
+            console.log(rouletteSize);
+
+            while (newGeneration.length < generationSize) {
+              var father = generation[selectIndividualWithRoulette()];
+              var mother = generation[selectIndividualWithRoulette()];
+
+              var child = { fitness: undefined, q: [] };
+              for (var gene = 0; gene < father.q.length; gene++) {
+                child.q.push(THREE.Math.randInt(0, 1) ? father.q[gene] : mother.q[gene]);
+              }
+
+              _this.configuration = child.q;
+
+              var _tipPosition = new THREE.Vector3();
+              _tipPosition.setFromMatrixPosition(_this.getLinkPose(_this.tipLinks[0]));
+
+              child.fitness = _tipPosition.distanceToSquared(goal);
+
+              newGeneration.push(child);
+            }
+
+            for (var _i3 = 0; _i3 < randsPerGen; _i3++) {
+              var _randomQ = _this.randomConfiguration;
+              _this.configuration = _randomQ;
+
+              var _tipPosition2 = new THREE.Vector3();
+              _tipPosition2.setFromMatrixPosition(_this.getLinkPose(_this.tipLinks[0]));
+
+              var _fitness = _tipPosition2.distanceToSquared(goal);
+
+              newGeneration.push({ fitness: _fitness, q: _randomQ });
+            }
+
+            console.log(newGeneration);
+
+            generation = newGeneration;
+          })();
+        }
+      }
     }
   }, {
     key: 'degreesOfFreedom',
