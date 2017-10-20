@@ -63801,19 +63801,70 @@ var Robot = exports.Robot = function () {
       var _this = this;
 
       var generationSize = 20;
+      var elitesPerGen = 1;
       var randsPerGen = 3;
 
       var generation = [];
-      for (var i = 0; i < generationSize; i++) {
-        var randomQ = this.randomConfiguration;
-        this.configuration = randomQ;
 
+      // Add current pose to initial generation
+      {
         var tipPosition = new THREE.Vector3();
         tipPosition.setFromMatrixPosition(this.getLinkPose(this.tipLinks[0]));
 
-        var fitness = tipPosition.distanceToSquared(goal);
+        var fitness = 1 / tipPosition.distanceToSquared(goal);
 
-        generation.push({ fitness: fitness, q: randomQ });
+        generation.push({ fitness: fitness, q: this.configuration });
+      }
+
+      // Add noisy current pose to initial generation
+      {
+        var noisyQ = [];
+        var _iteratorNormalCompletion = true;
+        var _didIteratorError = false;
+        var _iteratorError = undefined;
+
+        try {
+          for (var _iterator = this.configuration[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
+            var jointValue = _step.value;
+
+            noisyQ.push(jointValue + THREE.Math.randFloat(-5, 5));
+          }
+        } catch (err) {
+          _didIteratorError = true;
+          _iteratorError = err;
+        } finally {
+          try {
+            if (!_iteratorNormalCompletion && _iterator.return) {
+              _iterator.return();
+            }
+          } finally {
+            if (_didIteratorError) {
+              throw _iteratorError;
+            }
+          }
+        }
+
+        this.configuration = noisyQ;
+
+        var _tipPosition = new THREE.Vector3();
+        _tipPosition.setFromMatrixPosition(this.getLinkPose(this.tipLinks[0]));
+
+        var _fitness = 1 / _tipPosition.distanceToSquared(goal);
+
+        generation.push({ fitness: _fitness, q: this.configuration });
+      }
+
+      // Create a random initial generation
+      while (generation.length < generationSize) {
+        var randomQ = this.randomConfiguration;
+        this.configuration = randomQ;
+
+        var _tipPosition2 = new THREE.Vector3();
+        _tipPosition2.setFromMatrixPosition(this.getLinkPose(this.tipLinks[0]));
+
+        var _fitness2 = 1 / _tipPosition2.distanceToSquared(goal);
+
+        generation.push({ fitness: _fitness2, q: randomQ });
       }
       console.log(generation);
 
@@ -63822,19 +63873,20 @@ var Robot = exports.Robot = function () {
       while (!done) {
         console.log('Iteration ' + iteration++);
 
+        // Sort generation individuals by descending fitness
+        generation.sort(function (a, b) {
+          if (a.fitness > b.fitness) return -1;
+          if (a.fitness < b.fitness) return 1;
+          return 0;
+        });
+
         // Get the best individual of this generation.
         var best = generation[0];
-        for (var _i = 1; _i < generation.length; _i++) {
-          if (generation[_i].fitness < best.fitness) {
-            best = generation[_i];
-          }
-        }
-
         this.configuration = best.q;
         // addSphereAtPose(this.getLinkPose(this.tipLinks[0]))
         console.log('Best fitness: ' + best.fitness);
 
-        if (best.fitness <= Math.pow(1e-3, 2)) {
+        if (best.fitness >= 1 / Math.pow(1e-3, 2)) {
           console.log('SOLUTION FOUND !');
           done = true;
         } else if (iteration > 1e4) {
@@ -63846,11 +63898,11 @@ var Robot = exports.Robot = function () {
               var randomRouletteSpin = THREE.Math.randFloat(0, rouletteSize);
 
               var selectedIndividualId = -1;
-              for (var _i2 = 0; _i2 < generation.length; _i2++) {
-                var rouletteSliceSize = 1 / generation[_i2].fitness;
+              for (var _i = 0; _i < generation.length; _i++) {
+                var rouletteSliceSize = generation[_i].fitness;
 
                 if (randomRouletteSpin < rouletteSliceSize) {
-                  selectedIndividualId = _i2;
+                  selectedIndividualId = _i;
                   break;
                 } else {
                   randomRouletteSpin -= rouletteSliceSize;
@@ -63863,63 +63915,70 @@ var Robot = exports.Robot = function () {
             // Create next generation.
             var newGeneration = [];
 
+            // Transfer elites right away
+            for (var i = 0; i < elitesPerGen; i++) {
+              newGeneration.push(generation[i]);
+            }
+
             var rouletteSize = 0;
-            var _iteratorNormalCompletion = true;
-            var _didIteratorError = false;
-            var _iteratorError = undefined;
+            var _iteratorNormalCompletion2 = true;
+            var _didIteratorError2 = false;
+            var _iteratorError2 = undefined;
 
             try {
-              for (var _iterator = generation[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
-                var individual = _step.value;
+              for (var _iterator2 = generation[Symbol.iterator](), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
+                var individual = _step2.value;
 
-                rouletteSize += 1 / individual.fitness;
+                rouletteSize += individual.fitness;
               }
             } catch (err) {
-              _didIteratorError = true;
-              _iteratorError = err;
+              _didIteratorError2 = true;
+              _iteratorError2 = err;
             } finally {
               try {
-                if (!_iteratorNormalCompletion && _iterator.return) {
-                  _iterator.return();
+                if (!_iteratorNormalCompletion2 && _iterator2.return) {
+                  _iterator2.return();
                 }
               } finally {
-                if (_didIteratorError) {
-                  throw _iteratorError;
+                if (_didIteratorError2) {
+                  throw _iteratorError2;
                 }
               }
             }
 
             console.log(rouletteSize);
 
-            while (newGeneration.length < generationSize) {
+            while (newGeneration.length < generationSize - randsPerGen) {
               var father = generation[selectIndividualWithRoulette()];
               var mother = generation[selectIndividualWithRoulette()];
 
+              var parentsFitness = father.fitness + mother.fitness;
+
               var child = { fitness: undefined, q: [] };
               for (var gene = 0; gene < father.q.length; gene++) {
-                child.q.push(THREE.Math.randInt(0, 1) ? father.q[gene] : mother.q[gene]);
+                child.q.push((father.fitness * father.q[gene] + mother.fitness * mother.q[gene]) / parentsFitness);
               }
 
               _this.configuration = child.q;
 
-              var _tipPosition = new THREE.Vector3();
-              _tipPosition.setFromMatrixPosition(_this.getLinkPose(_this.tipLinks[0]));
+              var _tipPosition3 = new THREE.Vector3();
+              _tipPosition3.setFromMatrixPosition(_this.getLinkPose(_this.tipLinks[0]));
 
-              child.fitness = _tipPosition.distanceToSquared(goal);
+              child.fitness = 1 / _tipPosition3.distanceToSquared(goal);
 
               newGeneration.push(child);
             }
 
-            for (var _i3 = 0; _i3 < randsPerGen; _i3++) {
+            for (var _i2 = 0; _i2 < randsPerGen; _i2++) {
               var _randomQ = _this.randomConfiguration;
               _this.configuration = _randomQ;
 
-              var _tipPosition2 = new THREE.Vector3();
-              _tipPosition2.setFromMatrixPosition(_this.getLinkPose(_this.tipLinks[0]));
+              var _tipPosition4 = new THREE.Vector3();
+              _tipPosition4.setFromMatrixPosition(_this.getLinkPose(_this.tipLinks[0]));
 
-              var _fitness = _tipPosition2.distanceToSquared(goal);
+              var _fitness3 = 1 / _tipPosition4.distanceToSquared(goal);
 
-              newGeneration.push({ fitness: _fitness, q: _randomQ });
+              newGeneration.push({ fitness: _fitness3, q: _randomQ });
             }
 
             console.log(newGeneration);
@@ -63948,6 +64007,8 @@ var Robot = exports.Robot = function () {
       return this._q;
     },
     set: function set(q) {
+      this._q = q.slice(0);
+
       q = q.slice(0);
 
       try {
