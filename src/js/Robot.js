@@ -77,14 +77,12 @@ export class Robot {
   }
 
   set configuration (q) {
-    this._q = q.slice(0)
-
-    q = q.slice(0)
-
     try {
       if (q.length !== this.degreesOfFreedom) {
         throw new Error('set configuration (q): q must be the same size as the robot DoF.')
       } else {
+        this._q = q.slice(0)
+        q = q.slice(0)
         for (const prop in this._kinematics.joints) {
           if (this._kinematics.joints.hasOwnProperty(prop)) {
             if (!this._kinematics.joints[ prop ].static) {
@@ -167,7 +165,7 @@ export class Robot {
       if (best.fitness >= 1 / Math.pow(1e-3, 2)) {
         console.log('SOLUTION FOUND !')
         done = true
-      } else if (iteration > 1e4) {
+      } else if (iteration > 2e3) {
         console.log('Iterations limit reached.')
         done = true
       } else {
@@ -179,6 +177,56 @@ export class Robot {
           newGeneration.push(generation[i])
         }
 
+        // Try to optimize the best one
+        let opt = { fitness: generation[0].fitness, q: generation[0].q }
+        const maxOptIterations = 25
+        const wiggleAmount = 2 * THREE.Math.DEG2RAD
+
+        for (let i = 0; i < maxOptIterations; i++) {
+          const initialFitness = opt.fitness
+          let gains = []
+
+          for (let j = 0; j < this.degreesOfFreedom; j++) {
+            let currentQ = opt.q.slice(0)
+            currentQ[j] += wiggleAmount
+            this.configuration = currentQ
+
+            const tipPosition = new THREE.Vector3()
+            tipPosition.setFromMatrixPosition(this.getLinkPose(this.tipLinks[0]))
+
+            const fitness = 1 / tipPosition.distanceToSquared(goal)
+
+            gains.push(fitness - initialFitness)
+          }
+
+          // choose best joint to wiggle
+          let jointToWiggle = -1
+          let greatestAbsGain = 0
+          for (let j = 0; j < gains.length; j++) {
+            if (Math.abs(gains[j]) > greatestAbsGain) {
+              greatestAbsGain = Math.abs(gains[j])
+              jointToWiggle = j
+            }
+          }
+
+          if (jointToWiggle > -1) {
+            opt.q[jointToWiggle] += (gains[jointToWiggle] > 0 ? 1 : -1) * wiggleAmount
+            this.configuration = opt.q
+
+            const tipPosition = new THREE.Vector3()
+            tipPosition.setFromMatrixPosition(this.getLinkPose(this.tipLinks[0]))
+
+            const fitness = 1 / tipPosition.distanceToSquared(goal)
+
+            opt.fitness = fitness
+          }
+
+          // console.log(gains)
+        }
+
+        // return
+
+        // Start roulette
         let rouletteSize = 0
         for (const individual of generation) {
           rouletteSize += individual.fitness

@@ -63889,7 +63889,7 @@ var Robot = exports.Robot = function () {
         if (best.fitness >= 1 / Math.pow(1e-3, 2)) {
           console.log('SOLUTION FOUND !');
           done = true;
-        } else if (iteration > 1e4) {
+        } else if (iteration > 2e3) {
           console.log('Iterations limit reached.');
           done = true;
         } else {
@@ -63898,11 +63898,11 @@ var Robot = exports.Robot = function () {
               var randomRouletteSpin = THREE.Math.randFloat(0, rouletteSize);
 
               var selectedIndividualId = -1;
-              for (var _i = 0; _i < generation.length; _i++) {
-                var rouletteSliceSize = generation[_i].fitness;
+              for (var _i2 = 0; _i2 < generation.length; _i2++) {
+                var rouletteSliceSize = generation[_i2].fitness;
 
                 if (randomRouletteSpin < rouletteSliceSize) {
-                  selectedIndividualId = _i;
+                  selectedIndividualId = _i2;
                   break;
                 } else {
                   randomRouletteSpin -= rouletteSliceSize;
@@ -63920,6 +63920,56 @@ var Robot = exports.Robot = function () {
               newGeneration.push(generation[i]);
             }
 
+            // Try to optimize the best one
+            var opt = { fitness: generation[0].fitness, q: generation[0].q };
+            var maxOptIterations = 25;
+            var wiggleAmount = 2 * THREE.Math.DEG2RAD;
+
+            for (var _i = 0; _i < maxOptIterations; _i++) {
+              var initialFitness = opt.fitness;
+              var gains = [];
+
+              for (var j = 0; j < _this.degreesOfFreedom; j++) {
+                var currentQ = opt.q.slice(0);
+                currentQ[j] += wiggleAmount;
+                _this.configuration = currentQ;
+
+                var _tipPosition3 = new THREE.Vector3();
+                _tipPosition3.setFromMatrixPosition(_this.getLinkPose(_this.tipLinks[0]));
+
+                var _fitness3 = 1 / _tipPosition3.distanceToSquared(goal);
+
+                gains.push(_fitness3 - initialFitness);
+              }
+
+              // choose best joint to wiggle
+              var jointToWiggle = -1;
+              var greatestAbsGain = 0;
+              for (var _j = 0; _j < gains.length; _j++) {
+                if (Math.abs(gains[_j]) > greatestAbsGain) {
+                  greatestAbsGain = Math.abs(gains[_j]);
+                  jointToWiggle = _j;
+                }
+              }
+
+              if (jointToWiggle > -1) {
+                opt.q[jointToWiggle] += (gains[jointToWiggle] > 0 ? 1 : -1) * wiggleAmount;
+                _this.configuration = opt.q;
+
+                var _tipPosition4 = new THREE.Vector3();
+                _tipPosition4.setFromMatrixPosition(_this.getLinkPose(_this.tipLinks[0]));
+
+                var _fitness4 = 1 / _tipPosition4.distanceToSquared(goal);
+
+                opt.fitness = _fitness4;
+              }
+
+              // console.log(gains)
+            }
+
+            // return
+
+            // Start roulette
             var rouletteSize = 0;
             var _iteratorNormalCompletion2 = true;
             var _didIteratorError2 = false;
@@ -63961,24 +64011,24 @@ var Robot = exports.Robot = function () {
 
               _this.configuration = child.q;
 
-              var _tipPosition3 = new THREE.Vector3();
-              _tipPosition3.setFromMatrixPosition(_this.getLinkPose(_this.tipLinks[0]));
+              var _tipPosition5 = new THREE.Vector3();
+              _tipPosition5.setFromMatrixPosition(_this.getLinkPose(_this.tipLinks[0]));
 
-              child.fitness = 1 / _tipPosition3.distanceToSquared(goal);
+              child.fitness = 1 / _tipPosition5.distanceToSquared(goal);
 
               newGeneration.push(child);
             }
 
-            for (var _i2 = 0; _i2 < randsPerGen; _i2++) {
+            for (var _i3 = 0; _i3 < randsPerGen; _i3++) {
               var _randomQ = _this.randomConfiguration;
               _this.configuration = _randomQ;
 
-              var _tipPosition4 = new THREE.Vector3();
-              _tipPosition4.setFromMatrixPosition(_this.getLinkPose(_this.tipLinks[0]));
+              var _tipPosition6 = new THREE.Vector3();
+              _tipPosition6.setFromMatrixPosition(_this.getLinkPose(_this.tipLinks[0]));
 
-              var _fitness3 = 1 / _tipPosition4.distanceToSquared(goal);
+              var _fitness5 = 1 / _tipPosition6.distanceToSquared(goal);
 
-              newGeneration.push({ fitness: _fitness3, q: _randomQ });
+              newGeneration.push({ fitness: _fitness5, q: _randomQ });
             }
 
             console.log(newGeneration);
@@ -64007,14 +64057,12 @@ var Robot = exports.Robot = function () {
       return this._q;
     },
     set: function set(q) {
-      this._q = q.slice(0);
-
-      q = q.slice(0);
-
       try {
         if (q.length !== this.degreesOfFreedom) {
           throw new Error('set configuration (q): q must be the same size as the robot DoF.');
         } else {
+          this._q = q.slice(0);
+          q = q.slice(0);
           for (var prop in this._kinematics.joints) {
             if (this._kinematics.joints.hasOwnProperty(prop)) {
               if (!this._kinematics.joints[prop].static) {
