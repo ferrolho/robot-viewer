@@ -165,7 +165,7 @@ export class Robot {
       if (best.fitness >= 1 / Math.pow(1e-3, 2)) {
         console.log('SOLUTION FOUND !')
         done = true
-      } else if (iteration > 2e3) {
+      } else if (iteration > 100) {
         console.log('Iterations limit reached.')
         done = true
       } else {
