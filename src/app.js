@@ -9,6 +9,7 @@ const JSZip = require('jszip')
 const JSZipUtils = require('jszip-utils')
 const THREE = require('three')
 const THREEOrbitControls = require('three-orbitcontrols')
+const THREETransformControls = require('three-transformcontrols')
 const TWEEN = require('tween.js')
 const Stats = require('stats.js')
 
@@ -157,18 +158,25 @@ $(document).ready(function () {
 
   // Reset configuration
   $('#run-ik-button').click(function () {
-    addSphereAtPose(robot.getLinkPose(robot.tipLinks[0]))
-    addSphereAtXYZ(0, 0.9615, 0.815)
-
-    const goal = new THREE.Vector3(0, 0.9615, 0.815)
-    robot.moveTipToPose(goal, addSphereAtPose)
+    robot.moveTipToPose(ikGoal.position, addSphereAtPose)
+    // addSphereAtPose(robot.getLinkPose(robot.tipLinks[0]))
   })
 
   main()
 })
 
+let ikGoal
+let ikGoalControl
+
 function main () {
   loadModelZae('abb_irb52_7_120')
+  ikGoal = addSphereAtXYZ(0, 0.9615, 0.815)
+  ikGoalControl = new THREETransformControls(camera, renderer.domElement)
+  ikGoalControl.addEventListener('change', function () {
+    robot.moveTipToPose(ikGoal.position, addSphereAtPose)
+  })
+  ikGoalControl.attach(ikGoal)
+  scene.add(ikGoalControl)
 }
 
 function updateShadowsState () {
@@ -229,6 +237,8 @@ function addSphereAtXYZ (x, y, z) {
   scene.add(sphere)
 
   console.log(`Added sphere at (${x}, ${y}, ${z})`)
+
+  return sphere
 }
 
 animate()

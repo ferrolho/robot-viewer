@@ -20,6 +20,7 @@
     "stats.js": "^0.17.0",
     "three": "^0.87.1",
     "three-orbitcontrols": "^1.2.1",
+    "three-transformcontrols": "^0.78.1",
     "tween.js": "^16.6.0"
   },
   "devDependencies": {
