@@ -64487,11 +64487,11 @@ var camera = new THREE.PerspectiveCamera(75, RENDERER_WIDTH / window.innerHeight
 camera.position.set(1, 1, 1);
 
 // Orbit Controls
-var controls = new THREEOrbitControls(camera, renderer.domElement);
-controls.target = cameraTarget;
-controls.enableKeys = false;
-controls.mouseButtons = { ORBIT: THREE.MOUSE.LEFT, PAN: THREE.MOUSE.MIDDLE, ZOOM: THREE.MOUSE.RIGHT };
-controls.zoomSpeed = 0.8;
+var orbitControls = new THREEOrbitControls(camera, renderer.domElement);
+orbitControls.target = cameraTarget;
+orbitControls.enableKeys = false;
+orbitControls.mouseButtons = { ORBIT: THREE.MOUSE.LEFT, PAN: THREE.MOUSE.MIDDLE, ZOOM: THREE.MOUSE.RIGHT };
+orbitControls.zoomSpeed = 0.8;
 
 camera.lookAt(cameraTarget);
 
@@ -64639,6 +64639,12 @@ function main() {
   ikGoalControl = new THREETransformControls(camera, renderer.domElement);
   ikGoalControl.addEventListener('change', function () {
     robot.moveTipToPose(ikGoal.position, addSphereAtPose);
+  });
+  ikGoalControl.addEventListener('mouseDown', function () {
+    orbitControls.enabled = false;
+  });
+  ikGoalControl.addEventListener('mouseUp', function () {
+    orbitControls.enabled = true;
   });
   ikGoalControl.attach(ikGoal);
   scene.add(ikGoalControl);
