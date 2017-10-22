@@ -55,7 +55,7 @@ camera.lookAt(cameraTarget)
 const scene = new THREE.Scene()
 
 // Global variables
-let castShadows = true
+let castShadows = false
 let robot
 
 $(document).ready(function () {
@@ -158,8 +158,7 @@ $(document).ready(function () {
 
   // Reset configuration
   $('#run-ik-button').click(function () {
-    robot.moveTipToPose(ikGoal.position, addSphereAtPose)
-    // addSphereAtPose(robot.getLinkPose(robot.tipLinks[0]))
+    robot.moveTipToPose(ikGoal)
   })
 
   main()
@@ -173,7 +172,7 @@ function main () {
   ikGoal = addSphereAtXYZ(0, 0.9615, 0.815)
   ikGoalControl = new THREETransformControls(camera, renderer.domElement)
   ikGoalControl.addEventListener('change', function () {
-    robot.moveTipToPose(ikGoal.position, addSphereAtPose)
+    robot.moveTipToPose(ikGoal)
   })
   ikGoalControl.addEventListener('mouseDown', function () {
     orbitControls.enabled = false
@@ -329,3 +328,16 @@ function loadModelZae (model) {
     })
   })
 }
+
+window.addEventListener('keydown', function (event) {
+  switch (event.keyCode) {
+    case 84: // T
+      ikGoalControl.setMode('translate')
+      ikGoalControl.setSpace('world')
+      break
+    case 82: // R
+      ikGoalControl.setMode('rotate')
+      ikGoalControl.setSpace('local')
+      break
+  }
+})

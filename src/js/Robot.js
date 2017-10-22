@@ -96,19 +96,32 @@ export class Robot {
     }
   }
 
-  moveTipToPose (goal, addSphereAtPose) {
-    const generationSize = 20
+  calculateFitness (goal) {
+    const position = new THREE.Vector3()
+    const quaternion = new THREE.Quaternion()
+    const scale = new THREE.Vector3()
+
+    this.getLinkPose(this.tipLinks[0]).decompose(position, quaternion, scale)
+
+    const euler = new THREE.Euler()
+    euler.setFromQuaternion(quaternion)
+
+    const positionDistance = position.distanceToSquared(goal.position)
+    const orientationDistance = goal.rotation.toVector3().distanceToSquared(euler.toVector3())
+
+    return 1 / (positionDistance + orientationDistance)
+  }
+
+  moveTipToPose (goal) {
+    const generationSize = 8
     const elitesPerGen = 1
-    const randsPerGen = 3
+    const randsPerGen = 2
 
     let generation = []
 
     // Add current pose to initial generation
     {
-      const tipPosition = new THREE.Vector3()
-      tipPosition.setFromMatrixPosition(this.getLinkPose(this.tipLinks[0]))
-
-      const fitness = 1 / tipPosition.distanceToSquared(goal)
+      const fitness = this.calculateFitness(goal)
 
       generation.push({ fitness: fitness, q: this.configuration })
     }
@@ -122,10 +135,7 @@ export class Robot {
 
       this.configuration = noisyQ
 
-      const tipPosition = new THREE.Vector3()
-      tipPosition.setFromMatrixPosition(this.getLinkPose(this.tipLinks[0]))
-
-      const fitness = 1 / tipPosition.distanceToSquared(goal)
+      const fitness = this.calculateFitness(goal)
 
       generation.push({ fitness: fitness, q: this.configuration })
     }
@@ -135,10 +145,7 @@ export class Robot {
       const randomQ = this.randomConfiguration
       this.configuration = randomQ
 
-      const tipPosition = new THREE.Vector3()
-      tipPosition.setFromMatrixPosition(this.getLinkPose(this.tipLinks[0]))
-
-      const fitness = 1 / tipPosition.distanceToSquared(goal)
+      const fitness = this.calculateFitness(goal)
 
       generation.push({ fitness: fitness, q: randomQ })
     }
@@ -191,10 +198,7 @@ export class Robot {
             currentQ[j] += wiggleAmount
             this.configuration = currentQ
 
-            const tipPosition = new THREE.Vector3()
-            tipPosition.setFromMatrixPosition(this.getLinkPose(this.tipLinks[0]))
-
-            const fitness = 1 / tipPosition.distanceToSquared(goal)
+            const fitness = this.calculateFitness(goal)
 
             gains.push(fitness - initialFitness)
           }
@@ -213,10 +217,7 @@ export class Robot {
             opt.q[jointToWiggle] += (gains[jointToWiggle] > 0 ? 1 : -1) * wiggleAmount
             this.configuration = opt.q
 
-            const tipPosition = new THREE.Vector3()
-            tipPosition.setFromMatrixPosition(this.getLinkPose(this.tipLinks[0]))
-
-            const fitness = 1 / tipPosition.distanceToSquared(goal)
+            const fitness = this.calculateFitness(goal)
 
             opt.fitness = fitness
           }
@@ -264,10 +265,7 @@ export class Robot {
 
           this.configuration = child.q
 
-          const tipPosition = new THREE.Vector3()
-          tipPosition.setFromMatrixPosition(this.getLinkPose(this.tipLinks[0]))
-
-          child.fitness = 1 / tipPosition.distanceToSquared(goal)
+          child.fitness = this.calculateFitness(goal)
 
           newGeneration.push(child)
         }
@@ -276,10 +274,7 @@ export class Robot {
           const randomQ = this.randomConfiguration
           this.configuration = randomQ
 
-          const tipPosition = new THREE.Vector3()
-          tipPosition.setFromMatrixPosition(this.getLinkPose(this.tipLinks[0]))
-
-          const fitness = 1 / tipPosition.distanceToSquared(goal)
+          const fitness = this.calculateFitness(goal)
 
           newGeneration.push({ fitness: fitness, q: randomQ })
         }

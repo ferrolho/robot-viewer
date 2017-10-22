@@ -64499,7 +64499,7 @@ camera.lookAt(cameraTarget);
 var scene = new THREE.Scene();
 
 // Global variables
-var castShadows = true;
+var castShadows = false;
 var robot = void 0;
 
 $(document).ready(function () {
@@ -64623,8 +64623,7 @@ $(document).ready(function () {
 
   // Reset configuration
   $('#run-ik-button').click(function () {
-    robot.moveTipToPose(ikGoal.position, addSphereAtPose);
-    // addSphereAtPose(robot.getLinkPose(robot.tipLinks[0]))
+    robot.moveTipToPose(ikGoal);
   });
 
   main();
@@ -64638,7 +64637,7 @@ function main() {
   ikGoal = addSphereAtXYZ(0, 0.9615, 0.815);
   ikGoalControl = new THREETransformControls(camera, renderer.domElement);
   ikGoalControl.addEventListener('change', function () {
-    robot.moveTipToPose(ikGoal.position, addSphereAtPose);
+    robot.moveTipToPose(ikGoal);
   });
   ikGoalControl.addEventListener('mouseDown', function () {
     orbitControls.enabled = false;
@@ -64826,6 +64825,21 @@ function loadModelZae(model) {
   });
 }
 
+window.addEventListener('keydown', function (event) {
+  switch (event.keyCode) {
+    case 84:
+      // T
+      ikGoalControl.setMode('translate');
+      ikGoalControl.setSpace('world');
+      break;
+    case 82:
+      // R
+      ikGoalControl.setMode('rotate');
+      ikGoalControl.setSpace('local');
+      break;
+  }
+});
+
 },{"./js/ColladaRobotsList":110,"./js/Detector":111,"./js/Robot.js":112,"./loaders/ColladaLoader2":113,"jszip":21,"jszip-utils":11,"stats.js":101,"three":106,"three-orbitcontrols":104,"three-transformcontrols":105,"tween.js":107}],110:[function(require,module,exports){
 'use strict';
 
@@ -64970,22 +64984,36 @@ var Robot = exports.Robot = function () {
       });
     }
   }, {
+    key: 'calculateFitness',
+    value: function calculateFitness(goal) {
+      var position = new THREE.Vector3();
+      var quaternion = new THREE.Quaternion();
+      var scale = new THREE.Vector3();
+
+      this.getLinkPose(this.tipLinks[0]).decompose(position, quaternion, scale);
+
+      var euler = new THREE.Euler();
+      euler.setFromQuaternion(quaternion);
+
+      var positionDistance = position.distanceToSquared(goal.position);
+      var orientationDistance = goal.rotation.toVector3().distanceToSquared(euler.toVector3());
+
+      return 1 / (positionDistance + orientationDistance);
+    }
+  }, {
     key: 'moveTipToPose',
-    value: function moveTipToPose(goal, addSphereAtPose) {
+    value: function moveTipToPose(goal) {
       var _this = this;
 
-      var generationSize = 20;
+      var generationSize = 8;
       var elitesPerGen = 1;
-      var randsPerGen = 3;
+      var randsPerGen = 2;
 
       var generation = [];
 
       // Add current pose to initial generation
       {
-        var tipPosition = new THREE.Vector3();
-        tipPosition.setFromMatrixPosition(this.getLinkPose(this.tipLinks[0]));
-
-        var fitness = 1 / tipPosition.distanceToSquared(goal);
+        var fitness = this.calculateFitness(goal);
 
         generation.push({ fitness: fitness, q: this.configuration });
       }
@@ -65020,10 +65048,7 @@ var Robot = exports.Robot = function () {
 
         this.configuration = noisyQ;
 
-        var _tipPosition = new THREE.Vector3();
-        _tipPosition.setFromMatrixPosition(this.getLinkPose(this.tipLinks[0]));
-
-        var _fitness = 1 / _tipPosition.distanceToSquared(goal);
+        var _fitness = this.calculateFitness(goal);
 
         generation.push({ fitness: _fitness, q: this.configuration });
       }
@@ -65033,10 +65058,7 @@ var Robot = exports.Robot = function () {
         var randomQ = this.randomConfiguration;
         this.configuration = randomQ;
 
-        var _tipPosition2 = new THREE.Vector3();
-        _tipPosition2.setFromMatrixPosition(this.getLinkPose(this.tipLinks[0]));
-
-        var _fitness2 = 1 / _tipPosition2.distanceToSquared(goal);
+        var _fitness2 = this.calculateFitness(goal);
 
         generation.push({ fitness: _fitness2, q: randomQ });
       }
@@ -65108,10 +65130,7 @@ var Robot = exports.Robot = function () {
                 currentQ[j] += wiggleAmount;
                 _this.configuration = currentQ;
 
-                var _tipPosition3 = new THREE.Vector3();
-                _tipPosition3.setFromMatrixPosition(_this.getLinkPose(_this.tipLinks[0]));
-
-                var _fitness3 = 1 / _tipPosition3.distanceToSquared(goal);
+                var _fitness3 = _this.calculateFitness(goal);
 
                 gains.push(_fitness3 - initialFitness);
               }
@@ -65130,10 +65149,7 @@ var Robot = exports.Robot = function () {
                 opt.q[jointToWiggle] += (gains[jointToWiggle] > 0 ? 1 : -1) * wiggleAmount;
                 _this.configuration = opt.q;
 
-                var _tipPosition4 = new THREE.Vector3();
-                _tipPosition4.setFromMatrixPosition(_this.getLinkPose(_this.tipLinks[0]));
-
-                var _fitness4 = 1 / _tipPosition4.distanceToSquared(goal);
+                var _fitness4 = _this.calculateFitness(goal);
 
                 opt.fitness = _fitness4;
               }
@@ -65185,10 +65201,7 @@ var Robot = exports.Robot = function () {
 
               _this.configuration = child.q;
 
-              var _tipPosition5 = new THREE.Vector3();
-              _tipPosition5.setFromMatrixPosition(_this.getLinkPose(_this.tipLinks[0]));
-
-              child.fitness = 1 / _tipPosition5.distanceToSquared(goal);
+              child.fitness = _this.calculateFitness(goal);
 
               newGeneration.push(child);
             }
@@ -65197,10 +65210,7 @@ var Robot = exports.Robot = function () {
               var _randomQ = _this.randomConfiguration;
               _this.configuration = _randomQ;
 
-              var _tipPosition6 = new THREE.Vector3();
-              _tipPosition6.setFromMatrixPosition(_this.getLinkPose(_this.tipLinks[0]));
-
-              var _fitness5 = 1 / _tipPosition6.distanceToSquared(goal);
+              var _fitness5 = _this.calculateFitness(goal);
 
               newGeneration.push({ fitness: _fitness5, q: _randomQ });
             }
