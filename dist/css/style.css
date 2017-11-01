@@ -7,8 +7,13 @@
  */
 
 .icon-block {
-  padding: 0 15px;
+	padding: 0 15px;
 }
 .icon-block .material-icons {
 	font-size: inherit;
+}
+
+.side-nav li > a.btn {
+	height: 36px;
+	line-height: 36px;
 }
