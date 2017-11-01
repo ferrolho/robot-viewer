@@ -64621,13 +64621,26 @@ $(document).ready(function () {
     console.log('The cloud now has ' + totalPoints + ' particles.');
   });
 
-  // Reset configuration
-  $('#run-ik-button').click(function () {
-    robot.moveTipToPose(ikGoal);
+  // Inverse Kinematics
+
+  $('input[id=genetic-algorithm-switch][type=checkbox]').change(function () {
+    ikState = $(this).is(':checked') ? IkStateEnum.GENETIC_ALGORITHM : IkStateEnum.OFF;
+  });
+
+  $('input[id=pseudo-inverse-switch][type=checkbox]').change(function () {
+    ikState = $(this).is(':checked') ? IkStateEnum.PSEUDO_INVERSE : IkStateEnum.OFF;
   });
 
   main();
 });
+
+var IkStateEnum = Object.freeze({
+  OFF: 0,
+  GENETIC_ALGORITHM: 1,
+  PSEUDO_INVERSE: 2
+});
+
+var ikState = IkStateEnum.OFF;
 
 var ikGoal = void 0;
 var ikGoalControl = void 0;
@@ -64635,9 +64648,13 @@ var ikGoalControl = void 0;
 function main() {
   loadModelZae('abb_irb52_7_120');
   ikGoal = addSphereAtXYZ(0, 0.9615, 0.815);
+  ikGoal.name = 'ikGoal';
   ikGoalControl = new THREETransformControls(camera, renderer.domElement);
+  ikGoalControl.name = 'ikGoalControl';
   ikGoalControl.addEventListener('change', function () {
-    robot.moveTipToPose(ikGoal);
+    if (ikState !== IkStateEnum.OFF) {
+      robot.moveTipToPose(ikGoal);
+    }
   });
   ikGoalControl.addEventListener('mouseDown', function () {
     orbitControls.enabled = false;
@@ -64645,8 +64662,6 @@ function main() {
   ikGoalControl.addEventListener('mouseUp', function () {
     orbitControls.enabled = true;
   });
-  ikGoalControl.attach(ikGoal);
-  scene.add(ikGoalControl);
 }
 
 function updateShadowsState() {
@@ -64704,7 +64719,6 @@ function addSphereAtPose(pose) {
 function addSphereAtXYZ(x, y, z) {
   var sphere = new THREE.Mesh(sphereGeometry, sphereMaterialBlue);
   sphere.position.set(x, y, z);
-  scene.add(sphere);
 
   console.log('Added sphere at (' + x + ', ' + y + ', ' + z + ')');
 
@@ -64714,6 +64728,24 @@ function addSphereAtXYZ(x, y, z) {
 animate();
 function animate() {
   requestAnimationFrame(animate);
+
+  if (ikState === IkStateEnum.OFF) {
+    if (scene.getObjectByName('ikGoal')) {
+      scene.remove(ikGoal);
+    }
+    if (scene.getObjectByName('ikGoalControl')) {
+      ikGoalControl.detach(ikGoal);
+      scene.remove(ikGoalControl);
+    }
+  } else if (ikState !== IkStateEnum.OFF) {
+    if (!scene.getObjectByName('ikGoal')) {
+      scene.add(ikGoal);
+    }
+    if (!scene.getObjectByName('ikGoalControl')) {
+      ikGoalControl.attach(ikGoal);
+      scene.add(ikGoalControl);
+    }
+  }
 
   renderer.render(scene, camera);
   TWEEN.update();
