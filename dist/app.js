@@ -64771,8 +64771,8 @@ function setupModelsList(models) {
     var _loop = function _loop() {
       var model = _step2.value;
 
-      $('#' + model.brand + '-models').append('<li id="' + model.id + '"><a class="waves-effect" href="#!">' + model.name + '</a></li>');
-      $('#' + model.brand + '-models').children().last().click(function () {
+      $('#' + model.brand.toLowerCase() + '-models').append('<li id="' + model.id + '"><a class="waves-effect" href="#!">' + model.name + '</a></li>');
+      $('#' + model.brand.toLowerCase() + '-models').children().last().click(function () {
         loadModelZae(model.id);$('.button-collapse').sideNav('hide');
       });
     };
@@ -64837,20 +64837,28 @@ function sleep(ms) {
   });
 }
 
-function loadModelZae(model) {
-  console.log('Loading ' + model + '...');
+function loadModelZae(modelId) {
+  console.log('Loading ' + modelId + '...');
 
   $('#models-list li').removeClass('active');
-  $('#models-list #' + model).addClass('active');
+  $('#models-list #' + modelId).addClass('active');
 
   $('#loader-modal').modal('open');
 
-  JSZipUtils.getBinaryContent('../collada-robots-collection/' + model + '.zae', function (err, data) {
+  JSZipUtils.getBinaryContent('../collada-robots-collection/' + modelId + '.zae', function (err, data) {
     if (err) throw err;
     JSZip.loadAsync(data).then(function (zip) {
-      zip.file(model + '.dae').async('string').then(function (content) {
-        addCollada(model, loader.parse(content)).then(function (result) {
+      zip.file(modelId + '.dae').async('string').then(function (content) {
+        addCollada(modelId, loader.parse(content)).then(function (result) {
           $('#loader-modal').modal('close');
+
+          var model = $.grep(colladaRobotsList, function (e) {
+            return e.id === modelId;
+          })[0];
+
+          // Fill in HUD information
+          $('#hud-brand').text(model.brand);
+          $('#hud-model').text(model.name);
         });
       });
     });
@@ -64877,7 +64885,7 @@ window.addEventListener('keydown', function (event) {
 
 var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
 
-var ColladaRobotsList = [{ brand: 'abb', name: 'IRB 52', id: 'abb_irb52_7_120', tipLinks: ['tool0'] }, { brand: 'abb', name: 'IRB 120', id: 'abb_irb120_3_58', tipLinks: ['tool0'] }, { brand: 'abb', name: 'IRB 1200', id: 'abb_irb1200_5_90', tipLinks: ['tool0'] }, { brand: 'abb', name: 'IRB 1600', id: 'abb_irb1600_6_12', tipLinks: ['tool0'] }, { brand: 'abb', name: 'IRB 2400', id: 'abb_irb2400', tipLinks: ['tool0'] }, { brand: 'abb', name: 'IRB 2600', id: 'abb_irb2600_12_165', tipLinks: ['tool0'] }, { brand: 'abb', name: 'IRB 4400', id: 'abb_irb4400l_30_243', tipLinks: ['tool0'] }, { brand: 'abb', name: 'IRB 4600', id: 'abb_irb4600_60_205', tipLinks: ['tool0'] }, { brand: 'abb', name: 'IRB 5400', id: 'abb_irb5400', tipLinks: ['tool0'] }, { brand: 'abb', name: 'IRB 6640', id: 'abb_irb6640', tipLinks: ['tool0'] }, { brand: 'abb', name: 'IRB 7600', id: 'abb_irb7600_150_350', tipLinks: ['tool0'] }, { brand: 'clearpath', name: 'Dual Arm Husky', id: 'clearpath_dual_arm_husky', tipLinks: [] }, { brand: 'kawada', name: 'HiroNX', id: 'kawada_hironx', tipLinks: ['LHAND_JOINT0_Link', 'RHAND_JOINT0_Link'] }, { brand: 'kuka', name: 'KR 5 arc', id: 'kuka_kr5_arc', tipLinks: ['tool0'] }, { brand: 'kuka', name: 'KR 10 R1100 sixx', id: 'kuka_kr10r1100sixx', tipLinks: ['tool0'] }, { brand: 'kuka', name: 'KR 16-2', id: 'kuka_kr16_2', tipLinks: ['tool0'] }, { brand: 'kuka', name: 'KR 120 R2500 pro', id: 'kuka_kr120r2500pro', tipLinks: ['tool0'] }, { brand: 'kuka', name: 'LBR iiwa 14 R820', id: 'kuka_lbr_iiwa_14_r820', tipLinks: ['tool0'] }, { brand: 'nasa', name: 'Valkyrie', id: 'nasa_valkyrie', tipLinks: ['leftPalm', 'rightPalm', 'leftFoot', 'rightFoot'] }, { brand: 'universal', name: 'UR3', id: 'universal_robot_ur3', tipLinks: ['tool0'] }, { brand: 'universal', name: 'UR5', id: 'universal_robot_ur5', tipLinks: ['tool0'] }, { brand: 'universal', name: 'UR10', id: 'universal_robot_ur10', tipLinks: ['tool0'] }];
+var ColladaRobotsList = [{ brand: 'ABB', name: 'IRB 52', id: 'abb_irb52_7_120', tipLinks: ['tool0'] }, { brand: 'ABB', name: 'IRB 120', id: 'abb_irb120_3_58', tipLinks: ['tool0'] }, { brand: 'ABB', name: 'IRB 1200', id: 'abb_irb1200_5_90', tipLinks: ['tool0'] }, { brand: 'ABB', name: 'IRB 1600', id: 'abb_irb1600_6_12', tipLinks: ['tool0'] }, { brand: 'ABB', name: 'IRB 2400', id: 'abb_irb2400', tipLinks: ['tool0'] }, { brand: 'ABB', name: 'IRB 2600', id: 'abb_irb2600_12_165', tipLinks: ['tool0'] }, { brand: 'ABB', name: 'IRB 4400', id: 'abb_irb4400l_30_243', tipLinks: ['tool0'] }, { brand: 'ABB', name: 'IRB 4600', id: 'abb_irb4600_60_205', tipLinks: ['tool0'] }, { brand: 'ABB', name: 'IRB 5400', id: 'abb_irb5400', tipLinks: ['tool0'] }, { brand: 'ABB', name: 'IRB 6640', id: 'abb_irb6640', tipLinks: ['tool0'] }, { brand: 'ABB', name: 'IRB 7600', id: 'abb_irb7600_150_350', tipLinks: ['tool0'] }, { brand: 'Clearpath', name: 'Dual Arm Husky', id: 'clearpath_dual_arm_husky', tipLinks: [] }, { brand: 'KAWADA', name: 'HiroNX', id: 'kawada_hironx', tipLinks: ['LHAND_JOINT0_Link', 'RHAND_JOINT0_Link'] }, { brand: 'KUKA', name: 'KR 5 arc', id: 'kuka_kr5_arc', tipLinks: ['tool0'] }, { brand: 'KUKA', name: 'KR 10 R1100 sixx', id: 'kuka_kr10r1100sixx', tipLinks: ['tool0'] }, { brand: 'KUKA', name: 'KR 16-2', id: 'kuka_kr16_2', tipLinks: ['tool0'] }, { brand: 'KUKA', name: 'KR 120 R2500 pro', id: 'kuka_kr120r2500pro', tipLinks: ['tool0'] }, { brand: 'KUKA', name: 'LBR iiwa 14 R820', id: 'kuka_lbr_iiwa_14_r820', tipLinks: ['tool0'] }, { brand: 'NASA', name: 'Valkyrie', id: 'nasa_valkyrie', tipLinks: ['leftPalm', 'rightPalm', 'leftFoot', 'rightFoot'] }, { brand: 'Universal', name: 'UR3', id: 'universal_robot_ur3', tipLinks: ['tool0'] }, { brand: 'Universal', name: 'UR5', id: 'universal_robot_ur5', tipLinks: ['tool0'] }, { brand: 'Universal', name: 'UR10', id: 'universal_robot_ur10', tipLinks: ['tool0'] }];
 
 if ((typeof module === 'undefined' ? 'undefined' : _typeof(module)) === 'object') {
   module.exports = ColladaRobotsList;
