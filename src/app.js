@@ -293,8 +293,8 @@ const colladaRobotsList = require('./js/ColladaRobotsList')
 setupModelsList(colladaRobotsList)
 function setupModelsList (models) {
   for (const model of models) {
-    $(`#${model.brand.toLowerCase()}-models`).append(`<li id="${model.id}"><a class="waves-effect" href="#!">${model.name}</a></li>`)
-    $(`#${model.brand.toLowerCase()}-models`).children().last().click(function () { loadModelZae(model.id); $('.button-collapse').sideNav('hide') })
+    $(`#${model.brand.replace(/\s+/g, '-').toLowerCase()}-models`).append(`<li id="${model.id}"><a class="waves-effect" href="#!">${model.name}</a></li>`)
+    $(`#${model.brand.replace(/\s+/g, '-').toLowerCase()}-models`).children().last().click(function () { loadModelZae(model.id); $('.button-collapse').sideNav('hide') })
   }
 }
 
@@ -353,11 +353,11 @@ function loadModelZae (modelId) {
           const model = $.grep(colladaRobotsList, function (e) { return e.id === modelId })[0]
 
           // Fill in HUD information
-          $('#hud-brand').text(model.brand)
-          $('#hud-model').text(model.name)
-          $('#hud-reach').text(model.reach)
-          $('#hud-payload').text(model.payload)
-          $('#hud-dof').text(model.dof)
+          $('#hud-brand').text(model.brand ? model.brand : '—')
+          $('#hud-model').text(model.name ? model.name : '—')
+          $('#hud-reach').text(model.reach ? model.reach : '—')
+          $('#hud-payload').text(model.payload ? model.payload : '—')
+          $('#hud-dof').text(model.dof ? model.dof : '—')
         })
       })
     })
