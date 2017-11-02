@@ -293,8 +293,8 @@ const colladaRobotsList = require('./js/ColladaRobotsList')
 setupModelsList(colladaRobotsList)
 function setupModelsList (models) {
   for (const model of models) {
-    $(`#${model.brand}-models`).append(`<li id="${model.id}"><a class="waves-effect" href="#!">${model.name}</a></li>`)
-    $(`#${model.brand}-models`).children().last().click(function () { loadModelZae(model.id); $('.button-collapse').sideNav('hide') })
+    $(`#${model.brand.toLowerCase()}-models`).append(`<li id="${model.id}"><a class="waves-effect" href="#!">${model.name}</a></li>`)
+    $(`#${model.brand.toLowerCase()}-models`).children().last().click(function () { loadModelZae(model.id); $('.button-collapse').sideNav('hide') })
   }
 }
 
@@ -335,20 +335,26 @@ function sleep (ms) {
   return new Promise(resolve => setTimeout(resolve, ms))
 }
 
-function loadModelZae (model) {
-  console.log(`Loading ${model}...`)
+function loadModelZae (modelId) {
+  console.log(`Loading ${modelId}...`)
 
   $('#models-list li').removeClass('active')
-  $(`#models-list #${model}`).addClass('active')
+  $(`#models-list #${modelId}`).addClass('active')
 
   $('#loader-modal').modal('open')
 
-  JSZipUtils.getBinaryContent(`../collada-robots-collection/${model}.zae`, function (err, data) {
+  JSZipUtils.getBinaryContent(`../collada-robots-collection/${modelId}.zae`, function (err, data) {
     if (err) throw err
     JSZip.loadAsync(data).then(function (zip) {
-      zip.file(`${model}.dae`).async('string').then(function (content) {
-        addCollada(model, loader.parse(content)).then(function (result) {
+      zip.file(`${modelId}.dae`).async('string').then(function (content) {
+        addCollada(modelId, loader.parse(content)).then(function (result) {
           $('#loader-modal').modal('close')
+
+          const model = $.grep(colladaRobotsList, function (e) { return e.id === modelId })[0]
+
+          // Fill in HUD information
+          $('#hud-brand').text(model.brand)
+          $('#hud-model').text(model.name)
         })
       })
     })
