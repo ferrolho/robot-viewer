@@ -77,24 +77,32 @@ a.button-collapse.top-nav i {
               inset 0 -4px 8px -4px rgba(0, 0, 0, 0.4);
 }
 
+#hud-container {
+  width: 100%;
+  pointer-events:none;
+  position: relative;
+}
+
+#hud-container .row {
+  margin-bottom: initial;
+}
+
 #hud {
   width: 100%;
   margin-right: 0.82rem;
-  pointer-events:none;
   position: absolute;
   bottom: 0;
-  right: 0;
 }
 
-#hud > p {
+#hud p {
   font-style: italic;
   margin: initial;
 }
 
-#hud > h1,
-#hud > h2,
-#hud > h3,
-#hud > h4,
-#hud > h5 {
+#hud h1,
+#hud h2,
+#hud h3,
+#hud h4,
+#hud h5 {
   margin-top: initial;
 }

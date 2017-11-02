@@ -355,6 +355,9 @@ function loadModelZae (modelId) {
           // Fill in HUD information
           $('#hud-brand').text(model.brand)
           $('#hud-model').text(model.name)
+          $('#hud-reach').text(`${model.reach} m`)
+          $('#hud-payload').text(`${model.payload} kg`)
+          $('#hud-dof').text(model.dof)
         })
       })
     })
