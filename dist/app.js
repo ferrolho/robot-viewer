@@ -17336,6 +17336,18 @@ function OrbitControls ( object, domElement ) {
 
 	}
 
+	this.rotateLeft = function( angle ) {
+
+		sphericalDelta.theta -= angle;
+
+	}
+
+	this.rotateUp = function ( angle ) {
+
+		sphericalDelta.phi -= angle;
+
+	}
+
 	var panLeft = function () {
 
 		var v = new THREE.Vector3();
@@ -64449,6 +64461,8 @@ var Detector = require('./js/Detector'); /* global $, Materialize, requestAnimat
 
 if (!Detector.webgl) Detector.addGetWebGLMessage();
 
+var gamepad = new Gamepad();
+
 var JSZip = require('jszip');
 var JSZipUtils = require('jszip-utils');
 var THREE = require('three');
@@ -64881,6 +64895,36 @@ window.addEventListener('keydown', function (event) {
       ikGoalControl.setSpace('local');
       break;
   }
+});
+
+/**
+ * Gamepad-related stuff.
+ */
+
+/*
+ * Connection / Disconnection
+ */
+
+gamepad.on('connect', function (e) {
+  console.log('Controller ' + e.index + ' connected!');
+});
+
+gamepad.on('disconnect', function (e) {
+  console.log('Controller ' + e.index + ' disconnected!');
+});
+
+/*
+ * Stick movements
+ */
+
+gamepad.on('hold', 'stick_axis_left', function (e) {
+  //console.log(e.value)
+});
+
+gamepad.on('hold', 'stick_axis_right', function (e) {
+  orbitControls.rotateLeft(e.value[0] * 0.05);
+  orbitControls.rotateUp(e.value[1] * -0.03);
+  orbitControls.update();
 });
 
 },{"./js/ColladaRobotsList":110,"./js/Detector":111,"./js/Robot.js":112,"./loaders/ColladaLoader2":113,"jszip":21,"jszip-utils":11,"stats.js":101,"three":106,"three-orbitcontrols":104,"three-transformcontrols":105,"tween.js":107}],110:[function(require,module,exports){
