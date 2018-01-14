@@ -1,3 +1,6 @@
 [submodule "collada-robots-collection"]
 	path = collada-robots-collection
 	url = https://github.com/ferrolho/collada-robots-collection.git
+[submodule "gamepad.js"]
+	path = gamepad.js
+	url = https://github.com/neogeek/gamepad.js.git

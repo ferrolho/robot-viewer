@@ -5,6 +5,8 @@ import { Robot } from './js/Robot.js'
 const Detector = require('./js/Detector')
 if (!Detector.webgl) Detector.addGetWebGLMessage()
 
+const gamepad = new Gamepad()
+
 const JSZip = require('jszip')
 const JSZipUtils = require('jszip-utils')
 const THREE = require('three')
@@ -375,4 +377,34 @@ window.addEventListener('keydown', function (event) {
       ikGoalControl.setSpace('local')
       break
   }
+})
+
+/**
+ * Gamepad-related stuff.
+ */
+
+/*
+ * Connection / Disconnection
+ */
+
+gamepad.on('connect', e => {
+  console.log(`Controller ${e.index} connected!`)
+})
+
+gamepad.on('disconnect', e => {
+  console.log(`Controller ${e.index} disconnected!`)
+})
+
+/*
+ * Stick movements
+ */
+
+gamepad.on('hold', 'stick_axis_left', e => {
+  //console.log(e.value)
+})
+
+gamepad.on('hold', 'stick_axis_right', e => {
+  orbitControls.rotateLeft(e.value[0] * 0.05)
+  orbitControls.rotateUp(e.value[1] * -0.03)
+  orbitControls.update()
 })
