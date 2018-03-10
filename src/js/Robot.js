@@ -1,5 +1,7 @@
 const THREE = require('three')
 
+import { IkSolverEnum } from './IkSolver.js'
+
 export class Robot {
   constructor (dae, kinematics, tipLinks) {
     this._dae = dae
@@ -112,7 +114,26 @@ export class Robot {
     return 1 / (positionDistance + orientationDistance)
   }
 
-  moveTipToPose (goal) {
+  moveTipToPose (goal, solver=IkSolverEnum.FABRIK) {
+    switch (solver) {
+      case IkSolverEnum.FABRIK:
+        console.log('Using FABRIK')
+        this.moveTipToPoseWithFABRIK(goal)
+        break
+      case IkSolverEnum.GENETIC_ALGORITHM:
+        console.log('Using GENETIC_ALGORITHM')
+        this.moveTipToPoseWithGeneticAlgorithm(goal)
+        break
+      case IkSolverEnum.PSEUDO_INVERSE:
+        console.log('Using PSEUDO_INVERSE')
+        break
+    }
+  }
+
+  moveTipToPoseWithFABRIK (goal) {
+  }
+
+  moveTipToPoseWithGeneticAlgorithm (goal, verbose=false) {
     const generationSize = 8
     const elitesPerGen = 1
     const randsPerGen = 2
@@ -149,12 +170,15 @@ export class Robot {
 
       generation.push({ fitness: fitness, q: randomQ })
     }
-    console.log(generation)
+
+    if (verbose) console.log(generation)
 
     let iteration = 0
     let done = false
     while (!done) {
-      console.log(`Iteration ${iteration++}`)
+      if (verbose) console.log(`Iteration ${iteration}`)
+
+      iteration++
 
       // Sort generation individuals by descending fitness
       generation.sort(function (a, b) {
@@ -167,13 +191,13 @@ export class Robot {
       let best = generation[0]
       this.configuration = best.q
       // addSphereAtPose(this.getLinkPose(this.tipLinks[0]))
-      console.log(`Best fitness: ${best.fitness}`)
+      if (verbose) console.log(`Best fitness: ${best.fitness}`)
 
       if (best.fitness >= 1 / Math.pow(1e-3, 2)) {
-        console.log('SOLUTION FOUND !')
+        if (verbose) console.log('SOLUTION FOUND !')
         done = true
       } else if (iteration > 100) {
-        console.log('Iterations limit reached.')
+        if (verbose) console.log('Iterations limit reached.')
         done = true
       } else {
         // Create next generation.
@@ -222,7 +246,7 @@ export class Robot {
             opt.fitness = fitness
           }
 
-          // console.log(gains)
+          // if (verbose) console.log(gains)
         }
 
         // return
@@ -232,7 +256,7 @@ export class Robot {
         for (const individual of generation) {
           rouletteSize += individual.fitness
         }
-        console.log(rouletteSize)
+        if (verbose) console.log(rouletteSize)
 
         function selectIndividualWithRoulette () {
           let randomRouletteSpin = THREE.Math.randFloat(0, rouletteSize)
@@ -279,7 +303,7 @@ export class Robot {
           newGeneration.push({ fitness: fitness, q: randomQ })
         }
 
-        console.log(newGeneration)
+        if (verbose) console.log(newGeneration)
 
         generation = newGeneration
       }

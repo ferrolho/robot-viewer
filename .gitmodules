@@ -4,3 +4,6 @@
 [submodule "gamepad.js"]
 	path = gamepad.js
 	url = https://github.com/neogeek/gamepad.js.git
+[submodule "fullik"]
+	path = fullik
+	url = https://github.com/lo-th/fullik.git
