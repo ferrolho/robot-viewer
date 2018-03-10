@@ -1,5 +1,6 @@
 /* global $, Materialize, requestAnimationFrame */
 
+import { IkSolverEnum } from './js/IkSolver.js'
 import { Robot } from './js/Robot.js'
 
 const Detector = require('./js/Detector')
@@ -160,36 +161,36 @@ $(document).ready(function () {
 
   // Inverse Kinematics
 
+  $('input[id=fabrik-switch][type=checkbox]').change(function () {
+    ikSolver = $(this).is(':checked') ? IkSolverEnum.FABRIK : IkSolverEnum.OFF
+  })
+
   $('input[id=genetic-algorithm-switch][type=checkbox]').change(function () {
-    ikState = $(this).is(':checked') ? IkStateEnum.GENETIC_ALGORITHM : IkStateEnum.OFF
+    ikSolver = $(this).is(':checked') ? IkSolverEnum.GENETIC_ALGORITHM : IkSolverEnum.OFF
   })
 
   $('input[id=pseudo-inverse-switch][type=checkbox]').change(function () {
-    ikState = $(this).is(':checked') ? IkStateEnum.PSEUDO_INVERSE : IkStateEnum.OFF
+    ikSolver = $(this).is(':checked') ? IkSolverEnum.PSEUDO_INVERSE : IkSolverEnum.OFF
   })
 
   main()
 })
 
-const IkStateEnum = Object.freeze({
-  OFF: 0,
-  GENETIC_ALGORITHM: 1,
-  PSEUDO_INVERSE: 2
-})
-
-let ikState = IkStateEnum.OFF
+let ikSolver = IkSolverEnum.OFF
 
 let ikGoal
 let ikGoalControl
 
 function main () {
   loadModelZae('abb_irb52_7_120')
+
   ikGoal = addSphereAtXYZ(0, 0.9615, 0.815)
   ikGoal.name = 'ikGoal'
+
   ikGoalControl = new THREETransformControls(camera, renderer.domElement)
   ikGoalControl.name = 'ikGoalControl'
   ikGoalControl.addEventListener('change', function () {
-    if (ikState !== IkStateEnum.OFF) { robot.moveTipToPose(ikGoal) }
+    if (ikSolver !== IkSolverEnum.OFF) { robot.moveTipToPose(ikGoal, ikSolver) }
   })
   ikGoalControl.addEventListener('mouseDown', function () {
     orbitControls.enabled = false
@@ -264,13 +265,13 @@ animate()
 function animate () {
   requestAnimationFrame(animate)
 
-  if (ikState === IkStateEnum.OFF) {
+  if (ikSolver === IkSolverEnum.OFF) {
     if (scene.getObjectByName('ikGoal')) { scene.remove(ikGoal) }
     if (scene.getObjectByName('ikGoalControl')) {
       ikGoalControl.detach(ikGoal)
       scene.remove(ikGoalControl)
     }
-  } else if (ikState !== IkStateEnum.OFF) {
+  } else if (ikSolver !== IkSolverEnum.OFF) {
     if (!scene.getObjectByName('ikGoal')) { scene.add(ikGoal) }
     if (!scene.getObjectByName('ikGoalControl')) {
       ikGoalControl.attach(ikGoal)
@@ -405,6 +406,6 @@ gamepad.on('hold', 'stick_axis_left', e => {
 
 gamepad.on('hold', 'stick_axis_right', e => {
   orbitControls.rotateLeft(e.value[0] * 0.05)
-  orbitControls.rotateUp(e.value[1] * -0.03)
+  orbitControls.rotateUp(e.value[1] * 0.03)
   orbitControls.update()
 })
