@@ -1,14 +1,17 @@
-const THREE = require('three')
-
 import { IkSolverEnum } from './IkSolver.js'
 
+const THREE = require('three')
+const Kinematics = require('kinematics').default
+
 export class Robot {
-  constructor (dae, kinematics, tipLinks) {
+  constructor (dae, kinematics, tipLinks, geometryKin) {
     this._dae = dae
     this._kinematics = kinematics
     this._tipLinks = tipLinks
 
     // this.printLinkNames()
+
+    // console.log(this._dae)
 
     this._degreesOfFreedom = 0
 
@@ -21,9 +24,15 @@ export class Robot {
     }
 
     this._q = this.zeroConfiguration
+
+    this.geometryKin = geometryKin
+    this.links = ['base', 'link_1', 'link_2', 'link_3', 'link_4', 'link_5', 'link_6']
+
+    this.readyFABRIK = false
   }
 
   printLinkNames () {
+    console.log('.dae links:')
     this._dae.traverse(function (child) {
       if (child instanceof THREE.Group) {
         console.log(child.name)
@@ -114,11 +123,10 @@ export class Robot {
     return 1 / (positionDistance + orientationDistance)
   }
 
-  moveTipToPose (goal, solver=IkSolverEnum.FABRIK) {
-    switch (solver) {
+  moveTipToPose (goal, solverType = IkSolverEnum.FABRIK, scene = undefined) {
+    switch (solverType) {
       case IkSolverEnum.FABRIK:
-        console.log('Using FABRIK')
-        this.moveTipToPoseWithFABRIK(goal)
+        this.moveTipToPoseWithFABRIK(goal, scene)
         break
       case IkSolverEnum.GENETIC_ALGORITHM:
         console.log('Using GENETIC_ALGORITHM')
@@ -130,10 +138,82 @@ export class Robot {
     }
   }
 
-  moveTipToPoseWithFABRIK (goal) {
+  initFABRIK (scene) {
+    console.log('Initializing FABRIK')
+
+    this.configuration = this.zeroConfiguration
+
+    // console.log(this._kinematics.joints)
+
+    var linegeometry = new THREE.Geometry()
+
+    const material = new THREE.MeshLambertMaterial({ color: 0xff0000 })
+    const sphereGeometry = new THREE.SphereGeometry(0.01)
+
+    let points = [new THREE.Vector3()]
+
+    for (const point of this.geometryKin) {
+      let newPoint = new THREE.Vector3(point[0], point[1], point[2])
+      newPoint.add(points[points.length - 1])
+      points.push(newPoint)
+    }
+
+    console.log('POINTS')
+    console.log(points)
+
+    for (const point of points) {
+      linegeometry.vertices.push(point)
+
+      const sphere = new THREE.Mesh(sphereGeometry, material)
+      sphere.position.set(point.x, point.y, point.z)
+      scene.add(sphere)
+    }
+
+    // for (const link of this.links) {
+    //   const matrix = this.getLinkPose(link)
+
+    //   // geometry.push((position.sub(prev_pos)).toArray())
+
+    //   const position = new THREE.Vector3().setFromMatrixPosition(matrix)
+    //   linegeometry.vertices.push(position)
+
+    //   const sphere = new THREE.Mesh(sphereGeometry, material)
+    //   sphere.position.setFromMatrixPosition(matrix)
+    //   scene.add(sphere)
+
+    //   console.log(position)
+    // }
+
+    var line = new THREE.Line(linegeometry, material)
+    scene.add(line)
+
+      // console.log(`Position: ${position.toArray()}`)
+      // console.log(`V${i - 1}: ${position.sub(prev_pos).toArray()}`)
+
+    // console.log(geometry)
+
+    this.robotKin = new Kinematics(this.geometryKin)
+
+    this.readyFABRIK = true
   }
 
-  moveTipToPoseWithGeneticAlgorithm (goal, verbose=false) {
+  moveTipToPoseWithFABRIK (goal, scene) {
+    if (!this.readyFABRIK) this.initFABRIK(scene)
+
+    const result = this.robotKin.inverse(
+      goal.position.x, goal.position.y, goal.position.z,
+      goal.rotation.x, goal.rotation.y, goal.rotation.z)
+
+    //console.log(result)
+
+    if (!result.some(x => Number.isNaN(x))) {
+      for (let i = 0; i < result.length; i++)
+        result[i] *= 57.2958
+      this.configuration = result
+    }
+  }
+
+  moveTipToPoseWithGeneticAlgorithm (goal, verbose = false) {
     const generationSize = 8
     const elitesPerGen = 1
     const randsPerGen = 2
@@ -147,7 +227,7 @@ export class Robot {
       generation.push({ fitness: fitness, q: this.configuration })
     }
 
-    // Add noisy current pose to initial generation
+    // Add noisy current pose to initial generation (5 degrees noise)
     {
       const noisyQ = []
       for (const jointValue of this.configuration) {
