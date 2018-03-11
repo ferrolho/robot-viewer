@@ -17730,18 +17730,6 @@ function OrbitControls ( object, domElement ) {
 
 	}
 
-	this.rotateLeft = function( angle ) {
-
-		sphericalDelta.theta -= angle;
-
-	}
-
-	this.rotateUp = function ( angle ) {
-
-		sphericalDelta.phi -= angle;
-
-	}
-
 	var panLeft = function () {
 
 		var v = new THREE.Vector3();
@@ -65034,8 +65022,8 @@ $(document).ready(function () {
 
   // Inverse Kinematics
 
-  $('input[id=fabrik-switch][type=checkbox]').change(function () {
-    ikSolver = $(this).is(':checked') ? _IkSolver.IkSolverEnum.FABRIK : _IkSolver.IkSolverEnum.OFF;
+  $('input[id=ik-switch][type=checkbox]').change(function () {
+    ikSolver = $(this).is(':checked') ? _IkSolver.IkSolverEnum.IK : _IkSolver.IkSolverEnum.OFF;
   });
 
   $('input[id=genetic-algorithm-switch][type=checkbox]').change(function () {
@@ -65055,7 +65043,7 @@ var ikGoal = void 0;
 var ikGoalControl = void 0;
 
 function main() {
-  //loadModelZae('abb_irb52_7_120')
+  // loadModelZae('abb_irb52_7_120')
   loadModelZae('abb_irb120_3_58');
 
   ikGoal = addSphereAtXYZ(0.4, 0.5, 0);
@@ -65222,8 +65210,8 @@ async function addCollada(modelId, collada) {
       // Most of the models do not have normals
       child.material.flatShading = true;
 
-      child.material.transparent = true;
-      child.material.opacity = 0.3;
+      // child.material.transparent = true
+      // child.material.opacity = 0.3
     }
   });
 
@@ -65241,33 +65229,9 @@ async function addCollada(modelId, collada) {
     return e.id === modelId;
   })[0].tipLinks;
 
-  console.log(collada.library.kinematicsModels.kmodel0.links[0]);
-  explore(collada.library.kinematicsModels.kmodel0.links[0].attachments[1]);
-  console.log(geometryKin);
-
-  robot = new _Robot.Robot(dae, collada.kinematics, tipLinks, geometryKin);
+  robot = new _Robot.Robot(scene, dae, collada, tipLinks);
 
   updateShadowsState();
-}
-
-var geometryKin = [[0, 0.29, 0], [0, 0.27, 0], [0.15, 0.07, 0], [0.15, 0, 0], [0, 0, 0] // -0.072
-];
-
-function explore(tree) {
-  if (tree) {
-    console.log(tree.joint);
-    console.log(tree.transforms[0].obj);
-
-    //if (geometryKin.length < 5) {
-    //  if (geometryKin.length < 4) {
-    //    geometryKin.push(tree.transforms[0].obj.toArray())
-    //  } else {
-    //    geometryKin.push([0, 0, 0])
-    //  }
-    //}
-
-    explore(tree.links[0].attachments[0]);
-  }
 }
 
 function loadModelZae(modelId) {
@@ -65436,7 +65400,7 @@ Object.defineProperty(exports, "__esModule", {
 });
 var IkSolverEnum = exports.IkSolverEnum = Object.freeze({
   OFF: 0,
-  FABRIK: 1,
+  IK: 1,
   GENETIC_ALGORITHM: 2,
   PSEUDO_INVERSE: 3
 });
@@ -65459,36 +65423,151 @@ var THREE = require('three');
 var Kinematics = require('kinematics').default;
 
 var Robot = exports.Robot = function () {
-  function Robot(dae, kinematics, tipLinks, geometryKin) {
+  function Robot(scene, dae, collada, tipLinks) {
     _classCallCheck(this, Robot);
 
+    this._scene = scene;
     this._dae = dae;
-    this._kinematics = kinematics;
+    this._kinematics = collada.kinematics;
     this._tipLinks = tipLinks;
 
-    // this.printLinkNames()
-
-    // console.log(this._dae)
-
     this._degreesOfFreedom = 0;
+    this._joints = [];
 
     for (var prop in this._kinematics.joints) {
       if (this._kinematics.joints.hasOwnProperty(prop)) {
         if (!this._kinematics.joints[prop].static) {
           this._degreesOfFreedom++;
+          this._joints.push(prop);
         }
       }
     }
 
+    this._kinematicsGeometry = [];
+    this.computeKinematicsGeometry(collada.library.kinematicsModels.kmodel0);
+    // this.debugKinematicsGeometry(this._kinematicsGeometry)
+    this.robotKin = new Kinematics(this._kinematicsGeometry);
+
     this._q = this.zeroConfiguration;
 
-    this.geometryKin = geometryKin;
-    this.links = ['base', 'link_1', 'link_2', 'link_3', 'link_4', 'link_5', 'link_6'];
-
-    this.readyFABRIK = false;
+    // this.printLinkNames()
+    // this.printJointNames()
   }
 
   _createClass(Robot, [{
+    key: 'computeKinematicsGeometry',
+    value: function computeKinematicsGeometry(tree) {
+      if (tree) {
+        var _iteratorNormalCompletion = true;
+        var _didIteratorError = false;
+        var _iteratorError = undefined;
+
+        try {
+          for (var _iterator = tree.links[0].attachments[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
+            var attachment = _step.value;
+
+            if (this._joints.slice(1).includes(attachment.joint)) {
+              var v = attachment.transforms[0].obj;
+
+              if (this._kinematicsGeometry.length < 4) {
+                this._kinematicsGeometry.push([v.x, v.z, v.y]);
+              } else {
+                this._kinematicsGeometry.push([0.0, v.x + v.y + v.z, 0.0]);
+                return;
+              }
+            }
+
+            this.computeKinematicsGeometry(attachment);
+          }
+        } catch (err) {
+          _didIteratorError = true;
+          _iteratorError = err;
+        } finally {
+          try {
+            if (!_iteratorNormalCompletion && _iterator.return) {
+              _iterator.return();
+            }
+          } finally {
+            if (_didIteratorError) {
+              throw _iteratorError;
+            }
+          }
+        }
+      }
+    }
+  }, {
+    key: 'debugKinematicsGeometry',
+    value: function debugKinematicsGeometry(scene) {
+      var linegeometry = new THREE.Geometry();
+
+      var material = new THREE.MeshLambertMaterial({ color: 0xff0000 });
+      var sphereGeometry = new THREE.SphereGeometry(0.01);
+
+      var points = [new THREE.Vector3()];
+
+      var _iteratorNormalCompletion2 = true;
+      var _didIteratorError2 = false;
+      var _iteratorError2 = undefined;
+
+      try {
+        for (var _iterator2 = this._kinematicsGeometry[Symbol.iterator](), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
+          var point = _step2.value;
+
+          var newPoint = new THREE.Vector3(point[0], point[1], point[2]);
+          newPoint.add(points[points.length - 1]);
+          points.push(newPoint);
+        }
+
+        // console.log('POINTS')
+        // console.log(points)
+      } catch (err) {
+        _didIteratorError2 = true;
+        _iteratorError2 = err;
+      } finally {
+        try {
+          if (!_iteratorNormalCompletion2 && _iterator2.return) {
+            _iterator2.return();
+          }
+        } finally {
+          if (_didIteratorError2) {
+            throw _iteratorError2;
+          }
+        }
+      }
+
+      var _iteratorNormalCompletion3 = true;
+      var _didIteratorError3 = false;
+      var _iteratorError3 = undefined;
+
+      try {
+        for (var _iterator3 = points[Symbol.iterator](), _step3; !(_iteratorNormalCompletion3 = (_step3 = _iterator3.next()).done); _iteratorNormalCompletion3 = true) {
+          var _point = _step3.value;
+
+          linegeometry.vertices.push(_point);
+
+          var sphere = new THREE.Mesh(sphereGeometry, material);
+          sphere.position.set(_point.x, _point.y, _point.z);
+          this._scene.add(sphere);
+        }
+      } catch (err) {
+        _didIteratorError3 = true;
+        _iteratorError3 = err;
+      } finally {
+        try {
+          if (!_iteratorNormalCompletion3 && _iterator3.return) {
+            _iterator3.return();
+          }
+        } finally {
+          if (_didIteratorError3) {
+            throw _iteratorError3;
+          }
+        }
+      }
+
+      var line = new THREE.Line(linegeometry, material);
+      this._scene.add(line);
+    }
+  }, {
     key: 'printLinkNames',
     value: function printLinkNames() {
       console.log('.dae links:');
@@ -65497,6 +65576,11 @@ var Robot = exports.Robot = function () {
           console.log(child.name);
         }
       });
+    }
+  }, {
+    key: 'printJointNames',
+    value: function printJointNames() {
+      console.log(this._joints);
     }
   }, {
     key: 'getLinkPose',
@@ -65534,12 +65618,11 @@ var Robot = exports.Robot = function () {
   }, {
     key: 'moveTipToPose',
     value: function moveTipToPose(goal) {
-      var solverType = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : _IkSolver.IkSolverEnum.FABRIK;
-      var scene = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : undefined;
+      var solverType = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : _IkSolver.IkSolverEnum.IK;
 
       switch (solverType) {
-        case _IkSolver.IkSolverEnum.FABRIK:
-          this.moveTipToPoseWithFABRIK(goal, scene);
+        case _IkSolver.IkSolverEnum.IK:
+          this.moveTipToPoseWithIK(goal);
           break;
         case _IkSolver.IkSolverEnum.GENETIC_ALGORITHM:
           console.log('Using GENETIC_ALGORITHM');
@@ -65551,122 +65634,16 @@ var Robot = exports.Robot = function () {
       }
     }
   }, {
-    key: 'initFABRIK',
-    value: function initFABRIK(scene) {
-      console.log('Initializing FABRIK');
-
-      this.configuration = this.zeroConfiguration;
-
-      // console.log(this._kinematics.joints)
-
-      var linegeometry = new THREE.Geometry();
-
-      var material = new THREE.MeshLambertMaterial({ color: 0xff0000 });
-      var sphereGeometry = new THREE.SphereGeometry(0.01);
-
-      var points = [new THREE.Vector3()];
-
-      var _iteratorNormalCompletion = true;
-      var _didIteratorError = false;
-      var _iteratorError = undefined;
-
-      try {
-        for (var _iterator = this.geometryKin[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
-          var point = _step.value;
-
-          var newPoint = new THREE.Vector3(point[0], point[1], point[2]);
-          newPoint.add(points[points.length - 1]);
-          points.push(newPoint);
-        }
-      } catch (err) {
-        _didIteratorError = true;
-        _iteratorError = err;
-      } finally {
-        try {
-          if (!_iteratorNormalCompletion && _iterator.return) {
-            _iterator.return();
-          }
-        } finally {
-          if (_didIteratorError) {
-            throw _iteratorError;
-          }
-        }
-      }
-
-      console.log('POINTS');
-      console.log(points);
-
-      var _iteratorNormalCompletion2 = true;
-      var _didIteratorError2 = false;
-      var _iteratorError2 = undefined;
-
-      try {
-        for (var _iterator2 = points[Symbol.iterator](), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
-          var _point = _step2.value;
-
-          linegeometry.vertices.push(_point);
-
-          var sphere = new THREE.Mesh(sphereGeometry, material);
-          sphere.position.set(_point.x, _point.y, _point.z);
-          scene.add(sphere);
-        }
-
-        // for (const link of this.links) {
-        //   const matrix = this.getLinkPose(link)
-
-        //   // geometry.push((position.sub(prev_pos)).toArray())
-
-        //   const position = new THREE.Vector3().setFromMatrixPosition(matrix)
-        //   linegeometry.vertices.push(position)
-
-        //   const sphere = new THREE.Mesh(sphereGeometry, material)
-        //   sphere.position.setFromMatrixPosition(matrix)
-        //   scene.add(sphere)
-
-        //   console.log(position)
-        // }
-      } catch (err) {
-        _didIteratorError2 = true;
-        _iteratorError2 = err;
-      } finally {
-        try {
-          if (!_iteratorNormalCompletion2 && _iterator2.return) {
-            _iterator2.return();
-          }
-        } finally {
-          if (_didIteratorError2) {
-            throw _iteratorError2;
-          }
-        }
-      }
-
-      var line = new THREE.Line(linegeometry, material);
-      scene.add(line);
-
-      // console.log(`Position: ${position.toArray()}`)
-      // console.log(`V${i - 1}: ${position.sub(prev_pos).toArray()}`)
-
-      // console.log(geometry)
-
-      this.robotKin = new Kinematics(this.geometryKin);
-
-      this.readyFABRIK = true;
-    }
-  }, {
-    key: 'moveTipToPoseWithFABRIK',
-    value: function moveTipToPoseWithFABRIK(goal, scene) {
-      if (!this.readyFABRIK) this.initFABRIK(scene);
-
-      var result = this.robotKin.inverse(goal.position.x, goal.position.y, goal.position.z, goal.rotation.x, goal.rotation.y, goal.rotation.z);
-
-      //console.log(result)
+    key: 'moveTipToPoseWithIK',
+    value: function moveTipToPoseWithIK(goal) {
+      var result = this.robotKin.inverse(goal.position.x, goal.position.y, -goal.position.z, goal.rotation.x, goal.rotation.y, -goal.rotation.z);
 
       if (!result.some(function (x) {
         return Number.isNaN(x);
       })) {
-        for (var i = 0; i < result.length; i++) {
-          result[i] *= 57.2958;
-        }this.configuration = result;
+        this.configuration = result.map(function (x) {
+          return -x * THREE.Math.RAD2DEG;
+        });
       }
     }
   }, {
@@ -65692,27 +65669,27 @@ var Robot = exports.Robot = function () {
       // Add noisy current pose to initial generation (5 degrees noise)
       {
         var noisyQ = [];
-        var _iteratorNormalCompletion3 = true;
-        var _didIteratorError3 = false;
-        var _iteratorError3 = undefined;
+        var _iteratorNormalCompletion4 = true;
+        var _didIteratorError4 = false;
+        var _iteratorError4 = undefined;
 
         try {
-          for (var _iterator3 = this.configuration[Symbol.iterator](), _step3; !(_iteratorNormalCompletion3 = (_step3 = _iterator3.next()).done); _iteratorNormalCompletion3 = true) {
-            var jointValue = _step3.value;
+          for (var _iterator4 = this.configuration[Symbol.iterator](), _step4; !(_iteratorNormalCompletion4 = (_step4 = _iterator4.next()).done); _iteratorNormalCompletion4 = true) {
+            var jointValue = _step4.value;
 
             noisyQ.push(jointValue + THREE.Math.randFloat(-5, 5));
           }
         } catch (err) {
-          _didIteratorError3 = true;
-          _iteratorError3 = err;
+          _didIteratorError4 = true;
+          _iteratorError4 = err;
         } finally {
           try {
-            if (!_iteratorNormalCompletion3 && _iterator3.return) {
-              _iterator3.return();
+            if (!_iteratorNormalCompletion4 && _iterator4.return) {
+              _iterator4.return();
             }
           } finally {
-            if (_didIteratorError3) {
-              throw _iteratorError3;
+            if (_didIteratorError4) {
+              throw _iteratorError4;
             }
           }
         }
@@ -65835,27 +65812,27 @@ var Robot = exports.Robot = function () {
 
             // Start roulette
             var rouletteSize = 0;
-            var _iteratorNormalCompletion4 = true;
-            var _didIteratorError4 = false;
-            var _iteratorError4 = undefined;
+            var _iteratorNormalCompletion5 = true;
+            var _didIteratorError5 = false;
+            var _iteratorError5 = undefined;
 
             try {
-              for (var _iterator4 = generation[Symbol.iterator](), _step4; !(_iteratorNormalCompletion4 = (_step4 = _iterator4.next()).done); _iteratorNormalCompletion4 = true) {
-                var individual = _step4.value;
+              for (var _iterator5 = generation[Symbol.iterator](), _step5; !(_iteratorNormalCompletion5 = (_step5 = _iterator5.next()).done); _iteratorNormalCompletion5 = true) {
+                var individual = _step5.value;
 
                 rouletteSize += individual.fitness;
               }
             } catch (err) {
-              _didIteratorError4 = true;
-              _iteratorError4 = err;
+              _didIteratorError5 = true;
+              _iteratorError5 = err;
             } finally {
               try {
-                if (!_iteratorNormalCompletion4 && _iterator4.return) {
-                  _iterator4.return();
+                if (!_iteratorNormalCompletion5 && _iterator5.return) {
+                  _iterator5.return();
                 }
               } finally {
-                if (_didIteratorError4) {
-                  throw _iteratorError4;
+                if (_didIteratorError5) {
+                  throw _iteratorError5;
                 }
               }
             }
