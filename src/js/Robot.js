@@ -4,31 +4,81 @@ const THREE = require('three')
 const Kinematics = require('kinematics').default
 
 export class Robot {
-  constructor (dae, kinematics, tipLinks, geometryKin) {
+  constructor (scene, dae, collada, tipLinks) {
+    this._scene = scene
     this._dae = dae
-    this._kinematics = kinematics
+    this._kinematics = collada.kinematics
     this._tipLinks = tipLinks
 
-    // this.printLinkNames()
-
-    // console.log(this._dae)
-
     this._degreesOfFreedom = 0
+    this._joints = []
 
     for (const prop in this._kinematics.joints) {
       if (this._kinematics.joints.hasOwnProperty(prop)) {
-        if (!this._kinematics.joints[ prop ].static) {
+        if (!this._kinematics.joints[prop].static) {
           this._degreesOfFreedom++
+          this._joints.push(prop)
         }
       }
     }
 
+    this._kinematicsGeometry = []
+    this.computeKinematicsGeometry(collada.library.kinematicsModels.kmodel0)
+    // this.debugKinematicsGeometry(this._kinematicsGeometry)
+    this.robotKin = new Kinematics(this._kinematicsGeometry)
+
     this._q = this.zeroConfiguration
 
-    this.geometryKin = geometryKin
-    this.links = ['base', 'link_1', 'link_2', 'link_3', 'link_4', 'link_5', 'link_6']
+    // this.printLinkNames()
+    // this.printJointNames()
+  }
 
-    this.readyFABRIK = false
+  computeKinematicsGeometry (tree) {
+    if (tree) {
+      for (const attachment of tree.links[0].attachments) {
+        if (this._joints.slice(1).includes(attachment.joint)) {
+          const v = attachment.transforms[0].obj
+
+          if (this._kinematicsGeometry.length < 4) {
+            this._kinematicsGeometry.push([v.x, v.z, v.y])
+          } else {
+            this._kinematicsGeometry.push([0.0, v.x + v.y + v.z, 0.0])
+            return
+          }
+        }
+
+        this.computeKinematicsGeometry(attachment)
+      }
+    }
+  }
+
+  debugKinematicsGeometry (scene) {
+    var linegeometry = new THREE.Geometry()
+
+    const material = new THREE.MeshLambertMaterial({ color: 0xff0000 })
+    const sphereGeometry = new THREE.SphereGeometry(0.01)
+
+    let points = [new THREE.Vector3()]
+
+    for (const point of this._kinematicsGeometry) {
+      let newPoint = new THREE.Vector3(point[0], point[1], point[2])
+      newPoint.add(points[points.length - 1])
+      points.push(newPoint)
+    }
+
+    // console.log('POINTS')
+    // console.log(points)
+
+    for (const point of points) {
+      linegeometry.vertices.push(point)
+
+      const sphere = new THREE.Mesh(sphereGeometry, material)
+      sphere.position.set(point.x, point.y, point.z)
+      this._scene.add(sphere)
+    }
+
+    var line = new THREE.Line(linegeometry, material)
+    this._scene.add(line)
   }
 
   printLinkNames () {
@@ -38,6 +88,10 @@ export class Robot {
         console.log(child.name)
       }
     })
+  }
+
+  printJointNames () {
+    console.log(this._joints)
   }
 
   get degreesOfFreedom () {
@@ -77,7 +131,7 @@ export class Robot {
 
     for (const prop in this._kinematics.joints) {
       if (this._kinematics.joints.hasOwnProperty(prop)) {
-        const joint = this._kinematics.joints[ prop ]
+        const joint = this._kinematics.joints[prop]
         if (!joint.static) {
           q.push(THREE.Math.randFloat(joint.limits.min, joint.limits.max))
         }
@@ -96,7 +150,7 @@ export class Robot {
         q = q.slice(0)
         for (const prop in this._kinematics.joints) {
           if (this._kinematics.joints.hasOwnProperty(prop)) {
-            if (!this._kinematics.joints[ prop ].static) {
+            if (!this._kinematics.joints[prop].static) {
               this._kinematics.setJointValue(prop, q.shift())
             }
           }
@@ -123,10 +177,10 @@ export class Robot {
     return 1 / (positionDistance + orientationDistance)
   }
 
-  moveTipToPose (goal, solverType = IkSolverEnum.FABRIK, scene = undefined) {
+  moveTipToPose (goal, solverType = IkSolverEnum.IK) {
     switch (solverType) {
-      case IkSolverEnum.FABRIK:
-        this.moveTipToPoseWithFABRIK(goal, scene)
+      case IkSolverEnum.IK:
+        this.moveTipToPoseWithIK(goal)
         break
       case IkSolverEnum.GENETIC_ALGORITHM:
         console.log('Using GENETIC_ALGORITHM')
@@ -138,78 +192,13 @@ export class Robot {
     }
   }
 
-  initFABRIK (scene) {
-    console.log('Initializing FABRIK')
-
-    this.configuration = this.zeroConfiguration
-
-    // console.log(this._kinematics.joints)
-
-    var linegeometry = new THREE.Geometry()
-
-    const material = new THREE.MeshLambertMaterial({ color: 0xff0000 })
-    const sphereGeometry = new THREE.SphereGeometry(0.01)
-
-    let points = [new THREE.Vector3()]
-
-    for (const point of this.geometryKin) {
-      let newPoint = new THREE.Vector3(point[0], point[1], point[2])
-      newPoint.add(points[points.length - 1])
-      points.push(newPoint)
-    }
-
-    console.log('POINTS')
-    console.log(points)
-
-    for (const point of points) {
-      linegeometry.vertices.push(point)
-
-      const sphere = new THREE.Mesh(sphereGeometry, material)
-      sphere.position.set(point.x, point.y, point.z)
-      scene.add(sphere)
-    }
-
-    // for (const link of this.links) {
-    //   const matrix = this.getLinkPose(link)
-
-    //   // geometry.push((position.sub(prev_pos)).toArray())
-
-    //   const position = new THREE.Vector3().setFromMatrixPosition(matrix)
-    //   linegeometry.vertices.push(position)
-
-    //   const sphere = new THREE.Mesh(sphereGeometry, material)
-    //   sphere.position.setFromMatrixPosition(matrix)
-    //   scene.add(sphere)
-
-    //   console.log(position)
-    // }
-
-    var line = new THREE.Line(linegeometry, material)
-    scene.add(line)
-
-      // console.log(`Position: ${position.toArray()}`)
-      // console.log(`V${i - 1}: ${position.sub(prev_pos).toArray()}`)
-
-    // console.log(geometry)
-
-    this.robotKin = new Kinematics(this.geometryKin)
-
-    this.readyFABRIK = true
-  }
-
-  moveTipToPoseWithFABRIK (goal, scene) {
-    if (!this.readyFABRIK) this.initFABRIK(scene)
-
+  moveTipToPoseWithIK (goal) {
     const result = this.robotKin.inverse(
-      goal.position.x, goal.position.y, goal.position.z,
-      goal.rotation.x, goal.rotation.y, goal.rotation.z)
-
-    //console.log(result)
+      goal.position.x, goal.position.y, -goal.position.z,
+      goal.rotation.x, goal.rotation.y, -goal.rotation.z)
 
     if (!result.some(x => Number.isNaN(x))) {
-      for (let i = 0; i < result.length; i++)
-        result[i] *= 57.2958
-      this.configuration = result
+      this.configuration = result.map(x => -x * THREE.Math.RAD2DEG)
     }
   }
 
