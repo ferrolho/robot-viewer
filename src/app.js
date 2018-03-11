@@ -1,4 +1,4 @@
-/* global $, Materialize, requestAnimationFrame */
+/* global $, Gamepad, requestAnimationFrame */
 
 import { IkSolverEnum } from './js/IkSolver.js'
 import { Robot } from './js/Robot.js'
@@ -182,15 +182,16 @@ let ikGoal
 let ikGoalControl
 
 function main () {
-  loadModelZae('abb_irb52_7_120')
+  //loadModelZae('abb_irb52_7_120')
+  loadModelZae('abb_irb120_3_58')
 
-  ikGoal = addSphereAtXYZ(0, 0.9615, 0.815)
+  ikGoal = addSphereAtXYZ(0.4, 0.5, 0)
   ikGoal.name = 'ikGoal'
 
   ikGoalControl = new THREETransformControls(camera, renderer.domElement)
   ikGoalControl.name = 'ikGoalControl'
   ikGoalControl.addEventListener('change', function () {
-    if (ikSolver !== IkSolverEnum.OFF) { robot.moveTipToPose(ikGoal, ikSolver) }
+    if (ikSolver !== IkSolverEnum.OFF) { robot.moveTipToPose(ikGoal, ikSolver, scene) }
   })
   ikGoalControl.addEventListener('mouseDown', function () {
     orbitControls.enabled = false
@@ -314,6 +315,9 @@ async function addCollada (modelId, collada) {
     if (child instanceof THREE.Mesh) {
       // Most of the models do not have normals
       child.material.flatShading = true
+
+      child.material.transparent = true
+      child.material.opacity = 0.3
     }
   })
 
@@ -329,13 +333,38 @@ async function addCollada (modelId, collada) {
 
   const tipLinks = $.grep(colladaRobotsList, function (e) { return e.id === modelId })[0].tipLinks
 
-  robot = new Robot(dae, collada.kinematics, tipLinks)
+  console.log(collada.library.kinematicsModels.kmodel0.links[0])
+  explore(collada.library.kinematicsModels.kmodel0.links[0].attachments[1])
+  console.log(geometryKin)
+
+  robot = new Robot(dae, collada.kinematics, tipLinks, geometryKin)
 
   updateShadowsState()
 }
 
-function sleep (ms) {
-  return new Promise(resolve => setTimeout(resolve, ms))
+let geometryKin = [
+  [   0,   0.29, 0],
+  [   0,   0.27, 0],
+  [0.15,   0.07, 0],
+  [0.15,      0, 0],
+  [   0,      0, 0] // -0.072
+]
+
+function explore (tree) {
+  if (tree) {
+    console.log(tree.joint)
+    console.log(tree.transforms[0].obj)
+
+    //if (geometryKin.length < 5) {
+    //  if (geometryKin.length < 4) {
+    //    geometryKin.push(tree.transforms[0].obj.toArray())
+    //  } else {
+    //    geometryKin.push([0, 0, 0])
+    //  }
+    //}
+
+    explore(tree.links[0].attachments[0])
+  }
 }
 
 function loadModelZae (modelId) {
@@ -401,7 +430,7 @@ gamepad.on('disconnect', e => {
  */
 
 gamepad.on('hold', 'stick_axis_left', e => {
-  //console.log(e.value)
+  // console.log(e.value)
 })
 
 gamepad.on('hold', 'stick_axis_right', e => {
