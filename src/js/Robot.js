@@ -24,8 +24,6 @@ export class Robot {
 
     this._kinematicsGeometry = []
     this.computeKinematicsGeometry(collada.library.kinematicsModels.kmodel0)
-    // this.debugKinematicsGeometry(this._kinematicsGeometry)
-    this.robotKin = new Kinematics(this._kinematicsGeometry)
 
     this._q = this.zeroConfiguration
 
@@ -141,6 +139,11 @@ export class Robot {
     return q
   }
 
+  setJointValue (name, value) {
+    this._kinematics.setJointValue(name, value)
+    this._q[this._joints.indexOf(name)] = value
+  }
+
   set configuration (q) {
     try {
       if (q.length !== this.degreesOfFreedom) {
@@ -192,7 +195,16 @@ export class Robot {
     }
   }
 
+  initializeRobotKin () {
+    this.robotKinInitialized = true
+
+    // this.debugKinematicsGeometry(this._kinematicsGeometry)
+    this.robotKin = new Kinematics(this._kinematicsGeometry)
+  }
+
   moveTipToPoseWithIK (goal) {
+    if (!this.robotKinInitialized) { this.initializeRobotKin() }
+
     const result = this.robotKin.inverse(
       goal.position.x, goal.position.y, -goal.position.z,
       goal.rotation.x, goal.rotation.y, -goal.rotation.z)

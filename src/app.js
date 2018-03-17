@@ -369,16 +369,53 @@ function loadModelZae (modelId) {
 
 window.addEventListener('keydown', function (event) {
   switch (event.keyCode) {
-    case 84: // T
-      ikGoalControl.setMode('translate')
-      ikGoalControl.setSpace('world')
+    case 72: // H
+      console.log(`Moving robot to 'home' position`)
+      moveFromTo(robot.configuration, robot.zeroConfiguration)
+      break
+    case 75: // K
+      console.log(robot.configuration)
+      break
+    case 80: // P
+      console.log('Executing motion...')
+      moveFromTo(robot.configuration, robot.randomConfiguration)
       break
     case 82: // R
       ikGoalControl.setMode('rotate')
       ikGoalControl.setSpace('local')
       break
+    case 84: // T
+      ikGoalControl.setMode('translate')
+      ikGoalControl.setSpace('world')
+      break
+    default:
+      console.log('Pressed key code: ' + event.keyCode)
+      break
   }
 })
+
+function moveFromTo (q_s, q_t) {
+  let tweenStart = {}
+  let tweenFinal = {}
+
+  for (const joint of robot._joints) {
+    tweenStart[joint] = q_s.shift()
+    tweenFinal[joint] = q_t.shift()
+  }
+
+  const duration = 1000
+  const kinematicsTween = new TWEEN.Tween(tweenStart).to(tweenFinal, duration).easing(TWEEN.Easing.Quadratic.Out)
+
+  kinematicsTween.onUpdate(function () {
+    for (const joint of robot._joints) { robot.setJointValue(joint, this[joint]) }
+  })
+
+  kinematicsTween.onComplete(function () {
+    console.log('Motion completed.')
+  })
+
+  kinematicsTween.start()
+}
 
 /**
  * Gamepad-related stuff.
