@@ -28,7 +28,7 @@ var ColladaRobotsList = [
 
   { brand: 'Universal Robots', name: 'UR3',  id: 'universal_robot_ur3',  tipLinks: ['tool0'], payload:  3, reach: 0.5,  dof: 6, weight: 15, dataSheet: 'https://www.universal-robots.com/media/1514546/101081_199901_ur3_technical_details_web_a4_art03_rls_eng.pdf',  productWebPage: 'https://www.universal-robots.com/products/ur3-robot/' },
   { brand: 'Universal Robots', name: 'UR5',  id: 'universal_robot_ur5',  tipLinks: ['tool0'], payload:  5, reach: 0.85, dof: 6, weight: 15, dataSheet: 'https://www.universal-robots.com/media/1514597/101081_199901_ur5_technical_details_web_a4_art03_rls_eng.pdf',  productWebPage: 'https://www.universal-robots.com/products/ur5-robot/' },
-  { brand: 'Universal Robots', name: 'UR10', id: 'universal_robot_ur10', tipLinks: ['tool0'], payload: 10, reach: 1.3,  dof: 6, weight: 17, dataSheet: 'https://www.universal-robots.com/media/1514642/101081_199901_ur10_technical_details_web_a4_art03_rls_eng.pdf', productWebPage: 'https://www.universal-robots.com/products/ur10-robot/' },
+  { brand: 'Universal Robots', name: 'UR10', id: 'ur10_joint_limited_robot', tipLinks: ['tool0'], payload: 10, reach: 1.3,  dof: 6, weight: 17, dataSheet: 'https://www.universal-robots.com/media/1514642/101081_199901_ur10_technical_details_web_a4_art03_rls_eng.pdf', productWebPage: 'https://www.universal-robots.com/products/ur10-robot/' },
 
 ]
 
