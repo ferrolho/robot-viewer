@@ -64963,7 +64963,12 @@ $(document).ready(function () {
 
   var pointsMaterials = [new THREE.PointsMaterial({ color: 0xff0000, transparent: true, opacity: 0.5, size: 0.01 }), new THREE.PointsMaterial({ color: 0xff00ff, transparent: true, opacity: 0.5, size: 0.01 }), new THREE.PointsMaterial({ color: 0xffff00, transparent: true, opacity: 0.5, size: 0.01 }), new THREE.PointsMaterial({ color: 0x00ffff, transparent: true, opacity: 0.5, size: 0.01 })];
 
-  // Reachability
+  /**
+   * Robot Reachability
+   *
+   * Randomly samples robot configurations 1000 times and,
+   * for each sample, adds a visual point marker to the scene.
+   */
   $('#reachability-button').click(function () {
     while (pointCloudsInScene.length) {
       scene.remove(pointCloudsInScene.shift());
@@ -65309,10 +65314,19 @@ window.addEventListener('keydown', function (event) {
   }
 });
 
+/**
+ * Robot Motion (without accounting for any collisions)
+ *
+ * Moves the robot from an initial configuration $q_s$ to a final configuration $q_t$.
+ *
+ * @param {Number[]} q_s The initial configuration, $q_s$.
+ * @param {Number[]} q_t The final configuration, $q_t$.
+ */
 function moveFromTo(q_s, q_t) {
   var tweenStart = {};
   var tweenFinal = {};
 
+  // Initialises data structures for tween.js
   var _iteratorNormalCompletion3 = true;
   var _didIteratorError3 = false;
   var _iteratorError3 = undefined;
@@ -65339,10 +65353,11 @@ function moveFromTo(q_s, q_t) {
     }
   }
 
-  var duration = 1000;
+  var duration = 1000; // The motion duration, in milliseconds.
   var kinematicsTween = new TWEEN.Tween(tweenStart).to(tweenFinal, duration).easing(TWEEN.Easing.Quadratic.Out);
 
   kinematicsTween.onUpdate(function () {
+    // Update robot configuration, joint by joint.
     var _iteratorNormalCompletion4 = true;
     var _didIteratorError4 = false;
     var _iteratorError4 = undefined;
@@ -65691,6 +65706,13 @@ var Robot = exports.Robot = function () {
         }
       });
     }
+
+    /**
+     * Get the current robot configuration $q$.
+     *
+     * @returns {Number[]} An $n$-sized array with the current joint positions of the robot.
+     */
+
   }, {
     key: 'setJointValue',
     value: function setJointValue(name, value) {
@@ -66001,7 +66023,14 @@ var Robot = exports.Robot = function () {
     key: 'configuration',
     get: function get() {
       return this._q;
-    },
+    }
+
+    /**
+     * Get the robot's nominal configuration (a.k.a. 'home' configuration).
+     *
+     * @returns {Number[]} An $n$-sized zero-filled array, where $n$ is equal to the degrees of freedom of the robot.
+     */
+    ,
     set: function set(q) {
       try {
         if (q.length !== this.degreesOfFreedom) {
@@ -66026,6 +66055,13 @@ var Robot = exports.Robot = function () {
     get: function get() {
       return new Array(this._degreesOfFreedom + 1).join('0').split('').map(parseFloat);
     }
+
+    /**
+     * Get a random robot configuration.
+     *
+     * @returns {Number[]} Am $n$-sized array with random values inbetween joint limits.
+     */
+
   }, {
     key: 'randomConfiguration',
     get: function get() {

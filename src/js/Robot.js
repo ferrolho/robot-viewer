@@ -116,14 +116,29 @@ export class Robot {
     })
   }
 
+  /**
+   * Get the current robot configuration $q$.
+   *
+   * @returns {Number[]} An $n$-sized array with the current joint positions of the robot.
+   */
   get configuration () {
     return this._q
   }
 
+  /**
+   * Get the robot's nominal configuration (a.k.a. 'home' configuration).
+   *
+   * @returns {Number[]} An $n$-sized zero-filled array, where $n$ is equal to the degrees of freedom of the robot.
+   */
   get zeroConfiguration () {
     return new Array(this._degreesOfFreedom + 1).join('0').split('').map(parseFloat)
   }
 
+  /**
+   * Get a random robot configuration.
+   *
+   * @returns {Number[]} Am $n$-sized array with random values inbetween joint limits.
+   */
   get randomConfiguration () {
     let q = []
 
