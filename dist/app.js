@@ -65298,6 +65298,10 @@ window.addEventListener('keydown', function (event) {
       console.log('Executing motion...');
       moveFromTo(robot.configuration, robot.randomConfiguration);
       break;
+    case 81:
+      // Q
+      ikGoalControl.setSpace(ikGoalControl.space === 'local' ? 'world' : 'local');
+      break;
     case 82:
       // R
       ikGoalControl.setMode('rotate');
@@ -66041,7 +66045,7 @@ var Robot = exports.Robot = function () {
           for (var prop in this._kinematics.joints) {
             if (this._kinematics.joints.hasOwnProperty(prop)) {
               if (!this._kinematics.joints[prop].static) {
-                this._kinematics.setJointValue(prop, q.shift());
+                this.setJointValue(prop, q.shift());
               }
             }
           }

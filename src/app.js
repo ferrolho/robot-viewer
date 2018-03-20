@@ -385,6 +385,9 @@ window.addEventListener('keydown', function (event) {
       console.log('Executing motion...')
       moveFromTo(robot.configuration, robot.randomConfiguration)
       break
+    case 81: // Q
+      ikGoalControl.setSpace(ikGoalControl.space === 'local' ? 'world' : 'local')
+      break
     case 82: // R
       ikGoalControl.setMode('rotate')
       ikGoalControl.setSpace('local')
