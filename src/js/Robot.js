@@ -169,7 +169,7 @@ export class Robot {
         for (const prop in this._kinematics.joints) {
           if (this._kinematics.joints.hasOwnProperty(prop)) {
             if (!this._kinematics.joints[prop].static) {
-              this._kinematics.setJointValue(prop, q.shift())
+              this.setJointValue(prop, q.shift())
             }
           }
         }
