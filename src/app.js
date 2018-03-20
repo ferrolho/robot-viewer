@@ -98,12 +98,12 @@ $(document).ready(function () {
 
   // Reset configuration
   $('#reset-button').click(function () {
-    robot.configuration = robot.zeroConfiguration
+    // #enei2018 ...
   })
 
   // Random configuration
   $('#random-button').click(function () {
-    robot.configuration = robot.randomConfiguration
+    // #enei2018 ...
   })
 
   let rawPoints = [[], [], [], []]
@@ -126,13 +126,7 @@ $(document).ready(function () {
     while (pointCloudsInScene.length) { scene.remove(pointCloudsInScene.shift()) }
 
     for (let i = 0; i < 1e4; i++) {
-      robot.configuration = robot.randomConfiguration
-
-      for (let j = 0; j < robot.tipLinks.length; j++) {
-        const point = new THREE.Vector3()
-        point.setFromMatrixPosition(robot.getLinkPose(robot.tipLinks[j]))
-        rawPoints[j].push(point)
-      }
+      // #enei2018 ...
     }
 
     let totalPoints = 0
@@ -376,14 +370,14 @@ window.addEventListener('keydown', function (event) {
   switch (event.keyCode) {
     case 72: // H
       console.log(`Moving robot to 'home' position`)
-      moveFromTo(robot.configuration, robot.zeroConfiguration)
+      // #enei2018 ...
       break
     case 75: // K
       console.log(robot.configuration)
       break
     case 80: // P
       console.log('Executing motion...')
-      moveFromTo(robot.configuration, robot.randomConfiguration)
+      // #enei2018 ...
       break
     case 81: // Q
       ikGoalControl.setSpace(ikGoalControl.space === 'local' ? 'world' : 'local')
@@ -415,17 +409,14 @@ function moveFromTo (q_s, q_t) {
   let tweenFinal = {}
 
   // Initialises data structures for tween.js
-  for (const joint of robot._joints) {
-    tweenStart[joint] = q_s.shift()
-    tweenFinal[joint] = q_t.shift()
-  }
+  // #enei2018 ...
 
   const duration = 1000  // The motion duration, in milliseconds.
   const kinematicsTween = new TWEEN.Tween(tweenStart).to(tweenFinal, duration).easing(TWEEN.Easing.Quadratic.Out)
 
   kinematicsTween.onUpdate(function () {
     // Update robot configuration, joint by joint.
-    for (const joint of robot._joints) { robot.setJointValue(joint, this[joint]) }
+    // #enei2018 ...
   })
 
   kinematicsTween.onComplete(function () {

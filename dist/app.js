@@ -64950,12 +64950,12 @@ $(document).ready(function () {
 
   // Reset configuration
   $('#reset-button').click(function () {
-    robot.configuration = robot.zeroConfiguration;
+    // #enei2018 ...
   });
 
   // Random configuration
   $('#random-button').click(function () {
-    robot.configuration = robot.randomConfiguration;
+    // #enei2018 ...
   });
 
   var rawPoints = [[], [], [], []];
@@ -64975,18 +64975,12 @@ $(document).ready(function () {
     }
 
     for (var i = 0; i < 1e4; i++) {
-      robot.configuration = robot.randomConfiguration;
-
-      for (var j = 0; j < robot.tipLinks.length; j++) {
-        var point = new THREE.Vector3();
-        point.setFromMatrixPosition(robot.getLinkPose(robot.tipLinks[j]));
-        rawPoints[j].push(point);
-      }
+      // #enei2018 ...
     }
 
     var totalPoints = 0;
-    for (var _j = 0; _j < robot.tipLinks.length; _j++) {
-      totalPoints += rawPoints[_j].length;
+    for (var j = 0; j < robot.tipLinks.length; j++) {
+      totalPoints += rawPoints[j].length;
 
       var _geometry = new THREE.Geometry();
       var _iteratorNormalCompletion = true;
@@ -64994,9 +64988,9 @@ $(document).ready(function () {
       var _iteratorError = undefined;
 
       try {
-        for (var _iterator = rawPoints[_j][Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
-          var _point = _step.value;
-          _geometry.vertices.push(_point);
+        for (var _iterator = rawPoints[j][Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
+          var point = _step.value;
+          _geometry.vertices.push(point);
         }
       } catch (err) {
         _didIteratorError = true;
@@ -65013,7 +65007,7 @@ $(document).ready(function () {
         }
       }
 
-      var pointCloud = new THREE.Points(_geometry, pointsMaterials[_j]);
+      var pointCloud = new THREE.Points(_geometry, pointsMaterials[j]);
 
       scene.add(pointCloud);
       pointCloudsInScene.push(pointCloud);
@@ -65287,7 +65281,7 @@ window.addEventListener('keydown', function (event) {
     case 72:
       // H
       console.log('Moving robot to \'home\' position');
-      moveFromTo(robot.configuration, robot.zeroConfiguration);
+      // #enei2018 ...
       break;
     case 75:
       // K
@@ -65296,7 +65290,7 @@ window.addEventListener('keydown', function (event) {
     case 80:
       // P
       console.log('Executing motion...');
-      moveFromTo(robot.configuration, robot.randomConfiguration);
+      // #enei2018 ...
       break;
     case 81:
       // Q
@@ -65331,60 +65325,14 @@ function moveFromTo(q_s, q_t) {
   var tweenFinal = {};
 
   // Initialises data structures for tween.js
-  var _iteratorNormalCompletion3 = true;
-  var _didIteratorError3 = false;
-  var _iteratorError3 = undefined;
-
-  try {
-    for (var _iterator3 = robot._joints[Symbol.iterator](), _step3; !(_iteratorNormalCompletion3 = (_step3 = _iterator3.next()).done); _iteratorNormalCompletion3 = true) {
-      var joint = _step3.value;
-
-      tweenStart[joint] = q_s.shift();
-      tweenFinal[joint] = q_t.shift();
-    }
-  } catch (err) {
-    _didIteratorError3 = true;
-    _iteratorError3 = err;
-  } finally {
-    try {
-      if (!_iteratorNormalCompletion3 && _iterator3.return) {
-        _iterator3.return();
-      }
-    } finally {
-      if (_didIteratorError3) {
-        throw _iteratorError3;
-      }
-    }
-  }
+  // #enei2018 ...
 
   var duration = 1000; // The motion duration, in milliseconds.
   var kinematicsTween = new TWEEN.Tween(tweenStart).to(tweenFinal, duration).easing(TWEEN.Easing.Quadratic.Out);
 
   kinematicsTween.onUpdate(function () {
     // Update robot configuration, joint by joint.
-    var _iteratorNormalCompletion4 = true;
-    var _didIteratorError4 = false;
-    var _iteratorError4 = undefined;
-
-    try {
-      for (var _iterator4 = robot._joints[Symbol.iterator](), _step4; !(_iteratorNormalCompletion4 = (_step4 = _iterator4.next()).done); _iteratorNormalCompletion4 = true) {
-        var joint = _step4.value;
-        robot.setJointValue(joint, this[joint]);
-      }
-    } catch (err) {
-      _didIteratorError4 = true;
-      _iteratorError4 = err;
-    } finally {
-      try {
-        if (!_iteratorNormalCompletion4 && _iterator4.return) {
-          _iterator4.return();
-        }
-      } finally {
-        if (_didIteratorError4) {
-          throw _iteratorError4;
-        }
-      }
-    }
+    // #enei2018 ...
   });
 
   kinematicsTween.onComplete(function () {
@@ -66025,9 +65973,9 @@ var Robot = exports.Robot = function () {
     }
   }, {
     key: 'configuration',
-    get: function get() {
-      return this._q;
-    }
+    get: function get() {}
+    // #enei2018 ...
+
 
     /**
      * Get the robot's nominal configuration (a.k.a. 'home' configuration).
@@ -66040,15 +65988,7 @@ var Robot = exports.Robot = function () {
         if (q.length !== this.degreesOfFreedom) {
           throw new Error('set configuration (q): q must be the same size as the robot DoF.');
         } else {
-          this._q = q.slice(0);
-          q = q.slice(0);
-          for (var prop in this._kinematics.joints) {
-            if (this._kinematics.joints.hasOwnProperty(prop)) {
-              if (!this._kinematics.joints[prop].static) {
-                this.setJointValue(prop, q.shift());
-              }
-            }
-          }
+          // #enei2018 ...
         }
       } catch (e) {
         console.log(e.name + ': ' + e.message);
@@ -66056,9 +65996,9 @@ var Robot = exports.Robot = function () {
     }
   }, {
     key: 'zeroConfiguration',
-    get: function get() {
-      return new Array(this._degreesOfFreedom + 1).join('0').split('').map(parseFloat);
-    }
+    get: function get() {}
+    // #enei2018 ...
+
 
     /**
      * Get a random robot configuration.
@@ -66075,7 +66015,7 @@ var Robot = exports.Robot = function () {
         if (this._kinematics.joints.hasOwnProperty(prop)) {
           var joint = this._kinematics.joints[prop];
           if (!joint.static) {
-            q.push(THREE.Math.randFloat(joint.limits.min, joint.limits.max));
+            // #enei2018 ...
           }
         }
       }

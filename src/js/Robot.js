@@ -122,7 +122,7 @@ export class Robot {
    * @returns {Number[]} An $n$-sized array with the current joint positions of the robot.
    */
   get configuration () {
-    return this._q
+    // #enei2018 ...
   }
 
   /**
@@ -131,7 +131,7 @@ export class Robot {
    * @returns {Number[]} An $n$-sized zero-filled array, where $n$ is equal to the degrees of freedom of the robot.
    */
   get zeroConfiguration () {
-    return new Array(this._degreesOfFreedom + 1).join('0').split('').map(parseFloat)
+    // #enei2018 ...
   }
 
   /**
@@ -146,7 +146,7 @@ export class Robot {
       if (this._kinematics.joints.hasOwnProperty(prop)) {
         const joint = this._kinematics.joints[prop]
         if (!joint.static) {
-          q.push(THREE.Math.randFloat(joint.limits.min, joint.limits.max))
+          // #enei2018 ...
         }
       }
     }
@@ -164,15 +164,7 @@ export class Robot {
       if (q.length !== this.degreesOfFreedom) {
         throw new Error('set configuration (q): q must be the same size as the robot DoF.')
       } else {
-        this._q = q.slice(0)
-        q = q.slice(0)
-        for (const prop in this._kinematics.joints) {
-          if (this._kinematics.joints.hasOwnProperty(prop)) {
-            if (!this._kinematics.joints[prop].static) {
-              this.setJointValue(prop, q.shift())
-            }
-          }
-        }
+        // #enei2018 ...
       }
     } catch (e) {
       console.log(e.name + ': ' + e.message)
