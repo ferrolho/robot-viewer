@@ -116,7 +116,12 @@ $(document).ready(function () {
     new THREE.PointsMaterial({ color: 0x00ffff, transparent: true, opacity: 0.5, size: 0.01 })
   ]
 
-  // Reachability
+  /**
+   * Robot Reachability
+   *
+   * Randomly samples robot configurations 1000 times and,
+   * for each sample, adds a visual point marker to the scene.
+   */
   $('#reachability-button').click(function () {
     while (pointCloudsInScene.length) { scene.remove(pointCloudsInScene.shift()) }
 
@@ -394,19 +399,29 @@ window.addEventListener('keydown', function (event) {
   }
 })
 
+/**
+ * Robot Motion (without accounting for any collisions)
+ *
+ * Moves the robot from an initial configuration $q_s$ to a final configuration $q_t$.
+ *
+ * @param {Number[]} q_s The initial configuration, $q_s$.
+ * @param {Number[]} q_t The final configuration, $q_t$.
+ */
 function moveFromTo (q_s, q_t) {
   let tweenStart = {}
   let tweenFinal = {}
 
+  // Initialises data structures for tween.js
   for (const joint of robot._joints) {
     tweenStart[joint] = q_s.shift()
     tweenFinal[joint] = q_t.shift()
   }
 
-  const duration = 1000
+  const duration = 1000  // The motion duration, in milliseconds.
   const kinematicsTween = new TWEEN.Tween(tweenStart).to(tweenFinal, duration).easing(TWEEN.Easing.Quadratic.Out)
 
   kinematicsTween.onUpdate(function () {
+    // Update robot configuration, joint by joint.
     for (const joint of robot._joints) { robot.setJointValue(joint, this[joint]) }
   })
 
