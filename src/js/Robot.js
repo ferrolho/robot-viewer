@@ -223,35 +223,41 @@ export class Robot {
         this.moveTipToPoseWithGeneticAlgorithm(goal)
         break
       case IkSolverEnum.PSEUDO_INVERSE:
-        this.moveTipToPoseWithPseudoInverse(goal)
+        this.moveTipToPoseWithPseudoInverse(goal, 1e-3)
         break
     }
   }
 
-  moveTipToPoseWithPseudoInverse (goal) {
+  moveTipToPoseWithPseudoInverse (goal, c = 0) {
     const tolerance = 1e-3
+
+    const C = math.multiply(math.eye(3), c)
+    const Cinv = c === 0 ? math.zeros(3) : math.inv(C)
+
+    const W = math.eye(this.degreesOfFreedom)
+    const Winv = math.inv(W)
 
     let eff = new THREE.Vector3().setFromMatrixPosition(this.getLinkPose(this.tipLinks[0]))
     let effToGoal = new THREE.Vector3().subVectors(goal.position, eff)
 
     let iteration = 0
 
-    while (iteration < 1e3 && tolerance < effToGoal.length()) {
+    while (iteration < 100 && tolerance < effToGoal.length()) {
       const J = this.computeJacobianNumerically()
       // console.log(J)
 
-      const transposeJ = math.transpose(J)
-      // console.log(transposeJ)
+      const Jt = math.transpose(J)
+      // console.log(Jt)
 
-      // const pseudoInvJ = math.multiply(math.inv(math.multiply(transposeJ, J)), transposeJ)
-      // const pseudoInvJ = math.multiply(transposeJ, math.inv(math.multiply(J, transposeJ)))
+      const Jpinv = math.multiply(Winv, math.multiply(Jt, math.inv(math.add(math.multiply(J, math.multiply(Winv, Jt)), C))))
+      // console.log(Jpinv)
 
-      const d_q = math.multiply(effToGoal.toArray(), transposeJ)
-      // const d_q = math.multiply(effToGoal.toArray(), pseudoInvJ)
+      // const d_q = math.multiply(Jt, effToGoal.toArray())
+      const d_q = math.multiply(Jpinv, effToGoal.toArray())
       // console.log(d_q)
 
       for (let i = 0; i < this._joints.length; i++) {
-        this.setJointValue(this._joints[i], this._q[i] + d_q[i] * 100)
+        this.setJointValue(this._joints[i], this._q[i] + d_q.get([i]))
       }
 
       eff.setFromMatrixPosition(this.getLinkPose(this.tipLinks[0]))
@@ -281,7 +287,7 @@ export class Robot {
       this.setJointValue(this._joints[i], this._q[i] - variation)
     }
 
-    return J
+    return math.transpose(J)
   }
 
   initializeRobotKin () {

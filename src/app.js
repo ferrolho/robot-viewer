@@ -420,7 +420,7 @@ function moveFromTo (q_s, q_t) {
     tweenFinal[joint] = q_t.shift()
   }
 
-  const duration = 1000  // The motion duration, in milliseconds.
+  const duration = 1000 // The motion duration, in milliseconds.
   const kinematicsTween = new TWEEN.Tween(tweenStart).to(tweenFinal, duration).easing(TWEEN.Easing.Quadratic.Out)
 
   kinematicsTween.onUpdate(function () {
