@@ -123263,61 +123263,70 @@ var Robot = exports.Robot = function () {
 
       var tolerance = 1e-3;
 
-      var C = math.multiply(math.eye(3), c);
-      var Cinv = c === 0 ? math.zeros(3) : math.inv(C);
+      var C = math.multiply(math.eye(6), c);
+      // const Cinv = c === 0 ? math.zeros(6) : math.inv(C)
 
+      // const W = math.diag([6, 5, 4, 3, 2, 1])
       var W = math.eye(this.degreesOfFreedom);
       var Winv = math.inv(W);
 
-      var eff = new THREE.Vector3().setFromMatrixPosition(this.getLinkPose(this.tipLinks[0]));
-      var effToGoal = new THREE.Vector3().subVectors(goal.position, eff);
-
+      var effToGoal = this.computeEffToGoalInfo(goal);
       var iteration = 0;
 
-      while (iteration < 100 && tolerance < effToGoal.length()) {
+      while (iteration < 100 && (tolerance < math.sum(math.abs(effToGoal.pos)) || tolerance < math.sum(math.abs(effToGoal.rot)))) {
         var J = this.computeJacobianNumerically();
-        // console.log(J)
-
         var Jt = math.transpose(J);
-        // console.log(Jt)
-
         var Jpinv = math.multiply(Winv, math.multiply(Jt, math.inv(math.add(math.multiply(J, math.multiply(Winv, Jt)), C))));
-        // console.log(Jpinv)
-
-        // const d_q = math.multiply(Jt, effToGoal.toArray())
-        var d_q = math.multiply(Jpinv, effToGoal.toArray());
-        // console.log(d_q)
+        var d_q = math.multiply(Jpinv, effToGoal.pos.concat(effToGoal.rot));
 
         for (var i = 0; i < this._joints.length; i++) {
           this.setJointValue(this._joints[i], this._q[i] + d_q.get([i]));
         }
 
-        eff.setFromMatrixPosition(this.getLinkPose(this.tipLinks[0]));
-        effToGoal.subVectors(goal.position, eff);
-
+        effToGoal = this.computeEffToGoalInfo(goal);
         iteration++;
       }
 
       console.log('Solved with ' + iteration + ' iterations.');
     }
   }, {
+    key: 'computeEffToGoalInfo',
+    value: function computeEffToGoalInfo(goal) {
+      var eff_pos = new THREE.Vector3();
+      var eff_quat = new THREE.Quaternion();
+      this.getLinkPose(this.tipLinks[0]).decompose(eff_pos, eff_quat, new THREE.Vector3());
+      var eff_rot = new THREE.Euler().setFromQuaternion(eff_quat);
+
+      var effPosToGoal = new THREE.Vector3().subVectors(goal.position, eff_pos).toArray();
+      var effRotToGoal = new THREE.Vector3().subVectors(goal.rotation, eff_rot).toArray();
+
+      return { pos: effPosToGoal, rot: effRotToGoal };
+    }
+  }, {
     key: 'computeJacobianNumerically',
     value: function computeJacobianNumerically() {
-      var variation = 1;
-
-      var eff = new THREE.Vector3().setFromMatrixPosition(this.getLinkPose(this.tipLinks[0]));
+      var variation = 10; // In degrees, not in radians.
 
       var J = [];
 
       for (var i = 0; i < this._joints.length; i++) {
+        // Displace joint
         this.setJointValue(this._joints[i], this._q[i] + variation);
 
-        var d_eff = new THREE.Vector3().setFromMatrixPosition(this.getLinkPose(this.tipLinks[0]));
-        var diff = new THREE.Vector3().subVectors(d_eff, eff);
+        var d_eff_pos = new THREE.Vector3();
+        var d_eff_quat = new THREE.Quaternion();
+        this.getLinkPose(this.tipLinks[0]).decompose(d_eff_pos, d_eff_quat, new THREE.Vector3());
+        var d_eff_rot = new THREE.Euler().setFromQuaternion(d_eff_quat);
 
-        J.push(diff.toArray());
+        // Save eff pose after displacement
+        var d_eff = { position: d_eff_pos, rotation: d_eff_rot
 
-        this.setJointValue(this._joints[i], this._q[i] - variation);
+          // Undo joint displacement
+        };this.setJointValue(this._joints[i], this._q[i] - variation);
+
+        var diff = this.computeEffToGoalInfo(d_eff);
+
+        J.push(diff.pos.concat(diff.rot));
       }
 
       return math.transpose(J);

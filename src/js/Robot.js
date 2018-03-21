@@ -231,60 +231,68 @@ export class Robot {
   moveTipToPoseWithPseudoInverse (goal, c = 0) {
     const tolerance = 1e-3
 
-    const C = math.multiply(math.eye(3), c)
-    const Cinv = c === 0 ? math.zeros(3) : math.inv(C)
+    const C = math.multiply(math.eye(6), c)
+    // const Cinv = c === 0 ? math.zeros(6) : math.inv(C)
 
+    // const W = math.diag([6, 5, 4, 3, 2, 1])
     const W = math.eye(this.degreesOfFreedom)
     const Winv = math.inv(W)
 
-    let eff = new THREE.Vector3().setFromMatrixPosition(this.getLinkPose(this.tipLinks[0]))
-    let effToGoal = new THREE.Vector3().subVectors(goal.position, eff)
-
+    let effToGoal = this.computeEffToGoalInfo(goal)
     let iteration = 0
 
-    while (iteration < 100 && tolerance < effToGoal.length()) {
+    while (iteration < 100 &&
+          (tolerance < math.sum(math.abs(effToGoal.pos)) ||
+           tolerance < math.sum(math.abs(effToGoal.rot)))) {
       const J = this.computeJacobianNumerically()
-      // console.log(J)
-
       const Jt = math.transpose(J)
-      // console.log(Jt)
-
       const Jpinv = math.multiply(Winv, math.multiply(Jt, math.inv(math.add(math.multiply(J, math.multiply(Winv, Jt)), C))))
-      // console.log(Jpinv)
+      const d_q = math.multiply(Jpinv, effToGoal.pos.concat(effToGoal.rot))
 
-      // const d_q = math.multiply(Jt, effToGoal.toArray())
-      const d_q = math.multiply(Jpinv, effToGoal.toArray())
-      // console.log(d_q)
+      for (let i = 0; i < this._joints.length; i++) { this.setJointValue(this._joints[i], this._q[i] + d_q.get([i])) }
 
-      for (let i = 0; i < this._joints.length; i++) {
-        this.setJointValue(this._joints[i], this._q[i] + d_q.get([i]))
-      }
-
-      eff.setFromMatrixPosition(this.getLinkPose(this.tipLinks[0]))
-      effToGoal.subVectors(goal.position, eff)
-
+      effToGoal = this.computeEffToGoalInfo(goal)
       iteration++
     }
 
     console.log(`Solved with ${iteration} iterations.`)
   }
 
-  computeJacobianNumerically () {
-    const variation = 1
+  computeEffToGoalInfo (goal) {
+    const eff_pos = new THREE.Vector3()
+    const eff_quat = new THREE.Quaternion()
+    this.getLinkPose(this.tipLinks[0]).decompose(eff_pos, eff_quat, new THREE.Vector3())
+    const eff_rot = new THREE.Euler().setFromQuaternion(eff_quat)
 
-    const eff = new THREE.Vector3().setFromMatrixPosition(this.getLinkPose(this.tipLinks[0]))
+    const effPosToGoal = new THREE.Vector3().subVectors(goal.position, eff_pos).toArray()
+    const effRotToGoal = new THREE.Vector3().subVectors(goal.rotation, eff_rot).toArray()
+
+    return { pos: effPosToGoal, rot: effRotToGoal }
+  }
+
+  computeJacobianNumerically () {
+    const variation = 10 // In degrees, not in radians.
 
     let J = []
 
     for (let i = 0; i < this._joints.length; i++) {
+      // Displace joint
       this.setJointValue(this._joints[i], this._q[i] + variation)
 
-      const d_eff = new THREE.Vector3().setFromMatrixPosition(this.getLinkPose(this.tipLinks[0]))
-      const diff = new THREE.Vector3().subVectors(d_eff, eff)
+      const d_eff_pos = new THREE.Vector3()
+      const d_eff_quat = new THREE.Quaternion()
+      this.getLinkPose(this.tipLinks[0]).decompose(d_eff_pos, d_eff_quat, new THREE.Vector3())
+      const d_eff_rot = new THREE.Euler().setFromQuaternion(d_eff_quat)
 
-      J.push(diff.toArray())
+      // Save eff pose after displacement
+      const d_eff = { position: d_eff_pos, rotation: d_eff_rot }
 
+      // Undo joint displacement
       this.setJointValue(this._joints[i], this._q[i] - variation)
+
+      const diff = this.computeEffToGoalInfo(d_eff)
+
+      J.push(diff.pos.concat(diff.rot))
     }
 
     return math.transpose(J)
