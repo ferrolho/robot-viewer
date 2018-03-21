@@ -1,7 +1,23 @@
 import { IkSolverEnum } from './IkSolver.js'
 
-const THREE = require('three')
 const Kinematics = require('kinematics').default
+const math = require('mathjs')
+const THREE = require('three')
+
+/**
+ * Returns a number whose value is limited to the given range.
+ *
+ * Example: limit the output of this computation to between 0 and 255
+ * (x * 255).clamp(0, 255)
+ *
+ * @param {Number} min The lower boundary of the output range
+ * @param {Number} max The upper boundary of the output range
+ * @returns A number in the range [min, max]
+ * @type Number
+ */
+Number.prototype.clamp = function (min, max) {
+  return Math.min(Math.max(this, min), max)
+}
 
 export class Robot {
   constructor (scene, dae, collada, tipLinks) {
@@ -155,6 +171,8 @@ export class Robot {
   }
 
   setJointValue (name, value) {
+    value = value.clamp(this._kinematics.joints[name].limits.min, this._kinematics.joints[name].limits.max)
+
     this._kinematics.setJointValue(name, value)
     this._q[this._joints.indexOf(name)] = value
   }
@@ -205,9 +223,65 @@ export class Robot {
         this.moveTipToPoseWithGeneticAlgorithm(goal)
         break
       case IkSolverEnum.PSEUDO_INVERSE:
-        console.log('Using PSEUDO_INVERSE')
+        this.moveTipToPoseWithPseudoInverse(goal)
         break
     }
+  }
+
+  moveTipToPoseWithPseudoInverse (goal) {
+    const tolerance = 1e-3
+
+    let eff = new THREE.Vector3().setFromMatrixPosition(this.getLinkPose(this.tipLinks[0]))
+    let effToGoal = new THREE.Vector3().subVectors(goal.position, eff)
+
+    let iteration = 0
+
+    while (iteration < 1e3 && tolerance < effToGoal.length()) {
+      const J = this.computeJacobianNumerically()
+      // console.log(J)
+
+      const transposeJ = math.transpose(J)
+      // console.log(transposeJ)
+
+      // const pseudoInvJ = math.multiply(math.inv(math.multiply(transposeJ, J)), transposeJ)
+      // const pseudoInvJ = math.multiply(transposeJ, math.inv(math.multiply(J, transposeJ)))
+
+      const d_q = math.multiply(effToGoal.toArray(), transposeJ)
+      // const d_q = math.multiply(effToGoal.toArray(), pseudoInvJ)
+      // console.log(d_q)
+
+      for (let i = 0; i < this._joints.length; i++) {
+        this.setJointValue(this._joints[i], this._q[i] + d_q[i] * 100)
+      }
+
+      eff.setFromMatrixPosition(this.getLinkPose(this.tipLinks[0]))
+      effToGoal.subVectors(goal.position, eff)
+
+      iteration++
+    }
+
+    console.log(`Solved with ${iteration} iterations.`)
+  }
+
+  computeJacobianNumerically () {
+    const variation = 1
+
+    const eff = new THREE.Vector3().setFromMatrixPosition(this.getLinkPose(this.tipLinks[0]))
+
+    let J = []
+
+    for (let i = 0; i < this._joints.length; i++) {
+      this.setJointValue(this._joints[i], this._q[i] + variation)
+
+      const d_eff = new THREE.Vector3().setFromMatrixPosition(this.getLinkPose(this.tipLinks[0]))
+      const diff = new THREE.Vector3().subVectors(d_eff, eff)
+
+      J.push(diff.toArray())
+
+      this.setJointValue(this._joints[i], this._q[i] - variation)
+    }
+
+    return J
   }
 
   initializeRobotKin () {
