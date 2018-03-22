@@ -372,18 +372,38 @@ function loadModelZae (modelId) {
   })
 }
 
+const robotTweens = []
+
 window.addEventListener('keydown', function (event) {
   switch (event.keyCode) {
+    case 67: // C
+      console.log(`Motion keypoints deleted.`)
+      robot.clearMotionKeypoints()
+      break
     case 72: // H
-      console.log(`Moving robot to 'home' position`)
-      moveFromTo(robot.configuration, robot.zeroConfiguration)
+      console.log(`Moving robot to 'home' position...`)
+      moveFromTo(robot.configuration, robot.zeroConfiguration, 1000, TWEEN.Easing.Quadratic.Out).start()
+      break
+    case 74: // J
+      console.log('Moving robot to random position...')
+      moveFromTo(robot.configuration, robot.randomConfiguration, 1000, TWEEN.Easing.Quadratic.Out).start()
       break
     case 75: // K
+      console.log(`Motion keypoint recorded. (total = ${robot.motionKeypoints.length})`)
       console.log(robot.configuration)
+      robot.saveMotionKeypoint()
       break
     case 80: // P
-      console.log('Executing motion...')
-      moveFromTo(robot.configuration, robot.randomConfiguration)
+      console.log('Executing keypoints motion...')
+      robotTweens.length = 0
+      let prevQ = robot.configuration
+      for (let q of robot.motionKeypoints) {
+        const tween = moveFromTo(prevQ, q.slice())
+        if (robotTweens.length !== 0) { robotTweens[robotTweens.length - 1].chain(tween) }
+        robotTweens.push(tween)
+        prevQ = q.slice()
+      }
+      if (robotTweens.length !== 0) { robotTweens[0].start() }
       break
     case 81: // Q
       ikGoalControl.setSpace(ikGoalControl.space === 'local' ? 'world' : 'local')
@@ -410,7 +430,7 @@ window.addEventListener('keydown', function (event) {
  * @param {Number[]} q_s The initial configuration, $q_s$.
  * @param {Number[]} q_t The final configuration, $q_t$.
  */
-function moveFromTo (q_s, q_t) {
+function moveFromTo (q_s, q_t, duration=10, easing=TWEEN.Easing.Linear.None) {
   let tweenStart = {}
   let tweenFinal = {}
 
@@ -420,19 +440,18 @@ function moveFromTo (q_s, q_t) {
     tweenFinal[joint] = q_t.shift()
   }
 
-  const duration = 1000 // The motion duration, in milliseconds.
-  const kinematicsTween = new TWEEN.Tween(tweenStart).to(tweenFinal, duration).easing(TWEEN.Easing.Quadratic.Out)
+  const tween = new TWEEN.Tween(tweenStart).to(tweenFinal, duration).easing(easing)
 
-  kinematicsTween.onUpdate(function () {
+  tween.onUpdate(function () {
     // Update robot configuration, joint by joint.
     for (const joint of robot._joints) { robot.setJointValue(joint, this[joint]) }
   })
 
-  kinematicsTween.onComplete(function () {
+  tween.onComplete(function () {
     console.log('Motion completed.')
   })
 
-  kinematicsTween.start()
+  return tween
 }
 
 /**

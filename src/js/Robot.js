@@ -47,6 +47,20 @@ export class Robot {
     // this.printJointNames()
   }
 
+  get motionKeypoints () {
+    if (typeof this._motionKeypoints === 'undefined') { this._motionKeypoints = [] }
+    return this._motionKeypoints
+  }
+
+  clearMotionKeypoints () {
+    this._motionKeypoints = []
+  }
+
+  saveMotionKeypoint () {
+    if (typeof this._motionKeypoints === 'undefined') { this._motionKeypoints = [] }
+    this._motionKeypoints.push(this.configuration)
+  }
+
   computeKinematicsGeometry (tree) {
     if (tree) {
       for (const attachment of tree.links[0].attachments) {
@@ -138,7 +152,7 @@ export class Robot {
    * @returns {Number[]} An $n$-sized array with the current joint positions of the robot.
    */
   get configuration () {
-    return this._q
+    return this._q.slice()
   }
 
   /**

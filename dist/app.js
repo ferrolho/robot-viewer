@@ -122762,21 +122762,69 @@ function loadModelZae(modelId) {
   });
 }
 
+var robotTweens = [];
+
 window.addEventListener('keydown', function (event) {
   switch (event.keyCode) {
+    case 67:
+      // C
+      console.log('Motion keypoints deleted.');
+      robot.clearMotionKeypoints();
+      break;
     case 72:
       // H
-      console.log('Moving robot to \'home\' position');
-      moveFromTo(robot.configuration, robot.zeroConfiguration);
+      console.log('Moving robot to \'home\' position...');
+      moveFromTo(robot.configuration, robot.zeroConfiguration, 1000, TWEEN.Easing.Quadratic.Out).start();
+      break;
+    case 74:
+      // J
+      console.log('Moving robot to random position...');
+      moveFromTo(robot.configuration, robot.randomConfiguration, 1000, TWEEN.Easing.Quadratic.Out).start();
       break;
     case 75:
       // K
+      console.log('Motion keypoint recorded. (total = ' + robot.motionKeypoints.length + ')');
       console.log(robot.configuration);
+      robot.saveMotionKeypoint();
       break;
     case 80:
       // P
-      console.log('Executing motion...');
-      moveFromTo(robot.configuration, robot.randomConfiguration);
+      console.log('Executing keypoints motion...');
+      robotTweens.length = 0;
+      var prevQ = robot.configuration;
+      var _iteratorNormalCompletion3 = true;
+      var _didIteratorError3 = false;
+      var _iteratorError3 = undefined;
+
+      try {
+        for (var _iterator3 = robot.motionKeypoints[Symbol.iterator](), _step3; !(_iteratorNormalCompletion3 = (_step3 = _iterator3.next()).done); _iteratorNormalCompletion3 = true) {
+          var q = _step3.value;
+
+          var tween = moveFromTo(prevQ, q.slice());
+          if (robotTweens.length !== 0) {
+            robotTweens[robotTweens.length - 1].chain(tween);
+          }
+          robotTweens.push(tween);
+          prevQ = q.slice();
+        }
+      } catch (err) {
+        _didIteratorError3 = true;
+        _iteratorError3 = err;
+      } finally {
+        try {
+          if (!_iteratorNormalCompletion3 && _iterator3.return) {
+            _iterator3.return();
+          }
+        } finally {
+          if (_didIteratorError3) {
+            throw _iteratorError3;
+          }
+        }
+      }
+
+      if (robotTweens.length !== 0) {
+        robotTweens[0].start();
+      }
       break;
     case 81:
       // Q
@@ -122807,71 +122855,73 @@ window.addEventListener('keydown', function (event) {
  * @param {Number[]} q_t The final configuration, $q_t$.
  */
 function moveFromTo(q_s, q_t) {
+  var duration = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : 10;
+  var easing = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : TWEEN.Easing.Linear.None;
+
   var tweenStart = {};
   var tweenFinal = {};
 
   // Initialises data structures for tween.js
-  var _iteratorNormalCompletion3 = true;
-  var _didIteratorError3 = false;
-  var _iteratorError3 = undefined;
+  var _iteratorNormalCompletion4 = true;
+  var _didIteratorError4 = false;
+  var _iteratorError4 = undefined;
 
   try {
-    for (var _iterator3 = robot._joints[Symbol.iterator](), _step3; !(_iteratorNormalCompletion3 = (_step3 = _iterator3.next()).done); _iteratorNormalCompletion3 = true) {
-      var joint = _step3.value;
+    for (var _iterator4 = robot._joints[Symbol.iterator](), _step4; !(_iteratorNormalCompletion4 = (_step4 = _iterator4.next()).done); _iteratorNormalCompletion4 = true) {
+      var joint = _step4.value;
 
       tweenStart[joint] = q_s.shift();
       tweenFinal[joint] = q_t.shift();
     }
   } catch (err) {
-    _didIteratorError3 = true;
-    _iteratorError3 = err;
+    _didIteratorError4 = true;
+    _iteratorError4 = err;
   } finally {
     try {
-      if (!_iteratorNormalCompletion3 && _iterator3.return) {
-        _iterator3.return();
+      if (!_iteratorNormalCompletion4 && _iterator4.return) {
+        _iterator4.return();
       }
     } finally {
-      if (_didIteratorError3) {
-        throw _iteratorError3;
+      if (_didIteratorError4) {
+        throw _iteratorError4;
       }
     }
   }
 
-  var duration = 1000; // The motion duration, in milliseconds.
-  var kinematicsTween = new TWEEN.Tween(tweenStart).to(tweenFinal, duration).easing(TWEEN.Easing.Quadratic.Out);
+  var tween = new TWEEN.Tween(tweenStart).to(tweenFinal, duration).easing(easing);
 
-  kinematicsTween.onUpdate(function () {
+  tween.onUpdate(function () {
     // Update robot configuration, joint by joint.
-    var _iteratorNormalCompletion4 = true;
-    var _didIteratorError4 = false;
-    var _iteratorError4 = undefined;
+    var _iteratorNormalCompletion5 = true;
+    var _didIteratorError5 = false;
+    var _iteratorError5 = undefined;
 
     try {
-      for (var _iterator4 = robot._joints[Symbol.iterator](), _step4; !(_iteratorNormalCompletion4 = (_step4 = _iterator4.next()).done); _iteratorNormalCompletion4 = true) {
-        var joint = _step4.value;
+      for (var _iterator5 = robot._joints[Symbol.iterator](), _step5; !(_iteratorNormalCompletion5 = (_step5 = _iterator5.next()).done); _iteratorNormalCompletion5 = true) {
+        var joint = _step5.value;
         robot.setJointValue(joint, this[joint]);
       }
     } catch (err) {
-      _didIteratorError4 = true;
-      _iteratorError4 = err;
+      _didIteratorError5 = true;
+      _iteratorError5 = err;
     } finally {
       try {
-        if (!_iteratorNormalCompletion4 && _iterator4.return) {
-          _iterator4.return();
+        if (!_iteratorNormalCompletion5 && _iterator5.return) {
+          _iterator5.return();
         }
       } finally {
-        if (_didIteratorError4) {
-          throw _iteratorError4;
+        if (_didIteratorError5) {
+          throw _iteratorError5;
         }
       }
     }
   });
 
-  kinematicsTween.onComplete(function () {
+  tween.onComplete(function () {
     console.log('Motion completed.');
   });
 
-  kinematicsTween.start();
+  return tween;
 }
 
 /**
@@ -123063,6 +123113,19 @@ var Robot = exports.Robot = function () {
   }
 
   _createClass(Robot, [{
+    key: 'clearMotionKeypoints',
+    value: function clearMotionKeypoints() {
+      this._motionKeypoints = [];
+    }
+  }, {
+    key: 'saveMotionKeypoint',
+    value: function saveMotionKeypoint() {
+      if (typeof this._motionKeypoints === 'undefined') {
+        this._motionKeypoints = [];
+      }
+      this._motionKeypoints.push(this.configuration);
+    }
+  }, {
     key: 'computeKinematicsGeometry',
     value: function computeKinematicsGeometry(tree) {
       if (tree) {
@@ -123584,6 +123647,14 @@ var Robot = exports.Robot = function () {
       }
     }
   }, {
+    key: 'motionKeypoints',
+    get: function get() {
+      if (typeof this._motionKeypoints === 'undefined') {
+        this._motionKeypoints = [];
+      }
+      return this._motionKeypoints;
+    }
+  }, {
     key: 'degreesOfFreedom',
     get: function get() {
       return this._degreesOfFreedom;
@@ -123599,7 +123670,7 @@ var Robot = exports.Robot = function () {
   }, {
     key: 'configuration',
     get: function get() {
-      return this._q;
+      return this._q.slice();
     }
 
     /**
