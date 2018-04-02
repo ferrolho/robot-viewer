@@ -12,6 +12,8 @@ var ColladaRobotsList = [
   { brand: 'ABB', name: 'IRB 6640-235',     id: 'abb_irb6640',         reach: 2.55,  weight: 1310, payload: 235, dof: 6, tipLinks: ['tool0'], dataSheet: 'http://search.abb.com/library/Download.aspx?DocumentID=ROB0001EN&LanguageCode=en&DocumentPartId=&Action=Launch' },
   { brand: 'ABB', name: 'IRB 7600-150/3.5', id: 'abb_irb7600_150_350', reach: 3.5,   weight: 2450, payload: 150, dof: 6, tipLinks: ['tool0'], dataSheet: 'http://search.abb.com/library/Download.aspx?DocumentID=PR10074EN_R10&LanguageCode=en&DocumentPartId=&Action=Launch' },
 
+  { brand: 'ANYbotics', name: 'ANYmal', id: 'anybotics_anymal', weight: 30, payload: 10, dof: 12, tipLinks: ['LF_FOOT', 'RF_FOOT', 'LH_FOOT', 'RH_FOOT'], dataSheet: 'https://www.anybotics.com/wp-content/uploads/media/ANYmal_Flyer.pdf' },
+
   { brand: 'Clearpath', name: 'Dual Arm Husky', id: 'clearpath_dual_arm_husky', tipLinks: [] },
 
   { brand: 'Franka', name: 'Panda', id: 'franka_panda_arm_hand', tipLinks: ['panda_hand'], payload: 3, reach: 0.855, dof: 7, weight: 18, dataSheet: 'https://s3-eu-central-1.amazonaws.com/franka-de-uploads-staging/uploads/2017/09/2017-09-12_datasheet_panda.pdf', productWebPage: 'https://www.franka.de/' },
