@@ -38,7 +38,7 @@
 
 - The `Pseudo Inverse` is the best implemented `IK` solution in this viewer.
 
-    ![Pseudo Inverse](https://latex.codecogs.com/gif.download?J%5E%7B%5C%23%7D%20%3D%20W%5E%7B-1%7D%20J%5E%5Ctop%20%28%20J%20W%5E%7B-1%7D%20J%5E%5Ctop%20+%20C%20%29%5E%7B-1%7D)
+    ![Pseudo Inverse](https://latex.codecogs.com/gif.latex?J%5E%7B%5C%23%7D%20%3D%20W%5E%7B-1%7D%20J%5E%5Ctop%20%28%20J%20W%5E%7B-1%7D%20J%5E%5Ctop%20&plus;%20C%20%29%5E%7B-1%7D)
 
 #### Robot Models
 
