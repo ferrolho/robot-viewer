@@ -430,7 +430,7 @@ window.addEventListener('keydown', function (event) {
  * @param {Number[]} q_s The initial configuration, $q_s$.
  * @param {Number[]} q_t The final configuration, $q_t$.
  */
-function moveFromTo (q_s, q_t, duration=10, easing=TWEEN.Easing.Linear.None) {
+function moveFromTo (q_s, q_t, duration = 10, easing = TWEEN.Easing.Linear.None) {
   let tweenStart = {}
   let tweenFinal = {}
 

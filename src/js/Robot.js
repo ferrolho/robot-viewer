@@ -47,6 +47,41 @@ export class Robot {
     // this.printJointNames()
   }
 
+  sqrtm (A, iterations = 10) {
+    // Square root of a matrix by the Babylonian method
+    let X = math.eye(math.size(A))
+    for (let i = 0; i < iterations; i++) { X = math.multiply(0.5, math.add(X, math.divide(A, X))) }
+    return X
+  }
+
+  updateEllipsoid (eff_pos) {
+    const J = this.computeJacobianNumerically('translational')
+    const Jt = math.transpose(J)
+    const A = math.multiply(J, Jt)
+
+    const forceEllipsoidGeometry = new THREE.SphereGeometry(1.0)
+    const ps = forceEllipsoidGeometry.vertices.map(p => p.toArray())
+    const pe = math.multiply(this.sqrtm(A), math.transpose(ps))
+
+    for (let i = 0; i < forceEllipsoidGeometry.vertices.length; i++) {
+      forceEllipsoidGeometry.vertices[i].set(pe[0][i], pe[1][i], pe[2][i])
+    }
+
+    const lineSegments = new THREE.LineSegments(new THREE.WireframeGeometry(forceEllipsoidGeometry))
+    lineSegments.material.color = new THREE.Color('blue')
+    lineSegments.material.depthTest = false
+    lineSegments.material.opacity = 0.25
+    lineSegments.material.transparent = true
+
+    this._scene.remove(this._forceEllipsoid)
+    this._forceEllipsoid = lineSegments
+    this._scene.add(this._forceEllipsoid)
+
+    this._forceEllipsoid.position.set(eff_pos.x, eff_pos.y, eff_pos.z)
+
+    console.log(`Updated ellipsoid`)
+  }
+
   get motionKeypoints () {
     if (typeof this._motionKeypoints === 'undefined') { this._motionKeypoints = [] }
     return this._motionKeypoints
@@ -260,6 +295,8 @@ export class Robot {
            tolerance < math.sum(math.abs(effToGoal.rot)))) {
       const J = this.computeJacobianNumerically()
       const Jt = math.transpose(J)
+
+      // J^{\#} = W^{-1} J^\top ( J W^{-1} J^\top + C )^{-1}
       const Jpinv = math.multiply(Winv, math.multiply(Jt, math.inv(math.add(math.multiply(J, math.multiply(Winv, Jt)), C))))
       const d_q = math.multiply(Jpinv, effToGoal.pos.concat(effToGoal.rot))
 
@@ -268,6 +305,11 @@ export class Robot {
       effToGoal = this.computeEffToGoalInfo(goal)
       iteration++
     }
+
+    // Force ellipsoid update - NEEDS REFACTORING
+    const eff_pos = new THREE.Vector3()
+    this.getLinkPose(this.tipLinks[0]).decompose(eff_pos, new THREE.Quaternion(), new THREE.Vector3())
+    this.updateEllipsoid(eff_pos)
 
     console.log(`Solved with ${iteration} iterations.`)
   }
@@ -284,7 +326,15 @@ export class Robot {
     return { pos: effPosToGoal, rot: effRotToGoal }
   }
 
-  computeJacobianNumerically () {
+  /**
+   * Returns the numeric jacobian of this robot's configuration.
+   *
+   * @param {String} partial An optional string specifying whether the returned jacobian
+   *                         should contain the 'translational' or 'rotational' information
+   * @returns The numeric jacobian of this robot's configuration
+   * @type Number[]
+   */
+  computeJacobianNumerically (partial = '') {
     const variation = 10 // In degrees, not in radians.
 
     let J = []
@@ -306,7 +356,13 @@ export class Robot {
 
       const diff = this.computeEffToGoalInfo(d_eff)
 
-      J.push(diff.pos.concat(diff.rot))
+      if (partial === 'translational') {
+        J.push(diff.pos)
+      } else if (partial === 'rotational') {
+        J.push(diff.rot)
+      } else {
+        J.push(diff.pos.concat(diff.rot))
+      }
     }
 
     return math.transpose(J)
