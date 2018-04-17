@@ -309,7 +309,6 @@ function setupModelsList (models) {
 
 // instantiate a loader
 const loader = new THREE.ColladaLoader()
-loader.options.convertUpAxis = true
 
 const modelsInScene = []
 

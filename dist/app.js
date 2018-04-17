@@ -123683,7 +123683,6 @@ function setupModelsList(models) {
 
 // instantiate a loader
 var loader = new THREE.ColladaLoader();
-loader.options.convertUpAxis = true;
 
 var modelsInScene = [];
 
@@ -124077,6 +124076,7 @@ var Robot = exports.Robot = function () {
     this._scene = scene;
     this._dae = dae;
     this._kinematics = collada.kinematics;
+    this._physics = collada.library.physicsModels.pmodel0;
     this._tipLinks = tipLinks;
 
     this._degreesOfFreedom = 0;
@@ -124113,35 +124113,77 @@ var Robot = exports.Robot = function () {
       return X;
     }
   }, {
-    key: 'updateEllipsoid',
-    value: function updateEllipsoid(eff_pos) {
+    key: 'updateVelocityEllipsoid',
+    value: function updateVelocityEllipsoid(eff_pos) {
       var J = this.computeJacobianNumerically('translational');
       var Jt = math.transpose(J);
       var A = math.multiply(J, Jt);
 
-      var forceEllipsoidGeometry = new THREE.SphereGeometry(1.0);
-      var ps = forceEllipsoidGeometry.vertices.map(function (p) {
+      var ellipsoidGeometry = new THREE.SphereGeometry(1.0);
+      var ps = ellipsoidGeometry.vertices.map(function (p) {
         return p.toArray();
       });
       var pe = math.multiply(this.sqrtm(A), math.transpose(ps));
 
-      for (var i = 0; i < forceEllipsoidGeometry.vertices.length; i++) {
-        forceEllipsoidGeometry.vertices[i].set(pe[0][i], pe[1][i], pe[2][i]);
+      for (var i = 0; i < ellipsoidGeometry.vertices.length; i++) {
+        ellipsoidGeometry.vertices[i].set(pe[0][i], pe[1][i], pe[2][i]);
       }
 
-      var lineSegments = new THREE.LineSegments(new THREE.WireframeGeometry(forceEllipsoidGeometry));
+      var lineSegments = new THREE.LineSegments(new THREE.WireframeGeometry(ellipsoidGeometry));
       lineSegments.material.color = new THREE.Color('blue');
       lineSegments.material.depthTest = false;
       lineSegments.material.opacity = 0.25;
       lineSegments.material.transparent = true;
 
-      this._scene.remove(this._forceEllipsoid);
-      this._forceEllipsoid = lineSegments;
-      this._scene.add(this._forceEllipsoid);
+      this._scene.remove(this._velEllipsoid);
+      this._velEllipsoid = lineSegments;
+      this._scene.add(this._velEllipsoid);
 
-      this._forceEllipsoid.position.set(eff_pos.x, eff_pos.y, eff_pos.z);
+      this._velEllipsoid.position.set(eff_pos.x, eff_pos.y, eff_pos.z);
 
-      console.log('Updated ellipsoid');
+      console.log('Updated velocity ellipsoid');
+    }
+  }, {
+    key: 'computeInertia',
+    value: function computeInertia() {
+      console.log(this._physics);
+      return math.random(6, 6);
+    }
+  }, {
+    key: 'updateAccelerationEllipsoid',
+    value: function updateAccelerationEllipsoid(eff_pos) {
+      var J = this.computeJacobianNumerically();
+      var Jt = math.transpose(J);
+
+      var M = this.computeInertia();
+      var Minv = math.inv(M);
+
+      var Mx = math.multiply(J, math.multiply(Minv, math.multiply(math.transpose(Minv), Jt)));
+      Mx = math.resize(Mx, [3, 3]);
+
+      var ellipsoidGeometry = new THREE.SphereGeometry(1.0);
+      var ps = ellipsoidGeometry.vertices.map(function (p) {
+        return p.toArray();
+      });
+      var pe = math.multiply(this.sqrtm(Mx), math.transpose(ps));
+
+      for (var i = 0; i < ellipsoidGeometry.vertices.length; i++) {
+        ellipsoidGeometry.vertices[i].set(pe[0][i], pe[1][i], pe[2][i]);
+      }
+
+      var lineSegments = new THREE.LineSegments(new THREE.WireframeGeometry(ellipsoidGeometry));
+      lineSegments.material.color = new THREE.Color('red');
+      lineSegments.material.depthTest = false;
+      lineSegments.material.opacity = 0.25;
+      lineSegments.material.transparent = true;
+
+      this._scene.remove(this._accEllipsoid);
+      this._accEllipsoid = lineSegments;
+      this._scene.add(this._accEllipsoid);
+
+      this._accEllipsoid.position.set(eff_pos.x, eff_pos.y, eff_pos.z);
+
+      console.log('Updated acceleration ellipsoid');
     }
   }, {
     key: 'clearMotionKeypoints',
@@ -124386,7 +124428,8 @@ var Robot = exports.Robot = function () {
       // Force ellipsoid update - NEEDS REFACTORING
       var eff_pos = new THREE.Vector3();
       this.getLinkPose(this.tipLinks[0]).decompose(eff_pos, new THREE.Quaternion(), new THREE.Vector3());
-      this.updateEllipsoid(eff_pos);
+      this.updateVelocityEllipsoid(eff_pos);
+      this.updateAccelerationEllipsoid(eff_pos);
 
       console.log('Solved with ' + iteration + ' iterations.');
     }
@@ -127252,6 +127295,76 @@ module.exports = function (THREE) {
 				return data;
 			}
 
+			// physics
+
+			function parsePhysicsModel(xml) {
+
+				var data = {
+					name: xml.getAttribute('name') || '',
+					rigidBodies: {}
+				};
+
+				for (var i = 0; i < xml.childNodes.length; i++) {
+
+					var child = xml.childNodes[i];
+
+					if (child.nodeType !== 1) continue;
+
+					switch (child.nodeName) {
+
+						case 'rigid_body':
+							data.rigidBodies[child.getAttribute('name')] = {};
+							parsePhysicsRigidBody(child, data.rigidBodies[child.getAttribute('name')]);
+							break;
+
+					}
+				}
+
+				library.physicsModels[xml.getAttribute('id')] = data;
+			}
+
+			function parsePhysicsRigidBody(xml, data) {
+
+				for (var i = 0; i < xml.childNodes.length; i++) {
+
+					var child = xml.childNodes[i];
+
+					if (child.nodeType !== 1) continue;
+
+					switch (child.nodeName) {
+
+						case 'technique_common':
+							parsePhysicsTechniqueCommon(child, data);
+							break;
+
+					}
+				}
+			}
+
+			function parsePhysicsTechniqueCommon(xml, data) {
+
+				for (var i = 0; i < xml.childNodes.length; i++) {
+
+					var child = xml.childNodes[i];
+
+					if (child.nodeType !== 1) continue;
+
+					switch (child.nodeName) {
+
+						case 'inertia':
+							data.inertia = parseFloats(child.textContent);
+							break;
+
+						case 'mass':
+							data.mass = parseFloats(child.textContent)[0];
+							break;
+
+					}
+				}
+			}
+
+			// scene
+
 			function parseKinematicsScene(xml) {
 
 				var data = {
@@ -128153,6 +128266,7 @@ module.exports = function (THREE) {
 				nodes: {},
 				visualScenes: {},
 				kinematicsModels: {},
+				physicsModels: {},
 				kinematicsScenes: {}
 			};
 
@@ -128168,6 +128282,7 @@ module.exports = function (THREE) {
 			parseLibrary(collada, 'library_nodes', 'node', parseNode);
 			parseLibrary(collada, 'library_visual_scenes', 'visual_scene', parseVisualScene);
 			parseLibrary(collada, 'library_kinematics_models', 'kinematics_model', parseKinematicsModel);
+			parseLibrary(collada, 'library_physics_models', 'physics_model', parsePhysicsModel);
 			parseLibrary(collada, 'scene', 'instance_kinematics_scene', parseKinematicsScene);
 
 			buildLibrary(library.animations, buildAnimation);

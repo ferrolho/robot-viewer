@@ -24,6 +24,7 @@ export class Robot {
     this._scene = scene
     this._dae = dae
     this._kinematics = collada.kinematics
+    this._physics = collada.library.physicsModels.pmodel0
     this._tipLinks = tipLinks
 
     this._degreesOfFreedom = 0
@@ -54,32 +55,70 @@ export class Robot {
     return X
   }
 
-  updateEllipsoid (eff_pos) {
+  updateVelocityEllipsoid (eff_pos) {
     const J = this.computeJacobianNumerically('translational')
     const Jt = math.transpose(J)
     const A = math.multiply(J, Jt)
 
-    const forceEllipsoidGeometry = new THREE.SphereGeometry(1.0)
-    const ps = forceEllipsoidGeometry.vertices.map(p => p.toArray())
+    const ellipsoidGeometry = new THREE.SphereGeometry(1.0)
+    const ps = ellipsoidGeometry.vertices.map(p => p.toArray())
     const pe = math.multiply(this.sqrtm(A), math.transpose(ps))
 
-    for (let i = 0; i < forceEllipsoidGeometry.vertices.length; i++) {
-      forceEllipsoidGeometry.vertices[i].set(pe[0][i], pe[1][i], pe[2][i])
+    for (let i = 0; i < ellipsoidGeometry.vertices.length; i++) {
+      ellipsoidGeometry.vertices[i].set(pe[0][i], pe[1][i], pe[2][i])
     }
 
-    const lineSegments = new THREE.LineSegments(new THREE.WireframeGeometry(forceEllipsoidGeometry))
+    const lineSegments = new THREE.LineSegments(new THREE.WireframeGeometry(ellipsoidGeometry))
     lineSegments.material.color = new THREE.Color('blue')
     lineSegments.material.depthTest = false
     lineSegments.material.opacity = 0.25
     lineSegments.material.transparent = true
 
-    this._scene.remove(this._forceEllipsoid)
-    this._forceEllipsoid = lineSegments
-    this._scene.add(this._forceEllipsoid)
+    this._scene.remove(this._velEllipsoid)
+    this._velEllipsoid = lineSegments
+    this._scene.add(this._velEllipsoid)
 
-    this._forceEllipsoid.position.set(eff_pos.x, eff_pos.y, eff_pos.z)
+    this._velEllipsoid.position.set(eff_pos.x, eff_pos.y, eff_pos.z)
 
-    console.log(`Updated ellipsoid`)
+    console.log(`Updated velocity ellipsoid`)
+  }
+
+  computeInertia () {
+    console.log(this._physics)
+    return math.random(6, 6)
+  }
+
+  updateAccelerationEllipsoid (eff_pos) {
+    const J = this.computeJacobianNumerically()
+    const Jt = math.transpose(J)
+
+    const M = this.computeInertia()
+    const Minv = math.inv(M)
+
+    let Mx = math.multiply(J, math.multiply(Minv, math.multiply(math.transpose(Minv), Jt)))
+    Mx = math.resize(Mx, [3, 3])
+
+    const ellipsoidGeometry = new THREE.SphereGeometry(1.0)
+    const ps = ellipsoidGeometry.vertices.map(p => p.toArray())
+    const pe = math.multiply(this.sqrtm(Mx), math.transpose(ps))
+
+    for (let i = 0; i < ellipsoidGeometry.vertices.length; i++) {
+      ellipsoidGeometry.vertices[i].set(pe[0][i], pe[1][i], pe[2][i])
+    }
+
+    const lineSegments = new THREE.LineSegments(new THREE.WireframeGeometry(ellipsoidGeometry))
+    lineSegments.material.color = new THREE.Color('red')
+    lineSegments.material.depthTest = false
+    lineSegments.material.opacity = 0.25
+    lineSegments.material.transparent = true
+
+    this._scene.remove(this._accEllipsoid)
+    this._accEllipsoid = lineSegments
+    this._scene.add(this._accEllipsoid)
+
+    this._accEllipsoid.position.set(eff_pos.x, eff_pos.y, eff_pos.z)
+
+    console.log(`Updated acceleration ellipsoid`)
   }
 
   get motionKeypoints () {
@@ -309,7 +348,8 @@ export class Robot {
     // Force ellipsoid update - NEEDS REFACTORING
     const eff_pos = new THREE.Vector3()
     this.getLinkPose(this.tipLinks[0]).decompose(eff_pos, new THREE.Quaternion(), new THREE.Vector3())
-    this.updateEllipsoid(eff_pos)
+    this.updateVelocityEllipsoid(eff_pos)
+    this.updateAccelerationEllipsoid(eff_pos)
 
     console.log(`Solved with ${iteration} iterations.`)
   }
