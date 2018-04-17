@@ -16,7 +16,7 @@ const THREETransformControls = require('three-transformcontrols')
 const TWEEN = require('tween.js')
 const Stats = require('stats.js')
 
-require('./loaders/ColladaLoader2')(THREE)
+require('./loaders/ColladaLoader')(THREE)
 
 const stats = new Stats()
 stats.dom.id = 'statsjs'

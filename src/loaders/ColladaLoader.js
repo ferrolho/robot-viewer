@@ -1,6 +1,8 @@
 /**
  * @author mrdoob / http://mrdoob.com/
  * @author Mugen87 / https://github.com/Mugen87
+ * 
+ * Source: https://github.com/mrdoob/three.js/blob/dev/examples/js/loaders/ColladaLoader.js
  */
 
 module.exports = function(THREE) {
@@ -21,7 +23,7 @@ module.exports = function(THREE) {
 
 			var scope = this;
 
-			var path = THREE.Loader.prototype.extractUrlBase( url );
+			var path = scope.path === undefined ? THREE.LoaderUtils.extractUrlBase( url ) : scope.path;
 
 			var loader = new THREE.FileLoader( scope.manager );
 			loader.load( url, function ( text ) {
@@ -32,11 +34,17 @@ module.exports = function(THREE) {
 
 		},
 
+		setPath: function ( value ) {
+
+			this.path = value;
+
+		},
+
 		options: {
 
 			set convertUpAxis( value ) {
 
-				console.log( 'THREE.ColladaLoader.options.convertUpAxis: TODO' );
+				console.warn( 'THREE.ColladaLoader: options.convertUpAxis() has been removed. Up axis is converted automatically.' );
 
 			}
 
@@ -130,9 +138,15 @@ module.exports = function(THREE) {
 
 			}
 
+			function generateId() {
+
+				return 'three_default_' + ( count ++ );
+
+			}
+
 			function isEmpty( object ) {
 
-				return  Object.keys( object ).length === 0;
+				return Object.keys( object ).length === 0;
 
 			}
 
@@ -149,7 +163,15 @@ module.exports = function(THREE) {
 
 			function parseAssetUnit( xml ) {
 
-				return xml !== undefined ? parseFloat( xml.getAttribute( 'meter' ) ) : 1;
+				if ( ( xml !== undefined ) && ( xml.hasAttribute( 'meter' ) === true ) ) {
+
+					return parseFloat( xml.getAttribute( 'meter' ) );
+
+				} else {
+
+					return 1; // default 1 meter
+
+				}
 
 			}
 
@@ -348,13 +370,11 @@ module.exports = function(THREE) {
 
 						var inputId = sampler.inputs.INPUT;
 						var outputId = sampler.inputs.OUTPUT;
-						var interpolationId = sampler.inputs.INTERPOLATION;
 
 						var inputSource = sources[ inputId ];
 						var outputSource = sources[ outputId ];
-						var interpolationSource = sources[ interpolationId ];
 
-						var animation = buildAnimationChannel( channel, inputSource, outputSource, interpolationSource );
+						var animation = buildAnimationChannel( channel, inputSource, outputSource );
 
 						createKeyframeTracks( animation, tracks );
 
@@ -372,7 +392,7 @@ module.exports = function(THREE) {
 
 			}
 
-			function buildAnimationChannel( channel, inputSource, outputSource, interpolationSource ) {
+			function buildAnimationChannel( channel, inputSource, outputSource ) {
 
 				var node = library.nodes[ channel.id ];
 				var object3D = getNode( node.id );
@@ -439,7 +459,7 @@ module.exports = function(THREE) {
 				var animation = {
 					name: object3D.uuid,
 					keyframes: keyframes
-				}
+				};
 
 				return animation;
 
@@ -580,7 +600,7 @@ module.exports = function(THREE) {
 						prev = getPrev( keyframes, i, property );
 						next = getNext( keyframes, i, property );
 
-						if ( prev === null )  {
+						if ( prev === null ) {
 
 							keyframe.value[ property ] = next.value[ property ];
 							continue;
@@ -745,7 +765,7 @@ module.exports = function(THREE) {
 
 				var data = {
 					sources: {}
-				}
+				};
 
 				for ( var i = 0, l = xml.childNodes.length; i < l; i ++ ) {
 
@@ -784,7 +804,7 @@ module.exports = function(THREE) {
 
 				var data = {
 					inputs: {}
-				}
+				};
 
 				for ( var i = 0, l = xml.childNodes.length; i < l; i ++ ) {
 
@@ -812,7 +832,7 @@ module.exports = function(THREE) {
 
 				var data = {
 					inputs: {}
-				}
+				};
 
 				for ( var i = 0, l = xml.childNodes.length; i < l; i ++ ) {
 
@@ -1002,7 +1022,17 @@ module.exports = function(THREE) {
 
 			function getImage( id ) {
 
-				return getBuild( library.images[ id ], buildImage );
+				var data = library.images[ id ];
+
+				if ( data !== undefined ) {
+
+					return getBuild( data, buildImage );
+
+				}
+
+				console.warn( 'THREE.ColladaLoader: Couldn\'t find image with ID:', id );
+
+				return null;
 
 			}
 
@@ -1053,6 +1083,10 @@ module.exports = function(THREE) {
 
 						case 'technique':
 							data.technique = parseEffectTechnique( child );
+							break;
+
+						case 'extra':
+							data.extra = parseEffectExtra( child );
 							break;
 
 					}
@@ -1181,9 +1215,14 @@ module.exports = function(THREE) {
 						case 'diffuse':
 						case 'specular':
 						case 'shininess':
-						case 'transparent':
 						case 'transparency':
 							data[ child.nodeName ] = parseEffectParameter( child );
+							break;
+						case 'transparent':
+							data[ child.nodeName ] = {
+								opaque: child.getAttribute( 'opaque' ),
+								data: parseEffectParameter( child )
+							};
 							break;
 
 					}
@@ -1316,6 +1355,54 @@ module.exports = function(THREE) {
 
 			}
 
+			function parseEffectExtra( xml ) {
+
+				var data = {};
+
+				for ( var i = 0, l = xml.childNodes.length; i < l; i ++ ) {
+
+					var child = xml.childNodes[ i ];
+
+					if ( child.nodeType !== 1 ) continue;
+
+					switch ( child.nodeName ) {
+
+						case 'technique':
+							data.technique = parseEffectExtraTechnique( child );
+							break;
+
+					}
+
+				}
+
+				return data;
+
+			}
+
+			function parseEffectExtraTechnique( xml ) {
+
+				var data = {};
+
+				for ( var i = 0, l = xml.childNodes.length; i < l; i ++ ) {
+
+					var child = xml.childNodes[ i ];
+
+					if ( child.nodeType !== 1 ) continue;
+
+					switch ( child.nodeName ) {
+
+						case 'double_sided':
+							data[ child.nodeName ] = parseInt( child.textContent );
+							break;
+
+					}
+
+				}
+
+				return data;
+
+			}
+
 			function buildEffect( data ) {
 
 				return data;
@@ -1360,6 +1447,7 @@ module.exports = function(THREE) {
 
 				var effect = getEffect( data.url );
 				var technique = effect.profile.technique;
+				var extra = effect.profile.extra;
 
 				var material;
 
@@ -1385,16 +1473,31 @@ module.exports = function(THREE) {
 				function getTexture( textureObject ) {
 
 					var sampler = effect.profile.samplers[ textureObject.id ];
+					var image = null;
+
+					// get image
 
 					if ( sampler !== undefined ) {
 
 						var surface = effect.profile.surfaces[ sampler.source ];
+						image = getImage( surface.init_from );
 
-						var texture = textureLoader.load( getImage( surface.init_from ) );
+					} else {
+
+						console.warn( 'THREE.ColladaLoader: Undefined sampler. Access image directly (see #12530).' );
+						image = getImage( textureObject.id );
+
+					}
+
+					// create texture if image is avaiable
+
+					if ( image !== null ) {
+
+						var texture = textureLoader.load( image );
 
 						var extra = textureObject.extra;
 
-						if ( extra !== undefined && extra.technique !== undefined  && isEmpty( extra.technique ) === false ) {
+						if ( extra !== undefined && extra.technique !== undefined && isEmpty( extra.technique ) === false ) {
 
 							var technique = extra.technique;
 
@@ -1413,11 +1516,13 @@ module.exports = function(THREE) {
 
 						return texture;
 
+					} else {
+
+						console.warn( 'THREE.ColladaLoader: Couldn\'t create texture with ID:', textureObject.id );
+
+						return null;
+
 					}
-
-					console.error( 'THREE.ColladaLoader: Undefined sampler', textureObject.id );
-
-					return null;
 
 				}
 
@@ -1438,23 +1543,88 @@ module.exports = function(THREE) {
 							if ( parameter.texture ) material.specularMap = getTexture( parameter.texture );
 							break;
 						case 'shininess':
-							if ( parameter.float && material.shininess )
-								material.shininess = parameter.float;
+							if ( parameter.float && material.shininess ) material.shininess = parameter.float;
 							break;
 						case 'emission':
-							if ( parameter.color && material.emissive )
-								material.emissive.fromArray( parameter.color );
-							break;
-						case 'transparent':
-							// if ( parameter.texture ) material.alphaMap = getTexture( parameter.texture );
-							material.transparent = true;
-							break;
-						case 'transparency':
-							if ( parameter.float !== undefined ) material.opacity = parameter.float;
-							material.transparent = true;
+							if ( parameter.color && material.emissive ) material.emissive.fromArray( parameter.color );
+							if ( parameter.texture ) material.emissiveMap = getTexture( parameter.texture );
 							break;
 
 					}
+
+				}
+
+				//
+
+				var transparent = parameters[ 'transparent' ];
+				var transparency = parameters[ 'transparency' ];
+
+				// <transparency> does not exist but <transparent>
+
+				if ( transparency === undefined && transparent ) {
+
+					transparency = {
+						float: 1
+					};
+
+				}
+
+				// <transparent> does not exist but <transparency>
+
+				if ( transparent === undefined && transparency ) {
+
+					transparent = {
+						opaque: 'A_ONE',
+						data: {
+							color: [ 1, 1, 1, 1 ]
+						} };
+
+				}
+
+				if ( transparent && transparency ) {
+
+					// handle case if a texture exists but no color
+
+					if ( transparent.data.texture ) {
+
+						// we do not set an alpha map (see #13792)
+
+						material.transparent = true;
+
+					} else {
+
+						var color = transparent.data.color;
+
+						switch ( transparent.opaque ) {
+
+							case 'A_ONE':
+								material.opacity = color[ 3 ] * transparency.float;
+								break;
+							case 'RGB_ZERO':
+								material.opacity = 1 - ( color[ 0 ] * transparency.float );
+								break;
+							case 'A_ZERO':
+								material.opacity = 1 - ( color[ 3 ] * transparency.float );
+								break;
+							case 'RGB_ONE':
+								material.opacity = color[ 0 ] * transparency.float;
+								break;
+							default:
+								console.warn( 'THREE.ColladaLoader: Invalid opaque type "%s" of transparent tag.', transparent.opaque );
+
+						}
+
+						if ( material.opacity < 1 ) material.transparent = true;
+
+					}
+
+				}
+
+				//
+
+				if ( extra !== undefined && extra.technique !== undefined && extra.technique.double_sided === 1 ) {
+
+					material.side = THREE.DoubleSide;
 
 				}
 
@@ -1616,7 +1786,17 @@ module.exports = function(THREE) {
 
 			function getCamera( id ) {
 
-				return getBuild( library.cameras[ id ], buildCamera );
+				var data = library.cameras[ id ];
+
+				if ( data !== undefined ) {
+
+					return getBuild( data, buildCamera );
+
+				}
+
+				console.warn( 'THREE.ColladaLoader: Couldn\'t find camera with ID:', id );
+
+				return null;
 
 			}
 
@@ -1741,7 +1921,17 @@ module.exports = function(THREE) {
 
 			function getLight( id ) {
 
-				return getBuild( library.lights[ id ], buildLight );
+				var data = library.lights[ id ];
+
+				if ( data !== undefined ) {
+
+					return getBuild( data, buildLight );
+
+				}
+
+				console.warn( 'THREE.ColladaLoader: Couldn\'t find light with ID:', id );
+
+				return null;
 
 			}
 
@@ -1757,6 +1947,9 @@ module.exports = function(THREE) {
 				};
 
 				var mesh = getElementsByTagName( xml, 'mesh' )[ 0 ];
+
+				// the following tags inside geometry are not supported yet (see https://github.com/mrdoob/three.js/pull/12606): convex_mesh, spline, brep
+				if ( mesh === undefined ) return;
 
 				for ( var i = 0; i < mesh.childNodes.length; i ++ ) {
 
@@ -1863,9 +2056,10 @@ module.exports = function(THREE) {
 				var primitive = {
 					type: xml.nodeName,
 					material: xml.getAttribute( 'material' ),
-					count:  parseInt( xml.getAttribute( 'count' ) ),
+					count: parseInt( xml.getAttribute( 'count' ) ),
 					inputs: {},
-					stride: 0
+					stride: 0,
+					hasUV: false
 				};
 
 				for ( var i = 0, l = xml.childNodes.length; i < l; i ++ ) {
@@ -1882,6 +2076,7 @@ module.exports = function(THREE) {
 							var offset = parseInt( child.getAttribute( 'offset' ) );
 							primitive.inputs[ semantic ] = { id: id, offset: offset };
 							primitive.stride = Math.max( primitive.stride, offset + 1 );
+							if ( semantic === 'TEXCOORD' ) primitive.hasUV = true;
 							break;
 
 						case 'vcount':
@@ -1918,6 +2113,30 @@ module.exports = function(THREE) {
 
 			}
 
+			function checkUVCoordinates( primitives ) {
+
+				var count = 0;
+
+				for ( var i = 0, l = primitives.length; i < l; i ++ ) {
+
+					var primitive = primitives[ i ];
+
+					if ( primitive.hasUV === true ) {
+
+						count ++;
+
+					}
+
+				}
+
+				if ( count > 0 && count < primitives.length ) {
+
+					primitives.uvsNeedsFix = true;
+
+				}
+
+			}
+
 			function buildGeometry( data ) {
 
 				var build = {};
@@ -1928,16 +2147,22 @@ module.exports = function(THREE) {
 
 				if ( primitives.length === 0 ) return {};
 
-				// our goal is to create one buffer geoemtry for a single type of primitives
+				// our goal is to create one buffer geometry for a single type of primitives
 				// first, we group all primitives by their type
 
 				var groupedPrimitives = groupPrimitives( primitives );
 
 				for ( var type in groupedPrimitives ) {
 
-					// second, we create for each type of primitives (polylist,triangles or lines) a buffer geometry
+					var primitiveType = groupedPrimitives[ type ];
 
-					build[ type ] = buildGeometryType( groupedPrimitives[ type ], sources, vertices );
+					// second, ensure consistent uv coordinates for each type of primitives (polylist,triangles or lines)
+
+					checkUVCoordinates( primitiveType );
+
+					// third, create a buffer geometry for each type of primitives
+
+					build[ type ] = buildGeometryType( primitiveType, sources, vertices );
 
 				}
 
@@ -1961,30 +2186,56 @@ module.exports = function(THREE) {
 
 				var materialKeys = [];
 
-				var start = 0, count = 0;
-				var array;
+				var start = 0;
 
 				for ( var p = 0; p < primitives.length; p ++ ) {
 
 					var primitive = primitives[ p ];
 					var inputs = primitive.inputs;
-					var triangleCount = 1;
-
-					if ( primitive.vcount && primitive.vcount[ 0 ] === 4 ) {
-
-						triangleCount = 2; // one quad -> two triangles
-
-					}
 
 					// groups
 
-					if ( primitive.type === 'lines' || primitive.type === 'linestrips' ) {
+					var count = 0;
 
-						count = primitive.count * 2;
+					switch ( primitive.type ) {
 
-					} else {
+						case 'lines':
+						case 'linestrips':
+							count = primitive.count * 2;
+							break;
 
-						count = primitive.count * 3 * triangleCount;
+						case 'triangles':
+							count = primitive.count * 3;
+							break;
+
+						case 'polylist':
+
+							for ( var g = 0; g < primitive.count; g ++ ) {
+
+								var vc = primitive.vcount[ g ];
+
+								switch ( vc ) {
+
+									case 3:
+										count += 3; // single triangle
+										break;
+
+									case 4:
+										count += 6; // quad, subdivided into two triangles
+										break;
+
+									default:
+										count += ( vc - 2 ) * 3; // polylist with more than four vertices
+										break;
+
+								}
+
+							}
+
+							break;
+
+						default:
+							console.warn( 'THREE.ColladaLoader: Unknow primitive type:', primitive.type );
 
 					}
 
@@ -2010,11 +2261,12 @@ module.exports = function(THREE) {
 							case 'VERTEX':
 								for ( var key in vertices ) {
 
-									var id =  vertices[ key ];
+									var id = vertices[ key ];
 
 									switch ( key ) {
 
 										case 'POSITION':
+											var prevLength = position.array.length;
 											buildGeometryData( primitive, sources[ id ], input.offset, position.array );
 											position.stride = sources[ id ].stride;
 
@@ -2022,6 +2274,22 @@ module.exports = function(THREE) {
 
 												buildGeometryData( primitive, sources.skinIndices, input.offset, skinIndex.array );
 												buildGeometryData( primitive, sources.skinWeights, input.offset, skinWeight.array );
+
+											}
+
+											// see #3803
+
+											if ( primitive.hasUV === false && primitives.uvsNeedsFix === true ) {
+
+												var count = ( position.array.length - prevLength ) / position.stride;
+
+												for ( var i = 0; i < count; i ++ ) {
+
+													// fill missing uv coordinates
+
+													uv.array.push( 0, 0 );
+
+												}
 
 											}
 											break;
@@ -2107,8 +2375,6 @@ module.exports = function(THREE) {
 
 				}
 
-				var maxcount = 0;
-
 				var sourceArray = source.array;
 				var sourceStride = source.stride;
 
@@ -2138,19 +2404,21 @@ module.exports = function(THREE) {
 
 							pushVector( a ); pushVector( b ); pushVector( c );
 
-						} else {
+						} else if ( count > 4 ) {
 
-							maxcount = Math.max( maxcount, count );
+							for ( var k = 1, kl = ( count - 2 ); k <= kl; k ++ ) {
+
+								var a = index + stride * 0;
+								var b = index + stride * k;
+								var c = index + stride * ( k + 1 );
+
+								pushVector( a ); pushVector( b ); pushVector( c );
+
+							}
 
 						}
 
 						index += stride * count;
-
-					}
-
-					if ( maxcount > 0 ) {
-
-						console.log( 'THREE.ColladaLoader: Geometry has faces with more than 4 vertices.' );
 
 					}
 
@@ -2200,7 +2468,7 @@ module.exports = function(THREE) {
 
 				library.kinematicsModels[ xml.getAttribute( 'id' ) ] = data;
 
-			};
+			}
 
 			function buildKinematicsModel( data ) {
 
@@ -2268,7 +2536,7 @@ module.exports = function(THREE) {
 			function parseKinematicsJointParameter( xml, data ) {
 
 				var data = {
-					sid:  xml.getAttribute( 'sid' ),
+					sid: xml.getAttribute( 'sid' ),
 					name: xml.getAttribute( 'name' ) || '',
 					axis: new THREE.Vector3(),
 					limits: {
@@ -2530,11 +2798,10 @@ module.exports = function(THREE) {
 
 				function connect( jointIndex, visualElement ) {
 
-					var visualElementId = visualElement.getAttribute( 'id' );
 					var visualElementName = visualElement.getAttribute( 'name' );
 					var joint = kinematicsModel.joints[ jointIndex ];
 
-					visualScene.traverse( function( object ) {
+					visualScene.traverse( function ( object ) {
 
 						if ( object.name === visualElementName ) {
 
@@ -2549,7 +2816,7 @@ module.exports = function(THREE) {
 
 					} );
 
-				};
+				}
 
 				var m0 = new THREE.Matrix4();
 
@@ -2557,7 +2824,7 @@ module.exports = function(THREE) {
 
 					joints: kinematicsModel && kinematicsModel.joints,
 
-					getJointValue: function( jointIndex ) {
+					getJointValue: function ( jointIndex ) {
 
 						var jointData = jointMap[ jointIndex ];
 
@@ -2573,7 +2840,7 @@ module.exports = function(THREE) {
 
 					},
 
-					setJointValue: function( jointIndex, value ) {
+					setJointValue: function ( jointIndex, value ) {
 
 						var jointData = jointMap[ jointIndex ];
 
@@ -2605,7 +2872,7 @@ module.exports = function(THREE) {
 
 									// if there is a connection of the transform node with a joint, apply the joint value
 
-									if ( transform.sid && transform.sid.indexOf( jointIndex ) !== -1 ) {
+									if ( transform.sid && transform.sid.indexOf( jointIndex ) !== - 1 ) {
 
 										switch ( joint.type ) {
 
@@ -2707,7 +2974,7 @@ module.exports = function(THREE) {
 							var array = parseFloats( child.textContent );
 							var vector = new THREE.Vector3().fromArray( array );
 							var angle = THREE.Math.degToRad( array[ 3 ] );
-							transforms.push({
+							transforms.push( {
 								sid: child.getAttribute( 'sid' ),
 								type: child.nodeName,
 								obj: vector,
@@ -2725,13 +2992,33 @@ module.exports = function(THREE) {
 
 			// nodes
 
+			function prepareNodes( xml ) {
+
+				var elements = xml.getElementsByTagName( 'node' );
+
+				// ensure all node elements have id attributes
+
+				for ( var i = 0; i < elements.length; i ++ ) {
+
+					var element = elements[ i ];
+
+					if ( element.hasAttribute( 'id' ) === false ) {
+
+						element.setAttribute( 'id', generateId() );
+
+					}
+
+				}
+
+			}
+
 			var matrix = new THREE.Matrix4();
 			var vector = new THREE.Vector3();
 
 			function parseNode( xml ) {
 
 				var data = {
-					name: xml.getAttribute( 'name' ),
+					name: xml.getAttribute( 'name' ) || '',
 					type: xml.getAttribute( 'type' ),
 					id: xml.getAttribute( 'id' ),
 					sid: xml.getAttribute( 'sid' ),
@@ -2754,14 +3041,8 @@ module.exports = function(THREE) {
 					switch ( child.nodeName ) {
 
 						case 'node':
-
-							if ( child.hasAttribute( 'id' ) ) {
-
-								data.nodes.push( child.getAttribute( 'id' ) );
-								parseNode( child );
-
-							}
-
+							data.nodes.push( child.getAttribute( 'id' ) );
+							parseNode( child );
 							break;
 
 						case 'instance_camera':
@@ -2820,11 +3101,7 @@ module.exports = function(THREE) {
 
 				}
 
-				if ( xml.hasAttribute( 'id' ) ) {
-
-					library.nodes[ xml.getAttribute( 'id' ) ] = data;
-
-				}
+				library.nodes[ data.id ] = data;
 
 				return data;
 
@@ -2887,11 +3164,39 @@ module.exports = function(THREE) {
 				for ( i = 0; i < skeletons.length; i ++ ) {
 
 					var skeleton = skeletons[ i ];
-					var root = getNode( skeleton );
 
-					// setup bone data for a single bone hierarchy
+					var root;
 
-					buildBoneHierarchy( root, joints, boneData );
+					if ( hasNode( skeleton ) ) {
+
+						root = getNode( skeleton );
+						buildBoneHierarchy( root, joints, boneData );
+
+					} else if ( hasVisualScene( skeleton ) ) {
+
+						// handle case where the skeleton refers to the visual scene (#13335)
+
+						var visualScene = library.visualScenes[ skeleton ];
+						var children = visualScene.children;
+
+						for ( var j = 0; j < children.length; j ++ ) {
+
+							var child = children[ j ];
+
+							if ( child.type === 'JOINT' ) {
+
+								var root = getNode( child.id );
+								buildBoneHierarchy( root, joints, boneData );
+
+							}
+
+						}
+
+					} else {
+
+						console.error( 'THREE.ColladaLoader: Unable to find root bone of skeleton with ID:', skeleton );
+
+					}
 
 				}
 
@@ -2952,7 +3257,7 @@ module.exports = function(THREE) {
 
 				// setup bone data from visual scene
 
-				root.traverse( function( object ) {
+				root.traverse( function ( object ) {
 
 					if ( object.isBone === true ) {
 
@@ -2981,7 +3286,7 @@ module.exports = function(THREE) {
 							// and weights defined for it. But we still have to add the bone to the sorted bone list in order to
 							// ensure a correct animation of the model.
 
-							 boneInverse = new THREE.Matrix4();
+							boneInverse = new THREE.Matrix4();
 
 						}
 
@@ -3018,7 +3323,13 @@ module.exports = function(THREE) {
 
 				for ( var i = 0, l = instanceCameras.length; i < l; i ++ ) {
 
-					objects.push( getCamera( instanceCameras[ i ] ).clone() );
+					var instanceCamera = getCamera( instanceCameras[ i ] );
+
+					if ( instanceCamera !== null ) {
+
+						objects.push( instanceCamera.clone() );
+
+					}
 
 				}
 
@@ -3057,7 +3368,13 @@ module.exports = function(THREE) {
 
 				for ( var i = 0, l = instanceLights.length; i < l; i ++ ) {
 
-					objects.push( getLight( instanceLights[ i ] ).clone() );
+					var instanceLight = getLight( instanceLights[ i ] );
+
+					if ( instanceLight !== null ) {
+
+						objects.push( instanceLight.clone() );
+
+					}
 
 				}
 
@@ -3107,7 +3424,12 @@ module.exports = function(THREE) {
 
 				}
 
-				object.name = ( type === 'JOINT' ) ? data.sid : data.name;
+				if ( object.name === '' ) {
+
+					object.name = ( type === 'JOINT' ) ? data.sid : data.name;
+
+				}
+
 				object.matrix.copy( matrix );
 				object.matrix.decompose( object.position, object.quaternion, object.scale );
 
@@ -3211,6 +3533,12 @@ module.exports = function(THREE) {
 
 			}
 
+			function hasNode( id ) {
+
+				return library.nodes[ id ] !== undefined;
+
+			}
+
 			function getNode( id ) {
 
 				return getBuild( library.nodes[ id ], buildNode );
@@ -3225,6 +3553,8 @@ module.exports = function(THREE) {
 					name: xml.getAttribute( 'name' ),
 					children: []
 				};
+
+				prepareNodes( xml );
 
 				var elements = getElementsByTagName( xml, 'node' );
 
@@ -3249,21 +3579,17 @@ module.exports = function(THREE) {
 
 					var child = children[ i ];
 
-					if ( child.id === null ) {
-
-						group.add( buildNode( child ) );
-
-					} else {
-
-						// if there is an ID, let's try to get the finished build (e.g. joints are already build)
-
-						group.add( getNode( child.id ) );
-
-					}
+					group.add( getNode( child.id ) );
 
 				}
 
 				return group;
+
+			}
+
+			function hasVisualScene( id ) {
+
+				return library.visualScenes[ id ] !== undefined;
 
 			}
 
@@ -3322,19 +3648,13 @@ module.exports = function(THREE) {
 
 			}
 
-			console.time( 'THREE.ColladaLoader' );
-
 			if ( text.length === 0 ) {
 
 				return { scene: new THREE.Scene() };
 
 			}
 
-			console.time( 'THREE.ColladaLoader: DOMParser' );
-
 			var xml = new DOMParser().parseFromString( text, 'application/xml' );
-
-			console.timeEnd( 'THREE.ColladaLoader: DOMParser' );
 
 			var collada = getElementsByTagName( xml, 'COLLADA' )[ 0 ];
 
@@ -3351,6 +3671,7 @@ module.exports = function(THREE) {
 
 			var animations = [];
 			var kinematics = {};
+			var count = 0;
 
 			//
 
@@ -3370,8 +3691,6 @@ module.exports = function(THREE) {
 				kinematicsScenes: {}
 			};
 
-			console.time( 'THREE.ColladaLoader: Parse' );
-
 			parseLibrary( collada, 'library_animations', 'animation', parseAnimation );
 			parseLibrary( collada, 'library_animation_clips', 'animation_clip', parseAnimationClip );
 			parseLibrary( collada, 'library_controllers', 'controller', parseController );
@@ -3386,10 +3705,6 @@ module.exports = function(THREE) {
 			parseLibrary( collada, 'library_kinematics_models', 'kinematics_model', parseKinematicsModel );
 			parseLibrary( collada, 'scene', 'instance_kinematics_scene', parseKinematicsScene );
 
-			console.timeEnd( 'THREE.ColladaLoader: Parse' );
-
-			console.time( 'THREE.ColladaLoader: Build' );
-
 			buildLibrary( library.animations, buildAnimation );
 			buildLibrary( library.clips, buildAnimationClip );
 			buildLibrary( library.controllers, buildController );
@@ -3401,8 +3716,6 @@ module.exports = function(THREE) {
 			buildLibrary( library.geometries, buildGeometry );
 			buildLibrary( library.visualScenes, buildVisualScene );
 
-			console.timeEnd( 'THREE.ColladaLoader: Build' );
-
 			setupAnimations();
 			setupKinematics();
 
@@ -3410,13 +3723,11 @@ module.exports = function(THREE) {
 
 			if ( asset.upAxis === 'Z_UP' ) {
 
-				scene.rotation.x = - Math.PI / 2;
+				scene.quaternion.setFromEuler( new THREE.Euler( - Math.PI / 2, 0, 0 ) );
 
 			}
 
 			scene.scale.multiplyScalar( asset.unit );
-
-			console.timeEnd( 'THREE.ColladaLoader' );
 
 			return {
 				animations: animations,
