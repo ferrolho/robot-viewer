@@ -48,11 +48,29 @@ export class Robot {
     // this.printJointNames()
   }
 
-  sqrtm (A, iterations = 10) {
-    // Square root of a matrix by the Babylonian method
-    let X = math.eye(math.size(A))
-    for (let i = 0; i < iterations; i++) { X = math.multiply(0.5, math.add(X, math.divide(A, X))) }
-    return X
+  sqrtm (A) {
+    const _maxIterations = 1e3
+    const _tolerance = 1e-6
+
+    let error
+    let iterations = 0
+
+    let Y = A
+    let Z = math.eye(math.size(A))
+
+    do {
+      const Y_k = Y
+      Y = math.multiply(0.5, math.add(Y_k, math.inv(Z)))
+      Z = math.multiply(0.5, math.add(Z, math.inv(Y_k)))
+
+      error = math.max(math.abs(math.subtract(Y, Y_k)))
+
+      if (error > _tolerance && ++iterations > _maxIterations) {
+        throw new SyntaxError('Could not converge to solution within the maximum iterations limit')
+      }
+    } while (error > _tolerance)
+
+    return Y
   }
 
   updateVelocityEllipsoid (eff_pos) {
