@@ -155,7 +155,7 @@ export class Robot {
   }
 
   debugKinematicsGeometry (scene) {
-    var linegeometry = new THREE.Geometry()
+    const linegeometry = new THREE.Geometry()
 
     const material = new THREE.MeshLambertMaterial({ color: 0xff0000 })
     const sphereGeometry = new THREE.SphereGeometry(0.01)
@@ -179,7 +179,7 @@ export class Robot {
       this._scene.add(sphere)
     }
 
-    var line = new THREE.Line(linegeometry, material)
+    const line = new THREE.Line(linegeometry, material)
     this._scene.add(line)
   }
 
