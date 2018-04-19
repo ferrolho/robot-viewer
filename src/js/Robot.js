@@ -48,6 +48,36 @@ export class Robot {
     // this.printJointNames()
   }
 
+  /**
+   * Convert a skew-symmetric matrix to a vector.
+   *
+   * V = math.vex(S) is the vector (3x1) which has the skew-symmetric matrix S (3x3).
+   *
+   *    |  0   -vz  vy |
+   *    |  vz   0  -vx |
+   *    | -vy   vx  0  |
+   *
+   * Notes:
+   * - This is the inverse of the function skew().
+   * - No checking is done to ensure that the matrix is actually skew-symmetric.
+   * - The function takes the mean of the two elements that correspond to each unique
+   *   element of the matrix, i.e., vx = 0.5 * (S(3,2) - S(2,3))
+   *
+   * @param  {Matrix} S   The skew-symmetric matrix `S`
+   * @return {Array}     The vector `V` (3x1)
+   * @private
+   */
+  vex (S) {
+    if (math.deepEqual(math.size(S), [3, 3])) {
+      return math.multiply(0.5, [
+        math.subset(S, math.index(2, 1)) - math.subset(S, math.index(1, 2)),
+        math.subset(S, math.index(0, 2)) - math.subset(S, math.index(2, 0)),
+        math.subset(S, math.index(1, 0)) - math.subset(S, math.index(0, 1))])
+    } else {
+      throw new SyntaxError(`vex@Robot.js: Argument must be a 3,3 matrix (received ${math.size(S)})`)
+    }
+  }
+
   sqrtm (A) {
     const _maxIterations = 1e3
     const _tolerance = 1e-6
