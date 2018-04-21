@@ -389,7 +389,7 @@ window.addEventListener('keydown', function (event) {
       break
     case 75: // K
       console.log(`Motion keypoint recorded. (total = ${robot.motionKeypoints.length})`)
-      console.log(robot.configuration)
+      // console.log(robot.configuration)
       robot.saveMotionKeypoint()
       break
     case 80: // P

@@ -104,11 +104,11 @@ export class Robot {
   }
 
   updateVelocityEllipsoid (eff_pos) {
-    const J = this.computeJacobianNumerically('translational')
+    const J = this.jacob(this.configuration, 'translational')
     const Jt = math.transpose(J)
     const A = math.multiply(J, Jt)
 
-    const ellipsoidGeometry = new THREE.SphereGeometry(1.0)
+    const ellipsoidGeometry = new THREE.SphereGeometry(1 / 3)
     const ps = ellipsoidGeometry.vertices.map(p => p.toArray())
     const pe = math.multiply(this.sqrtm(A), math.transpose(ps))
 
@@ -137,7 +137,7 @@ export class Robot {
   }
 
   updateAccelerationEllipsoid (eff_pos) {
-    const J = this.computeJacobianNumerically()
+    const J = this.jacob(this.configuration)
     const Jt = math.transpose(J)
 
     const M = this.computeInertia()
@@ -259,6 +259,29 @@ export class Robot {
     return this._dae.getObjectByName(linkName).matrixWorld
   }
 
+  threejs2mathjsMatrix (T) {
+    T = new THREE.Matrix4().copy(T).transpose()
+    return math.matrix([
+      T.elements.slice(0, 4),
+      T.elements.slice(4, 8),
+      T.elements.slice(8, 12),
+      T.elements.slice(12, 16)])
+  }
+
+  fkine (q) {
+    const q_backup = this.configuration
+
+    this.configuration = q
+    this._dae.updateMatrixWorld()
+
+    const T = this.threejs2mathjsMatrix(this._dae.getObjectByName(this.tipLinks[0]).matrixWorld)
+
+    this.configuration = q_backup
+    this._dae.updateMatrixWorld()
+
+    return T
+  }
+
   updateShadowsState (castShadows) {
     this._dae.traverse(function (child) {
       if (child instanceof THREE.Mesh) {
@@ -318,12 +341,12 @@ export class Robot {
       if (q.length !== this.degreesOfFreedom) {
         throw new Error('set configuration (q): q must be the same size as the robot DoF.')
       } else {
-        this._q = q.slice(0)
-        q = q.slice(0)
+        this._q = q.slice()
+        let joint = 0
         for (const prop in this._kinematics.joints) {
           if (this._kinematics.joints.hasOwnProperty(prop)) {
             if (!this._kinematics.joints[prop].static) {
-              this.setJointValue(prop, q.shift())
+              this.setJointValue(prop, q[joint++])
             }
           }
         }
@@ -359,101 +382,126 @@ export class Robot {
         this.moveTipToPoseWithGeneticAlgorithm(goal)
         break
       case IkSolverEnum.PSEUDO_INVERSE:
-        this.moveTipToPoseWithPseudoInverse(goal, 1e-3)
+        this.moveTipToPoseWithPseudoInverse(goal)
         break
     }
   }
 
-  moveTipToPoseWithPseudoInverse (goal, c = 0) {
+  moveTipToPoseWithPseudoInverse (goal) {
+    const maxIterations = 100
     const tolerance = 1e-3
+    const alpha = 0.9
 
-    const C = math.multiply(math.eye(6), c)
-    // const Cinv = c === 0 ? math.zeros(6) : math.inv(C)
+    const Tf = this.threejs2mathjsMatrix(goal.matrixWorld)
+    let errorPrev = math.ones(6)
 
-    // const W = math.diag([6, 5, 4, 3, 2, 1])
-    const W = math.eye(this.degreesOfFreedom)
-    const Winv = math.inv(W)
+    let q = this.configuration
+    // let q = this.zeroConfiguration
 
-    let effToGoal = this.computeEffToGoalInfo(goal)
     let iteration = 0
 
-    while (iteration < 100 &&
-          (tolerance < math.sum(math.abs(effToGoal.pos)) ||
-           tolerance < math.sum(math.abs(effToGoal.rot)))) {
-      const J = this.computeJacobianNumerically()
-      const Jt = math.transpose(J)
+    while (iteration < maxIterations) {
+      const error = this.tr2delta(this.fkine(q), Tf) // 8.13
 
-      // J^{\#} = W^{-1} J^\top ( J W^{-1} J^\top + C )^{-1}
-      const Jpinv = math.multiply(Winv, math.multiply(Jt, math.inv(math.add(math.multiply(J, math.multiply(Winv, Jt)), C))))
-      const d_q = math.multiply(Jpinv, effToGoal.pos.concat(effToGoal.rot))
+      if (math.norm(error) <= tolerance) { break }
 
-      for (let i = 0; i < this._joints.length; i++) { this.setJointValue(this._joints[i], this._q[i] + d_q.get([i])) }
+      if (math.norm(error) > 2 * math.norm(errorPrev)) {
+        console.log(`Solution diverging at step ${iteration}, try reducing alpha`)
+      }
 
-      effToGoal = this.computeEffToGoalInfo(goal)
+      const dq = math.multiply(alpha, math.multiply(this.pseudoInverse(q), error))
+
+      q = math.add(q, math.multiply(dq, THREE.Math.RAD2DEG)).toArray()
+
+      errorPrev = error
+
       iteration++
     }
+
+    this.configuration = q
 
     // Force ellipsoid update - NEEDS REFACTORING
     const eff_pos = new THREE.Vector3()
     this.getLinkPose(this.tipLinks[0]).decompose(eff_pos, new THREE.Quaternion(), new THREE.Vector3())
     this.updateVelocityEllipsoid(eff_pos)
-    this.updateAccelerationEllipsoid(eff_pos)
+    // this.updateAccelerationEllipsoid(eff_pos)
 
     console.log(`Solved with ${iteration} iterations.`)
   }
 
-  computeEffToGoalInfo (goal) {
-    const eff_pos = new THREE.Vector3()
-    const eff_quat = new THREE.Quaternion()
-    this.getLinkPose(this.tipLinks[0]).decompose(eff_pos, eff_quat, new THREE.Vector3())
-    const eff_rot = new THREE.Euler().setFromQuaternion(eff_quat)
+  /**
+   * Computes the pseudo inverse jacobian matrix `J^{\#}` of configuration `q`.
+   *
+   * J^{\#} = W^{-1} J^\top ( J W^{-1} J^\top + C )^{-1}
+   *
+   * @param {*} q
+   * @param {*} c
+   */
+  pseudoInverse (q, c = 1e-3) {
+    const C = math.multiply(math.eye(6), c)
+    // const Cinv = c === 0 ? math.zeros(6) : math.inv(C)
 
-    const effPosToGoal = new THREE.Vector3().subVectors(goal.position, eff_pos).toArray()
-    const effRotToGoal = new THREE.Vector3().subVectors(goal.rotation, eff_rot).toArray()
+    // const W = math.diag([6, 5, 4, 3, 2, 1])
+    const W = math.eye(q.length)
+    const Winv = math.inv(W)
 
-    return { pos: effPosToGoal, rot: effRotToGoal }
+    const J = this.jacob(q)
+    const Jt = math.transpose(J)
+
+    return math.multiply(Winv, math.multiply(Jt, math.inv(math.add(math.multiply(J, math.multiply(Winv, Jt)), C))))
   }
 
   /**
-   * Returns the numeric jacobian of this robot's configuration.
+   * Computes the geometric jacobian `J` of a robot configuration `q`.
    *
-   * @param {String} partial An optional string specifying whether the returned jacobian
-   *                         should contain the 'translational' or 'rotational' information
-   * @returns The numeric jacobian of this robot's configuration
-   * @type Number[]
+   * @param  {Array}  q       A robot configuration `q`
+   * @param  {String} partial An optional string specifying whether the returned jacobian
+   *                          should contain the 'translational' or 'rotational' information
+   * @return {Matrix}         The numeric jacobian of this robot's configuration
    */
-  computeJacobianNumerically (partial = '') {
-    const variation = 10 // In degrees, not in radians.
+  jacob (q, partial = '') {
+    const dq = 1e-6
 
     let J = []
 
     for (let i = 0; i < this._joints.length; i++) {
-      // Displace joint
-      this.setJointValue(this._joints[i], this._q[i] + variation)
+      const q_displaced = q.slice()
+      q_displaced[i] += dq * THREE.Math.RAD2DEG
 
-      const d_eff_pos = new THREE.Vector3()
-      const d_eff_quat = new THREE.Quaternion()
-      this.getLinkPose(this.tipLinks[0]).decompose(d_eff_pos, d_eff_quat, new THREE.Vector3())
-      const d_eff_rot = new THREE.Euler().setFromQuaternion(d_eff_quat)
+      const t0 = this.fkine(q)
+      const tp = this.fkine(q_displaced)
 
-      // Save eff pose after displacement
-      const d_eff = { position: d_eff_pos, rotation: d_eff_rot }
+      const dtdq = math.divide(math.subtract(tp, t0), dq)
+      const drdq = math.subset(dtdq, math.index(math.range(0, 3), math.range(0, 3)))
+      const r0 = math.subset(t0, math.index(math.range(0, 3), math.range(0, 3)))
 
-      // Undo joint displacement
-      this.setJointValue(this._joints[i], this._q[i] - variation)
-
-      const diff = this.computeEffToGoalInfo(d_eff)
+      const v = math.transpose(math.subset(dtdq, math.index(math.range(0, 3), 3))).toArray()[0]
+      const w = this.vex(math.multiply(drdq, math.transpose(r0)))
 
       if (partial === 'translational') {
-        J.push(diff.pos)
+        J.push(v)
       } else if (partial === 'rotational') {
-        J.push(diff.rot)
+        J.push(w)
       } else {
-        J.push(diff.pos.concat(diff.rot))
+        J.push(math.concat(v, w))
       }
     }
 
-    return math.transpose(J)
+    J = math.transpose(J)
+
+    return J
+  }
+
+  tr2delta (T0, T1) {
+    const t0 = math.subset(T0, math.index(math.range(0, 3), 3))
+    const t1 = math.subset(T1, math.index(math.range(0, 3), 3))
+
+    const R0 = math.subset(T0, math.index(math.range(0, 3), math.range(0, 3)))
+    const R1 = math.subset(T1, math.index(math.range(0, 3), math.range(0, 3)))
+
+    return math.concat(
+      math.transpose(math.subtract(t1, t0)).toArray()[0],
+      this.vex(math.subtract(math.multiply(R1, math.transpose(R0)), math.eye(3))))
   }
 
   initializeRobotKin () {

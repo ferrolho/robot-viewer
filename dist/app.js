@@ -73790,6 +73790,18 @@ function OrbitControls ( object, domElement ) {
 
 	}
 
+	this.rotateLeft = function( angle ) {
+
+		sphericalDelta.theta -= angle;
+
+	}
+
+	this.rotateUp = function ( angle ) {
+
+		sphericalDelta.phi -= angle;
+
+	}
+
 	var panLeft = function () {
 
 		var v = new THREE.Vector3();
@@ -122783,7 +122795,7 @@ window.addEventListener('keydown', function (event) {
     case 75:
       // K
       console.log('Motion keypoint recorded. (total = ' + robot.motionKeypoints.length + ')');
-      console.log(robot.configuration);
+      // console.log(robot.configuration)
       robot.saveMotionKeypoint();
       break;
     case 80:
@@ -123171,11 +123183,11 @@ var Robot = exports.Robot = function () {
   }, {
     key: 'updateVelocityEllipsoid',
     value: function updateVelocityEllipsoid(eff_pos) {
-      var J = this.computeJacobianNumerically('translational');
+      var J = this.jacob(this.configuration, 'translational');
       var Jt = math.transpose(J);
       var A = math.multiply(J, Jt);
 
-      var ellipsoidGeometry = new THREE.SphereGeometry(1.0);
+      var ellipsoidGeometry = new THREE.SphereGeometry(1 / 3);
       var ps = ellipsoidGeometry.vertices.map(function (p) {
         return p.toArray();
       });
@@ -123208,7 +123220,7 @@ var Robot = exports.Robot = function () {
   }, {
     key: 'updateAccelerationEllipsoid',
     value: function updateAccelerationEllipsoid(eff_pos) {
-      var J = this.computeJacobianNumerically();
+      var J = this.jacob(this.configuration);
       var Jt = math.transpose(J);
 
       var M = this.computeInertia();
@@ -123389,6 +123401,27 @@ var Robot = exports.Robot = function () {
       return this._dae.getObjectByName(linkName).matrixWorld;
     }
   }, {
+    key: 'threejs2mathjsMatrix',
+    value: function threejs2mathjsMatrix(T) {
+      T = new THREE.Matrix4().copy(T).transpose();
+      return math.matrix([T.elements.slice(0, 4), T.elements.slice(4, 8), T.elements.slice(8, 12), T.elements.slice(12, 16)]);
+    }
+  }, {
+    key: 'fkine',
+    value: function fkine(q) {
+      var q_backup = this.configuration;
+
+      this.configuration = q;
+      this._dae.updateMatrixWorld();
+
+      var T = this.threejs2mathjsMatrix(this._dae.getObjectByName(this.tipLinks[0]).matrixWorld);
+
+      this.configuration = q_backup;
+      this._dae.updateMatrixWorld();
+
+      return T;
+    }
+  }, {
     key: 'updateShadowsState',
     value: function updateShadowsState(castShadows) {
       this._dae.traverse(function (child) {
@@ -123444,110 +123477,138 @@ var Robot = exports.Robot = function () {
           this.moveTipToPoseWithGeneticAlgorithm(goal);
           break;
         case _IkSolver.IkSolverEnum.PSEUDO_INVERSE:
-          this.moveTipToPoseWithPseudoInverse(goal, 1e-3);
+          this.moveTipToPoseWithPseudoInverse(goal);
           break;
       }
     }
   }, {
     key: 'moveTipToPoseWithPseudoInverse',
     value: function moveTipToPoseWithPseudoInverse(goal) {
-      var c = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 0;
-
+      var maxIterations = 100;
       var tolerance = 1e-3;
+      var alpha = 0.9;
 
-      var C = math.multiply(math.eye(6), c);
-      // const Cinv = c === 0 ? math.zeros(6) : math.inv(C)
+      var Tf = this.threejs2mathjsMatrix(goal.matrixWorld);
+      var errorPrev = math.ones(6);
 
-      // const W = math.diag([6, 5, 4, 3, 2, 1])
-      var W = math.eye(this.degreesOfFreedom);
-      var Winv = math.inv(W);
+      var q = this.configuration;
+      // let q = this.zeroConfiguration
 
-      var effToGoal = this.computeEffToGoalInfo(goal);
       var iteration = 0;
 
-      while (iteration < 100 && (tolerance < math.sum(math.abs(effToGoal.pos)) || tolerance < math.sum(math.abs(effToGoal.rot)))) {
-        var J = this.computeJacobianNumerically();
-        var Jt = math.transpose(J);
+      while (iteration < maxIterations) {
+        var error = this.tr2delta(this.fkine(q), Tf); // 8.13
 
-        // J^{\#} = W^{-1} J^\top ( J W^{-1} J^\top + C )^{-1}
-        var Jpinv = math.multiply(Winv, math.multiply(Jt, math.inv(math.add(math.multiply(J, math.multiply(Winv, Jt)), C))));
-        var d_q = math.multiply(Jpinv, effToGoal.pos.concat(effToGoal.rot));
-
-        for (var i = 0; i < this._joints.length; i++) {
-          this.setJointValue(this._joints[i], this._q[i] + d_q.get([i]));
+        if (math.norm(error) <= tolerance) {
+          break;
         }
 
-        effToGoal = this.computeEffToGoalInfo(goal);
+        if (math.norm(error) > 2 * math.norm(errorPrev)) {
+          console.log('Solution diverging at step ' + iteration + ', try reducing alpha');
+        }
+
+        var dq = math.multiply(alpha, math.multiply(this.pseudoInverse(q), error));
+
+        q = math.add(q, math.multiply(dq, THREE.Math.RAD2DEG)).toArray();
+
+        errorPrev = error;
+
         iteration++;
       }
+
+      this.configuration = q;
 
       // Force ellipsoid update - NEEDS REFACTORING
       var eff_pos = new THREE.Vector3();
       this.getLinkPose(this.tipLinks[0]).decompose(eff_pos, new THREE.Quaternion(), new THREE.Vector3());
       this.updateVelocityEllipsoid(eff_pos);
-      this.updateAccelerationEllipsoid(eff_pos);
+      // this.updateAccelerationEllipsoid(eff_pos)
 
       console.log('Solved with ' + iteration + ' iterations.');
     }
-  }, {
-    key: 'computeEffToGoalInfo',
-    value: function computeEffToGoalInfo(goal) {
-      var eff_pos = new THREE.Vector3();
-      var eff_quat = new THREE.Quaternion();
-      this.getLinkPose(this.tipLinks[0]).decompose(eff_pos, eff_quat, new THREE.Vector3());
-      var eff_rot = new THREE.Euler().setFromQuaternion(eff_quat);
-
-      var effPosToGoal = new THREE.Vector3().subVectors(goal.position, eff_pos).toArray();
-      var effRotToGoal = new THREE.Vector3().subVectors(goal.rotation, eff_rot).toArray();
-
-      return { pos: effPosToGoal, rot: effRotToGoal };
-    }
 
     /**
-     * Returns the numeric jacobian of this robot's configuration.
+     * Computes the pseudo inverse jacobian matrix `J^{\#}` of configuration `q`.
      *
-     * @param {String} partial An optional string specifying whether the returned jacobian
-     *                         should contain the 'translational' or 'rotational' information
-     * @returns The numeric jacobian of this robot's configuration
-     * @type Number[]
+     * J^{\#} = W^{-1} J^\top ( J W^{-1} J^\top + C )^{-1}
+     *
+     * @param {*} q
+     * @param {*} c
      */
 
   }, {
-    key: 'computeJacobianNumerically',
-    value: function computeJacobianNumerically() {
-      var partial = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : '';
+    key: 'pseudoInverse',
+    value: function pseudoInverse(q) {
+      var c = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 1e-3;
 
-      var variation = 10; // In degrees, not in radians.
+      var C = math.multiply(math.eye(6), c);
+      // const Cinv = c === 0 ? math.zeros(6) : math.inv(C)
+
+      // const W = math.diag([6, 5, 4, 3, 2, 1])
+      var W = math.eye(q.length);
+      var Winv = math.inv(W);
+
+      var J = this.jacob(q);
+      var Jt = math.transpose(J);
+
+      return math.multiply(Winv, math.multiply(Jt, math.inv(math.add(math.multiply(J, math.multiply(Winv, Jt)), C))));
+    }
+
+    /**
+     * Computes the geometric jacobian `J` of a robot configuration `q`.
+     *
+     * @param  {Array}  q       A robot configuration `q`
+     * @param  {String} partial An optional string specifying whether the returned jacobian
+     *                          should contain the 'translational' or 'rotational' information
+     * @return {Matrix}         The numeric jacobian of this robot's configuration
+     */
+
+  }, {
+    key: 'jacob',
+    value: function jacob(q) {
+      var partial = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : '';
+
+      var dq = 1e-6;
 
       var J = [];
 
       for (var i = 0; i < this._joints.length; i++) {
-        // Displace joint
-        this.setJointValue(this._joints[i], this._q[i] + variation);
+        var q_displaced = q.slice();
+        q_displaced[i] += dq * THREE.Math.RAD2DEG;
 
-        var d_eff_pos = new THREE.Vector3();
-        var d_eff_quat = new THREE.Quaternion();
-        this.getLinkPose(this.tipLinks[0]).decompose(d_eff_pos, d_eff_quat, new THREE.Vector3());
-        var d_eff_rot = new THREE.Euler().setFromQuaternion(d_eff_quat);
+        var t0 = this.fkine(q);
+        var tp = this.fkine(q_displaced);
 
-        // Save eff pose after displacement
-        var d_eff = { position: d_eff_pos, rotation: d_eff_rot
+        var dtdq = math.divide(math.subtract(tp, t0), dq);
+        var drdq = math.subset(dtdq, math.index(math.range(0, 3), math.range(0, 3)));
+        var r0 = math.subset(t0, math.index(math.range(0, 3), math.range(0, 3)));
 
-          // Undo joint displacement
-        };this.setJointValue(this._joints[i], this._q[i] - variation);
-
-        var diff = this.computeEffToGoalInfo(d_eff);
+        var v = math.transpose(math.subset(dtdq, math.index(math.range(0, 3), 3))).toArray()[0];
+        var w = this.vex(math.multiply(drdq, math.transpose(r0)));
 
         if (partial === 'translational') {
-          J.push(diff.pos);
+          J.push(v);
         } else if (partial === 'rotational') {
-          J.push(diff.rot);
+          J.push(w);
         } else {
-          J.push(diff.pos.concat(diff.rot));
+          J.push(math.concat(v, w));
         }
       }
 
-      return math.transpose(J);
+      J = math.transpose(J);
+
+      return J;
+    }
+  }, {
+    key: 'tr2delta',
+    value: function tr2delta(T0, T1) {
+      var t0 = math.subset(T0, math.index(math.range(0, 3), 3));
+      var t1 = math.subset(T1, math.index(math.range(0, 3), 3));
+
+      var R0 = math.subset(T0, math.index(math.range(0, 3), math.range(0, 3)));
+      var R1 = math.subset(T1, math.index(math.range(0, 3), math.range(0, 3)));
+
+      return math.concat(math.transpose(math.subtract(t1, t0)).toArray()[0], this.vex(math.subtract(math.multiply(R1, math.transpose(R0)), math.eye(3))));
     }
   }, {
     key: 'initializeRobotKin',
@@ -123839,12 +123900,12 @@ var Robot = exports.Robot = function () {
         if (q.length !== this.degreesOfFreedom) {
           throw new Error('set configuration (q): q must be the same size as the robot DoF.');
         } else {
-          this._q = q.slice(0);
-          q = q.slice(0);
+          this._q = q.slice();
+          var joint = 0;
           for (var prop in this._kinematics.joints) {
             if (this._kinematics.joints.hasOwnProperty(prop)) {
               if (!this._kinematics.joints[prop].static) {
-                this.setJointValue(prop, q.shift());
+                this.setJointValue(prop, q[joint++]);
               }
             }
           }
