@@ -123248,7 +123248,9 @@ var Robot = exports.Robot = function () {
 
       this.plotEllipsoid(Mx, 'acceleration-ellipsoid');
 
-      console.log('Updated acceleration ellipsoid');
+      if (this._verbose) {
+        console.log('Updated acceleration ellipsoid');
+      }
     }
   }, {
     key: 'updateForceEllipsoid',
@@ -123259,7 +123261,9 @@ var Robot = exports.Robot = function () {
 
       this.plotEllipsoid(A, 'force-ellipsoid');
 
-      console.log('Updated force ellipsoid');
+      if (this._verbose) {
+        console.log('Updated force ellipsoid');
+      }
     }
   }, {
     key: 'updateVelocityEllipsoid',
@@ -123270,7 +123274,9 @@ var Robot = exports.Robot = function () {
 
       this.plotEllipsoid(A, 'velocity-ellipsoid');
 
-      console.log('Updated velocity ellipsoid');
+      if (this._verbose) {
+        console.log('Updated velocity ellipsoid');
+      }
     }
   }, {
     key: 'computeInertia',
@@ -123512,9 +123518,9 @@ var Robot = exports.Robot = function () {
   }, {
     key: 'moveTipToPoseWithPseudoInverse',
     value: function moveTipToPoseWithPseudoInverse(goal) {
-      var maxIterations = 100;
+      var maxIterations = 50;
       var tolerance = 1e-3;
-      var alpha = 0.9;
+      var alpha = 0.2;
 
       var Tf = this.threejs2mathjsMatrix(goal.matrixWorld);
       var errorPrev = math.ones(6);
@@ -123523,6 +123529,8 @@ var Robot = exports.Robot = function () {
       // let q = this.zeroConfiguration
 
       var iteration = 0;
+
+      var start = Date.now();
 
       while (iteration < maxIterations) {
         var error = this.tr2delta(this.fkine(q), Tf); // 8.13
@@ -123544,13 +123552,16 @@ var Robot = exports.Robot = function () {
         iteration++;
       }
 
+      // milliseconds elapsed since start
+      var delta = Date.now() - start;
+
       this.configuration = q;
 
       // this.updateAccelerationEllipsoid()
       this.updateForceEllipsoid();
       this.updateVelocityEllipsoid();
 
-      console.log('Solved with ' + iteration + ' iterations.');
+      console.log('Solved with ' + iteration + ' iterations (' + delta + ' ms).');
     }
 
     /**
@@ -123581,7 +123592,7 @@ var Robot = exports.Robot = function () {
     }
 
     /**
-     * Computes the geometric jacobian `J` of a robot configuration `q`.
+     * Computes the numerical jacobian `J` of a robot configuration `q`.
      *
      * @param  {Array}  q       A robot configuration `q`
      * @param  {String} partial An optional string specifying whether the returned jacobian
@@ -123594,17 +123605,21 @@ var Robot = exports.Robot = function () {
     value: function jacob(q) {
       var partial = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : '';
 
-      var dq = 1e-6;
+      var dq = 1e-6 / 2;
 
       var J = [];
 
       for (var i = 0; i < this._joints.length; i++) {
-        var q_displaced = q.slice();
-        q_displaced[i] += dq * THREE.Math.RAD2DEG;
+        var q_less = q.slice();
+        q_less[i] -= dq * THREE.Math.RAD2DEG;
 
-        var t0 = this.fkine(q);
-        var tp = this.fkine(q_displaced);
+        var q_more = q.slice();
+        q_more[i] += dq * THREE.Math.RAD2DEG;
 
+        var t0 = this.fkine(q_less);
+        var tp = this.fkine(q_more);
+
+        // central difference - https://en.wikipedia.org/wiki/Finite_difference#Forward,_backward,_and_central_differences
         var dtdq = math.divide(math.subtract(tp, t0), dq);
         var drdq = math.subset(dtdq, math.index(math.range(0, 3), math.range(0, 3)));
         var r0 = math.subset(t0, math.index(math.range(0, 3), math.range(0, 3)));

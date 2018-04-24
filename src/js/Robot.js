@@ -169,7 +169,7 @@ export class Robot {
 
     this.plotEllipsoid(Mx, 'acceleration-ellipsoid')
 
-    console.log(`Updated acceleration ellipsoid`)
+    if (this._verbose) { console.log(`Updated acceleration ellipsoid`) }
   }
 
   updateForceEllipsoid (eff_pos) {
@@ -179,7 +179,7 @@ export class Robot {
 
     this.plotEllipsoid(A, 'force-ellipsoid')
 
-    console.log(`Updated force ellipsoid`)
+    if (this._verbose) { console.log(`Updated force ellipsoid`) }
   }
 
   updateVelocityEllipsoid (eff_pos) {
@@ -189,7 +189,7 @@ export class Robot {
 
     this.plotEllipsoid(A, 'velocity-ellipsoid')
 
-    console.log(`Updated velocity ellipsoid`)
+    if (this._verbose) { console.log(`Updated velocity ellipsoid`) }
   }
 
   computeInertia () {
@@ -419,9 +419,9 @@ export class Robot {
   }
 
   moveTipToPoseWithPseudoInverse (goal) {
-    const maxIterations = 100
+    const maxIterations = 50
     const tolerance = 1e-3
-    const alpha = 0.9
+    const alpha = 0.2
 
     const Tf = this.threejs2mathjsMatrix(goal.matrixWorld)
     let errorPrev = math.ones(6)
@@ -430,6 +430,8 @@ export class Robot {
     // let q = this.zeroConfiguration
 
     let iteration = 0
+
+    const start = Date.now()
 
     while (iteration < maxIterations) {
       const error = this.tr2delta(this.fkine(q), Tf) // 8.13
@@ -449,13 +451,16 @@ export class Robot {
       iteration++
     }
 
+    // milliseconds elapsed since start
+    const delta = Date.now() - start
+
     this.configuration = q
 
     // this.updateAccelerationEllipsoid()
     this.updateForceEllipsoid()
     this.updateVelocityEllipsoid()
 
-    console.log(`Solved with ${iteration} iterations.`)
+    console.log(`Solved with ${iteration} iterations (${delta} ms).`)
   }
 
   /**
@@ -481,7 +486,7 @@ export class Robot {
   }
 
   /**
-   * Computes the geometric jacobian `J` of a robot configuration `q`.
+   * Computes the numerical jacobian `J` of a robot configuration `q`.
    *
    * @param  {Array}  q       A robot configuration `q`
    * @param  {String} partial An optional string specifying whether the returned jacobian
@@ -489,17 +494,21 @@ export class Robot {
    * @return {Matrix}         The numeric jacobian of this robot's configuration
    */
   jacob (q, partial = '') {
-    const dq = 1e-6
+    const dq = 1e-6 / 2
 
     let J = []
 
     for (let i = 0; i < this._joints.length; i++) {
-      const q_displaced = q.slice()
-      q_displaced[i] += dq * THREE.Math.RAD2DEG
+      const q_less = q.slice()
+      q_less[i] -= dq * THREE.Math.RAD2DEG
 
-      const t0 = this.fkine(q)
-      const tp = this.fkine(q_displaced)
+      const q_more = q.slice()
+      q_more[i] += dq * THREE.Math.RAD2DEG
 
+      const t0 = this.fkine(q_less)
+      const tp = this.fkine(q_more)
+
+      // central difference - https://en.wikipedia.org/wiki/Finite_difference#Forward,_backward,_and_central_differences
       const dtdq = math.divide(math.subtract(tp, t0), dq)
       const drdq = math.subset(dtdq, math.index(math.range(0, 3), math.range(0, 3)))
       const r0 = math.subset(t0, math.index(math.range(0, 3), math.range(0, 3)))
