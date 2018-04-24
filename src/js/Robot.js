@@ -96,44 +96,65 @@ export class Robot {
       error = math.max(math.abs(math.subtract(Y, Y_k)))
 
       if (error > _tolerance && ++iterations > _maxIterations) {
-        throw new SyntaxError('Could not converge to solution within the maximum iterations limit')
+        throw new Error('Could not converge to solution within the maximum iterations limit')
       }
     } while (error > _tolerance)
 
     return Y
   }
 
-  updateVelocityEllipsoid (eff_pos) {
-    const J = this.jacob(this.configuration, 'translational')
-    const Jt = math.transpose(J)
-    const A = math.multiply(J, Jt)
-
-    const ellipsoidGeometry = new THREE.SphereGeometry(1 / 3)
-    const ps = ellipsoidGeometry.vertices.map(p => p.toArray())
-    const pe = math.multiply(this.sqrtm(A), math.transpose(ps))
-
-    for (let i = 0; i < ellipsoidGeometry.vertices.length; i++) {
-      ellipsoidGeometry.vertices[i].set(pe[0][i], pe[1][i], pe[2][i])
-    }
-
-    const lineSegments = new THREE.LineSegments(new THREE.WireframeGeometry(ellipsoidGeometry))
-    lineSegments.material.color = new THREE.Color('blue')
-    lineSegments.material.depthTest = false
-    lineSegments.material.opacity = 0.25
-    lineSegments.material.transparent = true
-
-    this._scene.remove(this._velEllipsoid)
-    this._velEllipsoid = lineSegments
-    this._scene.add(this._velEllipsoid)
-
-    this._velEllipsoid.position.set(eff_pos.x, eff_pos.y, eff_pos.z)
-
-    console.log(`Updated velocity ellipsoid`)
+  /**
+   * Unpacks the translational part of a transformation matrix.
+   *
+   * @param   {Matrix}  T   An SE(3) homogeneous transform (4x4)
+   * @returns {Vector3}     The translational part of a homogeneous transform T as a THREE.Vector3
+   */
+  transl (T) {
+    return new THREE.Vector3().fromArray(math.transpose(math.subset(T, math.index(math.range(0, 3), 3))).toArray()[0])
   }
 
-  computeInertia () {
-    console.log(this._physics)
-    return math.random(6, 6)
+  /**
+   * Adds an ellipsoid A to the THREE.Scene as a THREE.Object3D with a name.
+   *
+   * @param {*} A     The ellisoid to be added to the Scene
+   * @param {*} name  The name of the Object3D
+   */
+  plotEllipsoid (A, name) {
+    const radius = name === 'velocity-ellipsoid' ? 0.3 : 0.05
+    const geometry = new THREE.SphereGeometry(radius)
+    const ps = geometry.vertices.map(p => p.toArray())
+    const pe = math.multiply(this.sqrtm(A), math.transpose(ps))
+
+    for (let i = 0; i < geometry.vertices.length; i++) {
+      geometry.vertices[i].set(pe[0][i], pe[1][i], pe[2][i])
+    }
+
+    const lineSegments = new THREE.LineSegments(new THREE.WireframeGeometry(geometry))
+    lineSegments.material.depthTest = false
+    // lineSegments.material.linewidth = 2
+    lineSegments.material.opacity = 0.5
+    lineSegments.material.transparent = true
+
+    lineSegments.material.color = ((name) => {
+      switch (name) {
+        case 'acceleration-ellipsoid': return new THREE.Color('yellow')
+        case 'force-ellipsoid': return new THREE.Color('red')
+        case 'velocity-ellipsoid': return new THREE.Color('blue')
+        default: return new THREE.Color('black')
+      }
+    })(name)
+
+    // Remove the last plotted ellipsoid from the scene
+    this._scene.remove(this._scene.getObjectByName(name))
+
+    const ellipsoid = lineSegments
+    ellipsoid.name = name
+
+    const eff = this.transl(this.fkine(this.configuration))
+    ellipsoid.position.set(eff.x, eff.y, eff.z)
+
+    // Add new ellipsoid to the scene
+    this._scene.add(ellipsoid)
   }
 
   updateAccelerationEllipsoid (eff_pos) {
@@ -146,27 +167,37 @@ export class Robot {
     let Mx = math.multiply(J, math.multiply(Minv, math.multiply(math.transpose(Minv), Jt)))
     Mx = math.resize(Mx, [3, 3])
 
-    const ellipsoidGeometry = new THREE.SphereGeometry(1.0)
-    const ps = ellipsoidGeometry.vertices.map(p => p.toArray())
-    const pe = math.multiply(this.sqrtm(Mx), math.transpose(ps))
-
-    for (let i = 0; i < ellipsoidGeometry.vertices.length; i++) {
-      ellipsoidGeometry.vertices[i].set(pe[0][i], pe[1][i], pe[2][i])
-    }
-
-    const lineSegments = new THREE.LineSegments(new THREE.WireframeGeometry(ellipsoidGeometry))
-    lineSegments.material.color = new THREE.Color('red')
-    lineSegments.material.depthTest = false
-    lineSegments.material.opacity = 0.25
-    lineSegments.material.transparent = true
-
-    this._scene.remove(this._accEllipsoid)
-    this._accEllipsoid = lineSegments
-    this._scene.add(this._accEllipsoid)
-
-    this._accEllipsoid.position.set(eff_pos.x, eff_pos.y, eff_pos.z)
+    this.plotEllipsoid(Mx, 'acceleration-ellipsoid')
 
     console.log(`Updated acceleration ellipsoid`)
+  }
+
+  updateForceEllipsoid (eff_pos) {
+    const J = this.jacob(this.configuration, 'translational')
+    const Jt = math.transpose(J)
+    const A = math.inv(math.multiply(J, Jt))
+
+    this.plotEllipsoid(A, 'force-ellipsoid')
+
+    console.log(`Updated force ellipsoid`)
+  }
+
+  updateVelocityEllipsoid (eff_pos) {
+    const J = this.jacob(this.configuration, 'translational')
+    const Jt = math.transpose(J)
+    const A = math.multiply(J, Jt)
+
+    this.plotEllipsoid(A, 'velocity-ellipsoid')
+
+    console.log(`Updated velocity ellipsoid`)
+  }
+
+  computeInertia () {
+    console.log('Robot.js@computeInertia: THIS IS NOT YET FUNCTIONAL !')
+    return
+
+    console.log(this._physics)
+    return math.random(6, 6)
   }
 
   get motionKeypoints () {
@@ -420,11 +451,9 @@ export class Robot {
 
     this.configuration = q
 
-    // Force ellipsoid update - NEEDS REFACTORING
-    const eff_pos = new THREE.Vector3()
-    this.getLinkPose(this.tipLinks[0]).decompose(eff_pos, new THREE.Quaternion(), new THREE.Vector3())
-    this.updateVelocityEllipsoid(eff_pos)
-    // this.updateAccelerationEllipsoid(eff_pos)
+    // this.updateAccelerationEllipsoid()
+    this.updateForceEllipsoid()
+    this.updateVelocityEllipsoid()
 
     console.log(`Solved with ${iteration} iterations.`)
   }
