@@ -1,23 +1,9 @@
 import { IkSolverEnum } from './IkSolver.js'
+import * as math_ from './math_.js'
 
 const Kinematics = require('kinematics').default
 const math = require('mathjs')
 const THREE = require('three')
-
-/**
- * Returns a number whose value is limited to the given range.
- *
- * Example: limit the output of this computation to between 0 and 255
- * (x * 255).clamp(0, 255)
- *
- * @param {Number} min The lower boundary of the output range
- * @param {Number} max The upper boundary of the output range
- * @returns A number in the range [min, max]
- * @type Number
- */
-Number.prototype.clamp = function (min, max) {
-  return Math.min(Math.max(this, min), max)
-}
 
 export class Robot {
   constructor (scene, dae, collada, tipLinks) {
@@ -49,71 +35,6 @@ export class Robot {
   }
 
   /**
-   * Convert a skew-symmetric matrix to a vector.
-   *
-   * V = math.vex(S) is the vector (3x1) which has the skew-symmetric matrix S (3x3).
-   *
-   *    |  0   -vz  vy |
-   *    |  vz   0  -vx |
-   *    | -vy   vx  0  |
-   *
-   * Notes:
-   * - This is the inverse of the function skew().
-   * - No checking is done to ensure that the matrix is actually skew-symmetric.
-   * - The function takes the mean of the two elements that correspond to each unique
-   *   element of the matrix, i.e., vx = 0.5 * (S(3,2) - S(2,3))
-   *
-   * @param  {Matrix} S   The skew-symmetric matrix `S`
-   * @return {Array}     The vector `V` (3x1)
-   * @private
-   */
-  vex (S) {
-    if (math.deepEqual(math.size(S), [3, 3])) {
-      return math.multiply(0.5, [
-        math.subset(S, math.index(2, 1)) - math.subset(S, math.index(1, 2)),
-        math.subset(S, math.index(0, 2)) - math.subset(S, math.index(2, 0)),
-        math.subset(S, math.index(1, 0)) - math.subset(S, math.index(0, 1))])
-    } else {
-      throw new SyntaxError(`vex@Robot.js: Argument must be a 3,3 matrix (received ${math.size(S)})`)
-    }
-  }
-
-  sqrtm (A) {
-    const _maxIterations = 1e3
-    const _tolerance = 1e-6
-
-    let error
-    let iterations = 0
-
-    let Y = A
-    let Z = math.eye(math.size(A))
-
-    do {
-      const Y_k = Y
-      Y = math.multiply(0.5, math.add(Y_k, math.inv(Z)))
-      Z = math.multiply(0.5, math.add(Z, math.inv(Y_k)))
-
-      error = math.max(math.abs(math.subtract(Y, Y_k)))
-
-      if (error > _tolerance && ++iterations > _maxIterations) {
-        throw new Error('Could not converge to solution within the maximum iterations limit')
-      }
-    } while (error > _tolerance)
-
-    return Y
-  }
-
-  /**
-   * Unpacks the translational part of a transformation matrix.
-   *
-   * @param   {Matrix}  T   An SE(3) homogeneous transform (4x4)
-   * @returns {Vector3}     The translational part of a homogeneous transform T as a THREE.Vector3
-   */
-  transl (T) {
-    return new THREE.Vector3().fromArray(math.transpose(math.subset(T, math.index(math.range(0, 3), 3))).toArray()[0])
-  }
-
-  /**
    * Adds an ellipsoid A to the THREE.Scene as a THREE.Object3D with a name.
    *
    * @param {*} A     The ellisoid to be added to the Scene
@@ -123,7 +44,7 @@ export class Robot {
     const radius = name === 'velocity-ellipsoid' ? 0.3 : 0.05
     const geometry = new THREE.SphereGeometry(radius)
     const ps = geometry.vertices.map(p => p.toArray())
-    const pe = math.multiply(this.sqrtm(A), math.transpose(ps))
+    const pe = math.multiply(math_.sqrtm(A), math.transpose(ps))
 
     for (let i = 0; i < geometry.vertices.length; i++) {
       geometry.vertices[i].set(pe[0][i], pe[1][i], pe[2][i])
@@ -150,7 +71,7 @@ export class Robot {
     const ellipsoid = lineSegments
     ellipsoid.name = name
 
-    const eff = this.transl(this.fkine(this.configuration))
+    const eff = math_.transl(this.fkine(this.configuration))
     ellipsoid.position.set(eff.x, eff.y, eff.z)
 
     // Add new ellipsoid to the scene
@@ -434,7 +355,7 @@ export class Robot {
     const start = Date.now()
 
     while (iteration < maxIterations) {
-      const error = this.tr2delta(this.fkine(q), Tf) // 8.13
+      const error = math_.tr2delta(this.fkine(q), Tf) // 8.13
 
       if (math.norm(error) <= tolerance) { break }
 
@@ -514,7 +435,7 @@ export class Robot {
       const r0 = math.subset(t0, math.index(math.range(0, 3), math.range(0, 3)))
 
       const v = math.transpose(math.subset(dtdq, math.index(math.range(0, 3), 3))).toArray()[0]
-      const w = this.vex(math.multiply(drdq, math.transpose(r0)))
+      const w = math_.vex(math.multiply(drdq, math.transpose(r0)))
 
       if (partial === 'translational') {
         J.push(v)
@@ -528,18 +449,6 @@ export class Robot {
     J = math.transpose(J)
 
     return J
-  }
-
-  tr2delta (T0, T1) {
-    const t0 = math.subset(T0, math.index(math.range(0, 3), 3))
-    const t1 = math.subset(T1, math.index(math.range(0, 3), 3))
-
-    const R0 = math.subset(T0, math.index(math.range(0, 3), math.range(0, 3)))
-    const R1 = math.subset(T1, math.index(math.range(0, 3), math.range(0, 3)))
-
-    return math.concat(
-      math.transpose(math.subtract(t1, t0)).toArray()[0],
-      this.vex(math.subtract(math.multiply(R1, math.transpose(R0)), math.eye(3))))
   }
 
   initializeRobotKin () {

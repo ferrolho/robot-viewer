@@ -122953,7 +122953,7 @@ gamepad.on('hold', 'stick_axis_right', function (e) {
   orbitControls.update();
 });
 
-},{"./js/ColladaRobotsList":658,"./js/Detector":659,"./js/IkSolver.js":660,"./js/Robot.js":661,"./loaders/ColladaLoader":662,"jszip":47,"jszip-utils":37,"stats.js":647,"three":652,"three-orbitcontrols":650,"three-transformcontrols":651,"tween.js":654}],658:[function(require,module,exports){
+},{"./js/ColladaRobotsList":658,"./js/Detector":659,"./js/IkSolver.js":660,"./js/Robot.js":661,"./loaders/ColladaLoader":663,"jszip":47,"jszip-utils":37,"stats.js":647,"three":652,"three-orbitcontrols":650,"three-transformcontrols":651,"tween.js":654}],658:[function(require,module,exports){
 'use strict';
 
 var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
@@ -123060,26 +123060,17 @@ var _createClass = function () { function defineProperties(target, props) { for 
 
 var _IkSolver = require('./IkSolver.js');
 
+var _math_ = require('./math_.js');
+
+var math_ = _interopRequireWildcard(_math_);
+
+function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) newObj[key] = obj[key]; } } newObj.default = obj; return newObj; } }
+
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
 var Kinematics = require('kinematics').default;
 var math = require('mathjs');
 var THREE = require('three');
-
-/**
- * Returns a number whose value is limited to the given range.
- *
- * Example: limit the output of this computation to between 0 and 255
- * (x * 255).clamp(0, 255)
- *
- * @param {Number} min The lower boundary of the output range
- * @param {Number} max The upper boundary of the output range
- * @returns A number in the range [min, max]
- * @type Number
- */
-Number.prototype.clamp = function (min, max) {
-  return Math.min(Math.max(this, min), max);
-};
 
 var Robot = exports.Robot = function () {
   function Robot(scene, dae, collada, tipLinks) {
@@ -123113,83 +123104,14 @@ var Robot = exports.Robot = function () {
   }
 
   /**
-   * Convert a skew-symmetric matrix to a vector.
+   * Adds an ellipsoid A to the THREE.Scene as a THREE.Object3D with a name.
    *
-   * V = math.vex(S) is the vector (3x1) which has the skew-symmetric matrix S (3x3).
-   *
-   *    |  0   -vz  vy |
-   *    |  vz   0  -vx |
-   *    | -vy   vx  0  |
-   *
-   * Notes:
-   * - This is the inverse of the function skew().
-   * - No checking is done to ensure that the matrix is actually skew-symmetric.
-   * - The function takes the mean of the two elements that correspond to each unique
-   *   element of the matrix, i.e., vx = 0.5 * (S(3,2) - S(2,3))
-   *
-   * @param  {Matrix} S   The skew-symmetric matrix `S`
-   * @return {Array}     The vector `V` (3x1)
-   * @private
+   * @param {*} A     The ellisoid to be added to the Scene
+   * @param {*} name  The name of the Object3D
    */
 
 
   _createClass(Robot, [{
-    key: 'vex',
-    value: function vex(S) {
-      if (math.deepEqual(math.size(S), [3, 3])) {
-        return math.multiply(0.5, [math.subset(S, math.index(2, 1)) - math.subset(S, math.index(1, 2)), math.subset(S, math.index(0, 2)) - math.subset(S, math.index(2, 0)), math.subset(S, math.index(1, 0)) - math.subset(S, math.index(0, 1))]);
-      } else {
-        throw new SyntaxError('vex@Robot.js: Argument must be a 3,3 matrix (received ' + math.size(S) + ')');
-      }
-    }
-  }, {
-    key: 'sqrtm',
-    value: function sqrtm(A) {
-      var _maxIterations = 1e3;
-      var _tolerance = 1e-6;
-
-      var error = void 0;
-      var iterations = 0;
-
-      var Y = A;
-      var Z = math.eye(math.size(A));
-
-      do {
-        var Y_k = Y;
-        Y = math.multiply(0.5, math.add(Y_k, math.inv(Z)));
-        Z = math.multiply(0.5, math.add(Z, math.inv(Y_k)));
-
-        error = math.max(math.abs(math.subtract(Y, Y_k)));
-
-        if (error > _tolerance && ++iterations > _maxIterations) {
-          throw new Error('Could not converge to solution within the maximum iterations limit');
-        }
-      } while (error > _tolerance);
-
-      return Y;
-    }
-
-    /**
-     * Unpacks the translational part of a transformation matrix.
-     *
-     * @param   {Matrix}  T   An SE(3) homogeneous transform (4x4)
-     * @returns {Vector3}     The translational part of a homogeneous transform T as a THREE.Vector3
-     */
-
-  }, {
-    key: 'transl',
-    value: function transl(T) {
-      return new THREE.Vector3().fromArray(math.transpose(math.subset(T, math.index(math.range(0, 3), 3))).toArray()[0]);
-    }
-
-    /**
-     * Adds an ellipsoid A to the THREE.Scene as a THREE.Object3D with a name.
-     *
-     * @param {*} A     The ellisoid to be added to the Scene
-     * @param {*} name  The name of the Object3D
-     */
-
-  }, {
     key: 'plotEllipsoid',
     value: function plotEllipsoid(A, name) {
       var radius = name === 'velocity-ellipsoid' ? 0.3 : 0.05;
@@ -123197,7 +123119,7 @@ var Robot = exports.Robot = function () {
       var ps = geometry.vertices.map(function (p) {
         return p.toArray();
       });
-      var pe = math.multiply(this.sqrtm(A), math.transpose(ps));
+      var pe = math.multiply(math_.sqrtm(A), math.transpose(ps));
 
       for (var i = 0; i < geometry.vertices.length; i++) {
         geometry.vertices[i].set(pe[0][i], pe[1][i], pe[2][i]);
@@ -123228,7 +123150,7 @@ var Robot = exports.Robot = function () {
       var ellipsoid = lineSegments;
       ellipsoid.name = name;
 
-      var eff = this.transl(this.fkine(this.configuration));
+      var eff = math_.transl(this.fkine(this.configuration));
       ellipsoid.position.set(eff.x, eff.y, eff.z);
 
       // Add new ellipsoid to the scene
@@ -123533,7 +123455,7 @@ var Robot = exports.Robot = function () {
       var start = Date.now();
 
       while (iteration < maxIterations) {
-        var error = this.tr2delta(this.fkine(q), Tf); // 8.13
+        var error = math_.tr2delta(this.fkine(q), Tf); // 8.13
 
         if (math.norm(error) <= tolerance) {
           break;
@@ -123625,7 +123547,7 @@ var Robot = exports.Robot = function () {
         var r0 = math.subset(t0, math.index(math.range(0, 3), math.range(0, 3)));
 
         var v = math.transpose(math.subset(dtdq, math.index(math.range(0, 3), 3))).toArray()[0];
-        var w = this.vex(math.multiply(drdq, math.transpose(r0)));
+        var w = math_.vex(math.multiply(drdq, math.transpose(r0)));
 
         if (partial === 'translational') {
           J.push(v);
@@ -123639,17 +123561,6 @@ var Robot = exports.Robot = function () {
       J = math.transpose(J);
 
       return J;
-    }
-  }, {
-    key: 'tr2delta',
-    value: function tr2delta(T0, T1) {
-      var t0 = math.subset(T0, math.index(math.range(0, 3), 3));
-      var t1 = math.subset(T1, math.index(math.range(0, 3), 3));
-
-      var R0 = math.subset(T0, math.index(math.range(0, 3), math.range(0, 3)));
-      var R1 = math.subset(T1, math.index(math.range(0, 3), math.range(0, 3)));
-
-      return math.concat(math.transpose(math.subtract(t1, t0)).toArray()[0], this.vex(math.subtract(math.multiply(R1, math.transpose(R0)), math.eye(3))));
     }
   }, {
     key: 'initializeRobotKin',
@@ -123988,7 +123899,107 @@ var Robot = exports.Robot = function () {
   return Robot;
 }();
 
-},{"./IkSolver.js":660,"kinematics":73,"mathjs":77,"three":652}],662:[function(require,module,exports){
+},{"./IkSolver.js":660,"./math_.js":662,"kinematics":73,"mathjs":77,"three":652}],662:[function(require,module,exports){
+'use strict';
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.sqrtm = sqrtm;
+exports.tr2delta = tr2delta;
+exports.transl = transl;
+exports.vex = vex;
+var math = require('mathjs');
+
+/**
+ * Returns a number whose value is limited to the given range.
+ *
+ * Example: limit the output of this computation to between 0 and 255
+ * (x * 255).clamp(0, 255)
+ *
+ * @param {Number} min The lower boundary of the output range
+ * @param {Number} max The upper boundary of the output range
+ * @returns A number in the range [min, max]
+ * @type Number
+ */
+Number.prototype.clamp = function (min, max) {
+  return Math.min(Math.max(this, min), max);
+};
+
+function sqrtm(A) {
+  var _maxIterations = 1e3;
+  var _tolerance = 1e-6;
+
+  var error = void 0;
+  var iterations = 0;
+
+  var Y = A;
+  var Z = math.eye(math.size(A));
+
+  do {
+    var Y_k = Y;
+    Y = math.multiply(0.5, math.add(Y_k, math.inv(Z)));
+    Z = math.multiply(0.5, math.add(Z, math.inv(Y_k)));
+
+    error = math.max(math.abs(math.subtract(Y, Y_k)));
+
+    if (error > _tolerance && ++iterations > _maxIterations) {
+      throw new Error('Could not converge to solution within the maximum iterations limit');
+    }
+  } while (error > _tolerance);
+
+  return Y;
+}
+
+function tr2delta(T0, T1) {
+  var t0 = math.subset(T0, math.index(math.range(0, 3), 3));
+  var t1 = math.subset(T1, math.index(math.range(0, 3), 3));
+
+  var R0 = math.subset(T0, math.index(math.range(0, 3), math.range(0, 3)));
+  var R1 = math.subset(T1, math.index(math.range(0, 3), math.range(0, 3)));
+
+  return math.concat(math.transpose(math.subtract(t1, t0)).toArray()[0], vex(math.subtract(math.multiply(R1, math.transpose(R0)), math.eye(3))));
+}
+
+/**
+ * Unpacks the translational part of a transformation matrix.
+ *
+ * @param   {Matrix}  T   An SE(3) homogeneous transform (4x4)
+ * @returns {Vector3}     The translational part of a homogeneous transform T as a THREE.Vector3
+ */
+function transl(T) {
+  var v = math.transpose(math.subset(T, math.index(math.range(0, 3), 3))).toArray()[0];
+  return { x: v[0], y: v[1], z: v[2] };
+}
+
+/**
+ * Convert a skew-symmetric matrix to a vector.
+ *
+ * V = math.vex(S) is the vector (3x1) which has the skew-symmetric matrix S (3x3).
+ *
+ *    |  0   -vz  vy |
+ *    |  vz   0  -vx |
+ *    | -vy   vx  0  |
+ *
+ * Notes:
+ * - This is the inverse of the function skew().
+ * - No checking is done to ensure that the matrix is actually skew-symmetric.
+ * - The function takes the mean of the two elements that correspond to each unique
+ *   element of the matrix, i.e., vx = 0.5 * (S(3,2) - S(2,3))
+ *
+ * @param  {Matrix} S   The skew-symmetric matrix `S`
+ * @return {Array}     The vector `V` (3x1)
+ * @private
+ */
+function vex(S) {
+  if (math.deepEqual(math.size(S), [3, 3])) {
+    return math.multiply(0.5, [math.subset(S, math.index(2, 1)) - math.subset(S, math.index(1, 2)), math.subset(S, math.index(0, 2)) - math.subset(S, math.index(2, 0)), math.subset(S, math.index(1, 0)) - math.subset(S, math.index(0, 1))]);
+  } else {
+    throw new Error('vex@Robot.js: Argument must be a 3,3 matrix (received ' + math.size(S) + ')');
+  }
+}
+
+},{"mathjs":77}],663:[function(require,module,exports){
 'use strict';
 
 /**
