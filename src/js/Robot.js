@@ -350,12 +350,13 @@ export class Robot {
     let q = this.configuration
     // let q = this.zeroConfiguration
 
+    const partial = this.id === 'anybotics_anymal' ? 'translational' : ''
     let iteration = 0
 
     const start = Date.now()
 
     while (iteration < maxIterations) {
-      const error = math_.tr2delta(this.fkine(q), Tf) // 8.13
+      const error = math_.tr2delta(this.fkine(q), Tf, partial) // 8.13
 
       if (math.norm(error) <= tolerance) { break }
 
@@ -363,7 +364,7 @@ export class Robot {
         console.log(`Solution diverging at step ${iteration}, try reducing alpha`)
       }
 
-      const dq = math.multiply(alpha, math.multiply(this.pseudoInverse(q), error))
+      const dq = math.multiply(alpha, math.multiply(this.pseudoInverse(q, undefined, partial), error))
 
       q = math.add(q, math.multiply(dq, THREE.Math.RAD2DEG)).toArray()
 
@@ -392,15 +393,15 @@ export class Robot {
    * @param {*} q
    * @param {*} c
    */
-  pseudoInverse (q, c = 1e-3) {
-    const C = math.multiply(math.eye(6), c)
+  pseudoInverse (q, c = 1e-3, partial = '') {
+    const C = math.multiply(math.eye(partial === '' ? 6 : 3), c)
     // const Cinv = c === 0 ? math.zeros(6) : math.inv(C)
 
     // const W = math.diag([6, 5, 4, 3, 2, 1])
     const W = math.eye(q.length)
     const Winv = math.inv(W)
 
-    const J = this.jacob(q)
+    const J = this.jacob(q, partial)
     const Jt = math.transpose(J)
 
     return math.multiply(Winv, math.multiply(Jt, math.inv(math.add(math.multiply(J, math.multiply(Winv, Jt)), C))))

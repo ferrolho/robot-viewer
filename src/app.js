@@ -338,6 +338,7 @@ async function addCollada (modelId, collada) {
   const tipLinks = $.grep(colladaRobotsList, function (e) { return e.id === modelId })[0].tipLinks
 
   robot = new Robot(scene, dae, collada, tipLinks)
+  robot.id = modelId
 
   updateShadowsState()
 }

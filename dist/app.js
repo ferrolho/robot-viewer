@@ -122726,6 +122726,7 @@ async function addCollada(modelId, collada) {
   })[0].tipLinks;
 
   robot = new _Robot.Robot(scene, dae, collada, tipLinks);
+  robot.id = modelId;
 
   updateShadowsState();
 }
@@ -123450,12 +123451,13 @@ var Robot = exports.Robot = function () {
       var q = this.configuration;
       // let q = this.zeroConfiguration
 
+      var partial = this.id === 'anybotics_anymal' ? 'translational' : '';
       var iteration = 0;
 
       var start = Date.now();
 
       while (iteration < maxIterations) {
-        var error = math_.tr2delta(this.fkine(q), Tf); // 8.13
+        var error = math_.tr2delta(this.fkine(q), Tf, partial); // 8.13
 
         if (math.norm(error) <= tolerance) {
           break;
@@ -123465,7 +123467,7 @@ var Robot = exports.Robot = function () {
           console.log('Solution diverging at step ' + iteration + ', try reducing alpha');
         }
 
-        var dq = math.multiply(alpha, math.multiply(this.pseudoInverse(q), error));
+        var dq = math.multiply(alpha, math.multiply(this.pseudoInverse(q, undefined, partial), error));
 
         q = math.add(q, math.multiply(dq, THREE.Math.RAD2DEG)).toArray();
 
@@ -123499,15 +123501,16 @@ var Robot = exports.Robot = function () {
     key: 'pseudoInverse',
     value: function pseudoInverse(q) {
       var c = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 1e-3;
+      var partial = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : '';
 
-      var C = math.multiply(math.eye(6), c);
+      var C = math.multiply(math.eye(partial === '' ? 6 : 3), c);
       // const Cinv = c === 0 ? math.zeros(6) : math.inv(C)
 
       // const W = math.diag([6, 5, 4, 3, 2, 1])
       var W = math.eye(q.length);
       var Winv = math.inv(W);
 
-      var J = this.jacob(q);
+      var J = this.jacob(q, partial);
       var Jt = math.transpose(J);
 
       return math.multiply(Winv, math.multiply(Jt, math.inv(math.add(math.multiply(J, math.multiply(Winv, Jt)), C))));
@@ -123951,14 +123954,36 @@ function sqrtm(A) {
   return Y;
 }
 
+/**
+ * Convert homogeneous transform to differential motion
+ *
+ * "is the differential motion (6x1) corresponding to
+ * infinitessimal motion from pose T0 to T1 which are homogeneous
+ * transformations (4x4). D=(dx, dy, dz, dRx, dRy, dRz) and is an approximation
+ * to the average spatial velocity multiplied by time."
+ *
+ * @param {*} T0
+ * @param {*} T1
+ */
 function tr2delta(T0, T1) {
+  var partial = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : '';
+
   var t0 = math.subset(T0, math.index(math.range(0, 3), 3));
   var t1 = math.subset(T1, math.index(math.range(0, 3), 3));
 
   var R0 = math.subset(T0, math.index(math.range(0, 3), math.range(0, 3)));
   var R1 = math.subset(T1, math.index(math.range(0, 3), math.range(0, 3)));
 
-  return math.concat(math.transpose(math.subtract(t1, t0)).toArray()[0], vex(math.subtract(math.multiply(R1, math.transpose(R0)), math.eye(3))));
+  var dt = math.transpose(math.subtract(t1, t0)).toArray()[0];
+  var dr = vex(math.subtract(math.multiply(R1, math.transpose(R0)), math.eye(3)));
+
+  if (partial === 'translational') {
+    return dt;
+  } else if (partial === 'rotational') {
+    return dr;
+  } else {
+    return math.concat(dt, dr);
+  }
 }
 
 /**

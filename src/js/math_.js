@@ -40,16 +40,34 @@ export function sqrtm (A) {
   return Y
 }
 
-export function tr2delta (T0, T1) {
+/**
+ * Convert homogeneous transform to differential motion
+ *
+ * "is the differential motion (6x1) corresponding to
+ * infinitessimal motion from pose T0 to T1 which are homogeneous
+ * transformations (4x4). D=(dx, dy, dz, dRx, dRy, dRz) and is an approximation
+ * to the average spatial velocity multiplied by time."
+ *
+ * @param {*} T0
+ * @param {*} T1
+ */
+export function tr2delta (T0, T1, partial = '') {
   const t0 = math.subset(T0, math.index(math.range(0, 3), 3))
   const t1 = math.subset(T1, math.index(math.range(0, 3), 3))
 
   const R0 = math.subset(T0, math.index(math.range(0, 3), math.range(0, 3)))
   const R1 = math.subset(T1, math.index(math.range(0, 3), math.range(0, 3)))
 
-  return math.concat(
-    math.transpose(math.subtract(t1, t0)).toArray()[0],
-    vex(math.subtract(math.multiply(R1, math.transpose(R0)), math.eye(3))))
+  const dt = math.transpose(math.subtract(t1, t0)).toArray()[0]
+  const dr = vex(math.subtract(math.multiply(R1, math.transpose(R0)), math.eye(3)))
+
+  if (partial === 'translational') {
+    return dt
+  } else if (partial === 'rotational') {
+    return dr
+  } else {
+    return math.concat(dt, dr)
+  }
 }
 
 /**
