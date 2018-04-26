@@ -15,6 +15,31 @@ Number.prototype.clamp = function (min, max) {
   return Math.min(Math.max(this, min), max)
 }
 
+/**
+ * Import the math library numeric.js, http://numericjs.com/
+ * The library must be installed first using npm:
+ *     npm install numeric
+ */
+try {
+  // load the numeric.js library
+  var numeric = require('numeric')
+
+  // import the numeric.js library into math.js
+  math.import(numeric, {wrap: true, silent: true})
+
+  if (math.eig) {
+    // calculate eigenvalues of a matrix
+    console.log(math.eval('eig([1, 2; 4, 3])').lambda.x) // [5, -1];
+
+    // solve AX = b
+    var A = math.eval('[1, 2, 3; 2, -1, 1; 3, 0, -1]')
+    var b = [9, 8, 3]
+    console.log(math.solve(A, b)) // [2, -1, 3]
+  }
+} catch (err) {
+  console.log('Warning: To import numeric.js, the library must be installed first via `npm install numeric`.')
+}
+
 export function sqrtm (A) {
   const _maxIterations = 1e3
   const _tolerance = 1e-6
