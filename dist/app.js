@@ -123073,6 +123073,8 @@ var Kinematics = require('kinematics').default;
 var math = require('mathjs');
 var THREE = require('three');
 
+var _quadrupeds = ['anybotics_anymal', 'iit_hyq'];
+
 var Robot = exports.Robot = function () {
   function Robot(scene, dae, collada, tipLinks) {
     _classCallCheck(this, Robot);
@@ -123451,7 +123453,7 @@ var Robot = exports.Robot = function () {
       var q = this.configuration;
       // let q = this.zeroConfiguration
 
-      var partial = this.id === 'anybotics_anymal' ? 'translational' : '';
+      var partial = _quadrupeds.indexOf(this.id) > -1 ? 'translational' : '';
       var iteration = 0;
 
       var start = Date.now();

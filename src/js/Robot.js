@@ -5,6 +5,8 @@ const Kinematics = require('kinematics').default
 const math = require('mathjs')
 const THREE = require('three')
 
+const _quadrupeds = ['anybotics_anymal', 'iit_hyq']
+
 export class Robot {
   constructor (scene, dae, collada, tipLinks) {
     this._scene = scene
@@ -350,7 +352,7 @@ export class Robot {
     let q = this.configuration
     // let q = this.zeroConfiguration
 
-    const partial = this.id === 'anybotics_anymal' ? 'translational' : ''
+    const partial = _quadrupeds.indexOf(this.id) > -1 ? 'translational' : ''
     let iteration = 0
 
     const start = Date.now()

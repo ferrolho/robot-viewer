@@ -18,6 +18,7 @@ var ColladaRobotsList = [
 
   { brand: 'Franka', name: 'Panda', id: 'franka_panda_arm_hand', tipLinks: ['panda_hand'], payload: 3, reach: 0.855, dof: 7, weight: 18, dataSheet: 'https://s3-eu-central-1.amazonaws.com/franka-de-uploads-staging/uploads/2017/09/2017-09-12_datasheet_panda.pdf', productWebPage: 'https://www.franka.de/' },
 
+  { brand: 'iit', name: 'HyQ',        id: 'iit_hyq',            tipLinks: ['lf_foot', 'rf_foot', 'lh_foot', 'rh_foot'], dof: 12, weight: 80 },
   { brand: 'iit', name: 'iCub v2.5+', id: 'iit_icub_v2_5_plus', tipLinks: ['l_hand', 'r_hand'] },
 
   { brand: 'KAWADA', name: 'HiroNX', id: 'kawada_hironx', tipLinks: ['LHAND_JOINT0_Link', 'RHAND_JOINT0_Link'] },
