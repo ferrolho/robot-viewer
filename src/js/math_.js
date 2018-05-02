@@ -40,31 +40,6 @@ try {
   console.log('Warning: To import numeric.js, the library must be installed first via `npm install numeric`.')
 }
 
-export function sqrtm (A) {
-  const _maxIterations = 1e3
-  const _tolerance = 1e-6
-
-  let error
-  let iterations = 0
-
-  let Y = A
-  let Z = math.eye(math.size(A))
-
-  do {
-    const Y_k = Y
-    Y = math.multiply(0.5, math.add(Y_k, math.inv(Z)))
-    Z = math.multiply(0.5, math.add(Z, math.inv(Y_k)))
-
-    error = math.max(math.abs(math.subtract(Y, Y_k)))
-
-    if (error > _tolerance && ++iterations > _maxIterations) {
-      throw new Error('Could not converge to solution within the maximum iterations limit')
-    }
-  } while (error > _tolerance)
-
-  return Y
-}
-
 /**
  * Convert homogeneous transform to differential motion
  *

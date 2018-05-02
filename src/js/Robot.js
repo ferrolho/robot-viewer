@@ -46,7 +46,7 @@ export class Robot {
     const radius = name === 'velocity-ellipsoid' ? 0.3 : 0.05
     const geometry = new THREE.SphereGeometry(radius)
     const ps = geometry.vertices.map(p => p.toArray())
-    const pe = math.multiply(math_.sqrtm(A), math.transpose(ps))
+    const pe = math.multiply(math.sqrtm(A), math.transpose(ps))
 
     for (let i = 0; i < geometry.vertices.length; i++) {
       geometry.vertices[i].set(pe[0][i], pe[1][i], pe[2][i])
