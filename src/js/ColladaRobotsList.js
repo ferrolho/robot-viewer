@@ -31,8 +31,13 @@ var ColladaRobotsList = [
 
   { brand: 'NASA', name: 'Valkyrie', id: 'nasa_valkyrie', tipLinks: ['leftPalm', 'rightPalm', 'leftFoot', 'rightFoot'], dof: 44, weight: 136 },
 
-  { brand: 'Universal Robots', name: 'UR3',  id: 'universal_robot_ur3',  tipLinks: ['tool0'], payload:  3, reach: 0.5,  dof: 6, weight: 15, dataSheet: 'https://www.universal-robots.com/media/1514546/101081_199901_ur3_technical_details_web_a4_art03_rls_eng.pdf',  productWebPage: 'https://www.universal-robots.com/products/ur3-robot/' },
-  { brand: 'Universal Robots', name: 'UR5',  id: 'universal_robot_ur5',  tipLinks: ['tool0'], payload:  5, reach: 0.85, dof: 6, weight: 15, dataSheet: 'https://www.universal-robots.com/media/1514597/101081_199901_ur5_technical_details_web_a4_art03_rls_eng.pdf',  productWebPage: 'https://www.universal-robots.com/products/ur5-robot/' },
+  // { brand: 'PAL Robotics', name: 'TALOS', id: 'pal_robotics_talos_full_v2', tipLinks: ['gripper_left_base_link', 'gripper_right_base_link'], dof: 32, weight: 95, dataSheet: 'https://pal-robotics.com/wp-content/uploads/2018/03/Datasheet_TALOS.pdf', productWebPage: 'https://pal-robotics.com/en/products/talos/' },
+  { brand: 'PAL Robotics', name: 'TALOS', id: 'pal_robotics_talos_full_v2_no_grippers', tipLinks: ['wrist_left_ft_tool_link', 'wrist_right_ft_tool_link', 'left_sole_link', 'right_sole_link'], dof: 32, weight: 95, dataSheet: 'https://pal-robotics.com/wp-content/uploads/2018/03/Datasheet_TALOS.pdf', productWebPage: 'https://pal-robotics.com/en/products/talos/' },
+
+  { brand: 'Unimation', name: 'Puma 560', id: 'unimation_puma560', tipLinks: ['link7'], dof: 6, payload: 4, reach: 0.878, weight: 83 },
+
+  { brand: 'Universal Robots', name: 'UR3',  id: 'universal_robot_ur3',  tipLinks: ['tool0'], payload:  3, reach: 0.5,  dof: 6, weight: 15, dataSheet: 'https://www.universal-robots.com/media/1514546/101081_199901_ur3_technical_details_web_a4_art03_rls_eng.pdf', productWebPage: 'https://www.universal-robots.com/products/ur3-robot/' },
+  { brand: 'Universal Robots', name: 'UR5',  id: 'universal_robot_ur5',  tipLinks: ['tool0'], payload:  5, reach: 0.85, dof: 6, weight: 15, dataSheet: 'https://www.universal-robots.com/media/1514597/101081_199901_ur5_technical_details_web_a4_art03_rls_eng.pdf', productWebPage: 'https://www.universal-robots.com/products/ur5-robot/' },
   { brand: 'Universal Robots', name: 'UR10', id: 'ur10_joint_limited_robot', tipLinks: ['tool0'], payload: 10, reach: 1.3,  dof: 6, weight: 17, dataSheet: 'https://www.universal-robots.com/media/1514642/101081_199901_ur10_technical_details_web_a4_art03_rls_eng.pdf', productWebPage: 'https://www.universal-robots.com/products/ur10-robot/' },
 
 ]

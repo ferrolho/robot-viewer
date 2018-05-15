@@ -33,7 +33,7 @@ export class Robot {
     this._q = this.zeroConfiguration
 
     // this.printLinkNames()
-    // this.printJointNames()
+    this.printJointNames()
   }
 
   /**
