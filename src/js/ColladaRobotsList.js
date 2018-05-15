@@ -33,6 +33,7 @@ var ColladaRobotsList = [
 
   // { brand: 'PAL Robotics', name: 'TALOS', id: 'pal_robotics_talos_full_v2', tipLinks: ['gripper_left_base_link', 'gripper_right_base_link'], dof: 32, weight: 95, dataSheet: 'https://pal-robotics.com/wp-content/uploads/2018/03/Datasheet_TALOS.pdf', productWebPage: 'https://pal-robotics.com/en/products/talos/' },
   { brand: 'PAL Robotics', name: 'TALOS', id: 'pal_robotics_talos_full_v2_no_grippers', tipLinks: ['wrist_left_ft_tool_link', 'wrist_right_ft_tool_link', 'left_sole_link', 'right_sole_link'], dof: 32, weight: 95, dataSheet: 'https://pal-robotics.com/wp-content/uploads/2018/03/Datasheet_TALOS.pdf', productWebPage: 'https://pal-robotics.com/en/products/talos/' },
+  { brand: 'PAL Robotics', name: 'TIAGo', id: 'pal_robotics_tiago_titanium', tipLinks: ['wrist_ft_tool_link'], dof: 12, weight: 70, dataSheet: 'https://tiago.pal-robotics.com/wp-content/uploads/2018/03/Datasheet_TIAGo-Hardware-Software.pdf', productWebPage: 'https://tiago.pal-robotics.com/' },
 
   { brand: 'Unimation', name: 'Puma 560', id: 'unimation_puma560', tipLinks: ['link7'], dof: 6, payload: 4, reach: 0.878, weight: 83 },
 
