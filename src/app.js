@@ -1,4 +1,4 @@
-/* global $, Gamepad, requestAnimationFrame */
+/* global $, Blob, Gamepad, requestAnimationFrame */
 
 import { IkSolverEnum } from './js/IkSolver.js'
 import { Robot } from './js/Robot.js'
@@ -8,6 +8,7 @@ if (!Detector.webgl) Detector.addGetWebGLMessage()
 
 const gamepad = new Gamepad()
 
+const FileSaver = require('file-saver')
 const JSZip = require('jszip')
 const JSZipUtils = require('jszip-utils')
 const THREE = require('three')
@@ -16,7 +17,10 @@ const THREETransformControls = require('three-transformcontrols')
 const TWEEN = require('tween.js')
 const Stats = require('stats.js')
 
-require('./loaders/ColladaLoader')(THREE)
+require('./modules/ColladaLoader')(THREE)
+require('./modules/ConvexGeometry')(THREE)
+require('./modules/QuickHull')(THREE)
+require('./modules/STLExporter')(THREE)
 
 const stats = new Stats()
 stats.dom.id = 'statsjs'
@@ -60,6 +64,8 @@ const scene = new THREE.Scene()
 // Global variables
 let castShadows = false
 let robot
+
+let rawPoints = [[], [], [], []]
 
 $(document).ready(function () {
   // Initialize collapse button
@@ -106,7 +112,6 @@ $(document).ready(function () {
     robot.configuration = robot.randomConfiguration
   })
 
-  let rawPoints = [[], [], [], []]
   let pointCloudsInScene = []
 
   const pointsMaterials = [
@@ -416,11 +421,29 @@ window.addEventListener('keydown', function (event) {
       ikGoalControl.setMode('translate')
       ikGoalControl.setSpace('world')
       break
+    case 88: // X
+      doConvexHullStuff()
+      break
     default:
       console.log('Pressed key code: ' + event.keyCode)
       break
   }
 })
+
+function doConvexHullStuff () {
+  const exporter = new THREE.STLExporter()
+  const material = new THREE.MeshBasicMaterial({color: 0x00ff00})
+
+  let rawPointsIdx = 0
+  for (const link of robot.tipLinks) {
+    const geometry = new THREE.ConvexGeometry(rawPoints[rawPointsIdx++])
+
+    const stlscene = new THREE.Scene()
+    stlscene.add(new THREE.Mesh(geometry, material))
+
+    FileSaver.saveAs(new Blob([ exporter.parse(stlscene) ], { type: 'text/plain' }), `${link}.stl`)
+  }
+}
 
 /**
  * Robot Motion (without accounting for any collisions)
