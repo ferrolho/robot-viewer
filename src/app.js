@@ -1,9 +1,9 @@
 /* global $, Blob, Gamepad, requestAnimationFrame */
 
-import { IkSolverEnum } from './js/IkSolver.js'
-import { Robot } from './js/Robot.js'
+import { IkSolverEnum } from './IkSolver.js'
+import { Robot } from './Robot.js'
 
-const Detector = require('./js/Detector')
+const Detector = require('./three.js/Detector')
 if (!Detector.webgl) Detector.addGetWebGLMessage()
 
 const gamepad = new Gamepad()
@@ -12,15 +12,15 @@ const FileSaver = require('file-saver')
 const JSZip = require('jszip')
 const JSZipUtils = require('jszip-utils')
 const THREE = require('three')
-const THREEOrbitControls = require('three-orbitcontrols')
-const THREETransformControls = require('three-transformcontrols')
 const TWEEN = require('tween.js')
 const Stats = require('stats.js')
 
-require('./modules/ColladaLoader')(THREE)
-require('./modules/ConvexGeometry')(THREE)
-require('./modules/QuickHull')(THREE)
-require('./modules/STLExporter')(THREE)
+require('./three.js/controls/OrbitControls')(THREE)
+require('./three.js/controls/TransformControls')(THREE)
+require('./three.js/exporters/STLExporter')(THREE)
+require('./three.js/geometries/ConvexGeometry')(THREE)
+require('./three.js/geometries/QuickHull')(THREE)
+require('./three.js/loaders/ColladaLoader')(THREE)
 
 const stats = new Stats()
 stats.dom.id = 'statsjs'
@@ -50,10 +50,11 @@ const camera = new THREE.PerspectiveCamera(75, RENDERER_WIDTH / window.innerHeig
 camera.position.set(1, 1, 1)
 
 // Orbit Controls
-const orbitControls = new THREEOrbitControls(camera, renderer.domElement)
+const orbitControls = new THREE.OrbitControls(camera, renderer.domElement)
 orbitControls.target = cameraTarget
 orbitControls.enableKeys = false
 orbitControls.mouseButtons = { ORBIT: THREE.MOUSE.LEFT, PAN: THREE.MOUSE.MIDDLE, ZOOM: THREE.MOUSE.RIGHT }
+orbitControls.screenSpacePanning = true
 orbitControls.zoomSpeed = 0.8
 
 camera.lookAt(cameraTarget)
@@ -73,8 +74,8 @@ $(document).ready(function () {
 
   $('#loader-modal').modal({ dismissible: false })
 
-  // Axis Helper
-  const axis = new THREE.AxisHelper(1)
+  // Axes Helper
+  const axis = new THREE.AxesHelper(1)
 
   $('input[id=axis-switch][type=checkbox]').change(function () {
     $(this).is(':checked') ? scene.add(axis) : scene.remove(axis)
@@ -198,7 +199,7 @@ function main () {
   ikGoal = addSphereAtXYZ(0.4, 0.5, 0)
   ikGoal.name = 'ikGoal'
 
-  ikGoalControl = new THREETransformControls(camera, renderer.domElement)
+  ikGoalControl = new THREE.TransformControls(camera, renderer.domElement)
   ikGoalControl.name = 'ikGoalControl'
   ikGoalControl.addEventListener('change', function () {
     if (ikSolver !== IkSolverEnum.OFF) { robot.moveTipToPose(ikGoal, ikSolver, scene) }
@@ -303,7 +304,7 @@ function onWindowResize () {
   renderer.setSize(RENDERER_WIDTH, window.innerHeight)
 }
 
-const colladaRobotsList = require('./js/ColladaRobotsList')
+const colladaRobotsList = require('./ColladaRobotsList')
 setupModelsList(colladaRobotsList)
 function setupModelsList (models) {
   for (const model of models) {
