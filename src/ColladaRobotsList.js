@@ -14,7 +14,7 @@ var ColladaRobotsList = [
 
   { brand: 'ANYbotics', name: 'ANYmal', id: 'anybotics_anymal', weight: 30, payload: 10, dof: 12, tipLinks: ['LF_FOOT', 'RF_FOOT', 'LH_FOOT', 'RH_FOOT'], dataSheet: 'https://www.anybotics.com/wp-content/uploads/media/ANYmal_Flyer.pdf' },
 
-  { brand: 'Clearpath', name: 'Dual Arm Husky', id: 'clearpath_dual_arm_husky', tipLinks: [] },
+  { brand: 'Clearpath', name: 'Dual Arm Husky', id: 'clearpath_dual_arm_husky', tipLinks: ['l_robotiq_fts300_fts_toolside', 'r_robotiq_fts300_fts_toolside'], dof: 12 },
 
   { brand: 'Franka', name: 'Panda', id: 'franka_panda_arm_hand', tipLinks: ['panda_hand'], payload: 3, reach: 0.855, dof: 7, weight: 18, dataSheet: 'https://s3-eu-central-1.amazonaws.com/franka-de-uploads-staging/uploads/2017/09/2017-09-12_datasheet_panda.pdf', productWebPage: 'https://www.franka.de/' },
 
