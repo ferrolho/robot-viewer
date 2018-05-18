@@ -128960,12 +128960,14 @@ $(document).ready(function () {
 
   // Reset configuration
   $('#reset-button').click(function () {
-    robot.configuration = robot.zeroConfiguration;
+    console.log('Moving robot to \'home\' position...');
+    moveFromTo(robot.configuration, robot.zeroConfiguration, 1000, TWEEN.Easing.Quadratic.Out).start();
   });
 
   // Random configuration
   $('#random-button').click(function () {
-    robot.configuration = robot.randomConfiguration;
+    console.log('Moving robot to random position...');
+    moveFromTo(robot.configuration, robot.randomConfiguration, 1000, TWEEN.Easing.Quadratic.Out).start();
   });
 
   var pointCloudsInScene = [];
@@ -128983,6 +128985,8 @@ $(document).ready(function () {
       scene.remove(pointCloudsInScene.shift());
     }
 
+    var q_backup = robot.configuration;
+
     for (var i = 0; i < 1e4; i++) {
       robot.configuration = robot.randomConfiguration;
 
@@ -128992,6 +128996,8 @@ $(document).ready(function () {
         rawPoints[j].push(point);
       }
     }
+
+    robot.configuration = q_backup;
 
     var totalPoints = 0;
     for (var _j = 0; _j < robot.tipLinks.length; _j++) {
@@ -129299,16 +129305,6 @@ window.addEventListener('keydown', function (event) {
       // C
       console.log('Motion keypoints deleted.');
       robot.clearMotionKeypoints();
-      break;
-    case 72:
-      // H
-      console.log('Moving robot to \'home\' position...');
-      moveFromTo(robot.configuration, robot.zeroConfiguration, 1000, TWEEN.Easing.Quadratic.Out).start();
-      break;
-    case 74:
-      // J
-      console.log('Moving robot to random position...');
-      moveFromTo(robot.configuration, robot.randomConfiguration, 1000, TWEEN.Easing.Quadratic.Out).start();
       break;
     case 75:
       // K

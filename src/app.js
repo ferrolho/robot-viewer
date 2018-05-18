@@ -105,12 +105,14 @@ $(document).ready(function () {
 
   // Reset configuration
   $('#reset-button').click(function () {
-    robot.configuration = robot.zeroConfiguration
+    console.log(`Moving robot to 'home' position...`)
+    moveFromTo(robot.configuration, robot.zeroConfiguration, 1000, TWEEN.Easing.Quadratic.Out).start()
   })
 
   // Random configuration
   $('#random-button').click(function () {
-    robot.configuration = robot.randomConfiguration
+    console.log('Moving robot to random position...')
+    moveFromTo(robot.configuration, robot.randomConfiguration, 1000, TWEEN.Easing.Quadratic.Out).start()
   })
 
   let pointCloudsInScene = []
@@ -131,6 +133,8 @@ $(document).ready(function () {
   $('#reachability-button').click(function () {
     while (pointCloudsInScene.length) { scene.remove(pointCloudsInScene.shift()) }
 
+    const q_backup = robot.configuration
+
     for (let i = 0; i < 1e4; i++) {
       robot.configuration = robot.randomConfiguration
 
@@ -140,6 +144,8 @@ $(document).ready(function () {
         rawPoints[j].push(point)
       }
     }
+
+    robot.configuration = q_backup
 
     let totalPoints = 0
     for (let j = 0; j < robot.tipLinks.length; j++) {
@@ -385,14 +391,6 @@ window.addEventListener('keydown', function (event) {
     case 67: // C
       console.log(`Motion keypoints deleted.`)
       robot.clearMotionKeypoints()
-      break
-    case 72: // H
-      console.log(`Moving robot to 'home' position...`)
-      moveFromTo(robot.configuration, robot.zeroConfiguration, 1000, TWEEN.Easing.Quadratic.Out).start()
-      break
-    case 74: // J
-      console.log('Moving robot to random position...')
-      moveFromTo(robot.configuration, robot.randomConfiguration, 1000, TWEEN.Easing.Quadratic.Out).start()
       break
     case 75: // K
       console.log(`Motion keypoint recorded. (total = ${robot.motionKeypoints.length})`)
