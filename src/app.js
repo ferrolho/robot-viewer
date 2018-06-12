@@ -82,7 +82,7 @@ $(document).ready(function () {
   })
 
   // Grid Helper
-  const grid = new THREE.GridHelper(2)
+  const grid = new THREE.GridHelper(10)
   grid.material.color.setHex(0x000000)
   grid.material.opacity = 0.2
   grid.material.transparent = true

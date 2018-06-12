@@ -43,8 +43,7 @@ export class Robot {
    * @param {*} name  The name of the Object3D
    */
   plotEllipsoid (A, name) {
-    const radius = name === 'velocity-ellipsoid' ? 0.3 : 0.05
-    const geometry = new THREE.SphereGeometry(radius)
+    const geometry = new THREE.SphereGeometry(0.5)
     const ps = geometry.vertices.map(p => p.toArray())
     const pe = math.multiply(math.sqrtm(A), math.transpose(ps))
 
@@ -80,7 +79,7 @@ export class Robot {
     this._scene.add(ellipsoid)
   }
 
-  updateAccelerationEllipsoid (eff_pos) {
+  updateAccelerationEllipsoid () {
     const J = this.jacob(this.configuration)
     const Jt = math.transpose(J)
 
@@ -95,7 +94,7 @@ export class Robot {
     if (this._verbose) { console.log(`Updated acceleration ellipsoid`) }
   }
 
-  updateForceEllipsoid (eff_pos) {
+  updateForceEllipsoid () {
     const J = this.jacob(this.configuration, 'translational')
     const Jt = math.transpose(J)
     const A = math.inv(math.multiply(J, Jt))
@@ -105,7 +104,7 @@ export class Robot {
     if (this._verbose) { console.log(`Updated force ellipsoid`) }
   }
 
-  updateVelocityEllipsoid (eff_pos) {
+  updateVelocityEllipsoid () {
     const J = this.jacob(this.configuration, 'translational')
     const Jt = math.transpose(J)
     const A = math.multiply(J, Jt)
