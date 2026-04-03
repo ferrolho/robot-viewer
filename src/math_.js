@@ -1,4 +1,5 @@
-const math = require('mathjs')
+import math from 'mathjs'
+import numeric from 'numeric'
 
 /**
  * Returns a number whose value is limited to the given range.
@@ -17,13 +18,8 @@ Number.prototype.clamp = function (min, max) {
 
 /**
  * Import the math library numeric.js, http://numericjs.com/
- * The library must be installed first using npm:
- *     npm install numeric
  */
 try {
-  // load the numeric.js library
-  var numeric = require('numeric')
-
   // import the numeric.js library into math.js
   math.import(numeric, {wrap: true, silent: true})
 
@@ -37,7 +33,7 @@ try {
     console.log(math.solve(A, b)) // [2, -1, 3]
   }
 } catch (err) {
-  console.log('Warning: To import numeric.js, the library must be installed first via `npm install numeric`.')
+  console.log('Warning: Failed to import numeric.js into mathjs:', err.message)
 }
 
 /**

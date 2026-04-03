@@ -1,9 +1,9 @@
 import { IkSolverEnum } from './IkSolver.js'
 import * as math_ from './math_.js'
 
-const Kinematics = require('kinematics').default
-const math = require('mathjs')
-const THREE = require('three')
+import Kinematics from 'kinematics'
+import math from 'mathjs'
+import * as THREE from 'three'
 
 const _quadrupeds = ['anybotics_anymal', 'iit_hyq']
 
@@ -156,8 +156,6 @@ export class Robot {
   }
 
   debugKinematicsGeometry (scene) {
-    const linegeometry = new THREE.Geometry()
-
     const material = new THREE.MeshLambertMaterial({ color: 0xff0000 })
     const sphereGeometry = new THREE.SphereGeometry(0.01)
 
@@ -169,17 +167,13 @@ export class Robot {
       points.push(newPoint)
     }
 
-    // console.log('POINTS')
-    // console.log(points)
-
     for (const point of points) {
-      linegeometry.vertices.push(point)
-
       const sphere = new THREE.Mesh(sphereGeometry, material)
       sphere.position.set(point.x, point.y, point.z)
       this._scene.add(sphere)
     }
 
+    const linegeometry = new THREE.BufferGeometry().setFromPoints(points)
     const line = new THREE.Line(linegeometry, material)
     this._scene.add(line)
   }
@@ -274,7 +268,7 @@ export class Robot {
       if (this._kinematics.joints.hasOwnProperty(prop)) {
         const joint = this._kinematics.joints[prop]
         if (!joint.static) {
-          q.push(THREE.Math.randFloat(joint.limits.min, joint.limits.max))
+          q.push(THREE.MathUtils.randFloat(joint.limits.min, joint.limits.max))
         }
       }
     }
@@ -367,7 +361,7 @@ export class Robot {
 
       const dq = math.multiply(alpha, math.multiply(this.pseudoInverse(q, undefined, partial), error))
 
-      q = math.add(q, math.multiply(dq, THREE.Math.RAD2DEG)).toArray()
+      q = math.add(q, math.multiply(dq, THREE.MathUtils.RAD2DEG)).toArray()
 
       errorPrev = error
 
@@ -423,10 +417,10 @@ export class Robot {
 
     for (let i = 0; i < this._joints.length; i++) {
       const q_less = q.slice()
-      q_less[i] -= dq * THREE.Math.RAD2DEG
+      q_less[i] -= dq * THREE.MathUtils.RAD2DEG
 
       const q_more = q.slice()
-      q_more[i] += dq * THREE.Math.RAD2DEG
+      q_more[i] += dq * THREE.MathUtils.RAD2DEG
 
       const t0 = this.fkine(q_less)
       const tp = this.fkine(q_more)
@@ -468,7 +462,7 @@ export class Robot {
       goal.rotation.x, goal.rotation.y, -goal.rotation.z)
 
     if (!result.some(x => Number.isNaN(x))) {
-      this.configuration = result.map(x => -x * THREE.Math.RAD2DEG)
+      this.configuration = result.map(x => -x * THREE.MathUtils.RAD2DEG)
     }
   }
 
@@ -490,7 +484,7 @@ export class Robot {
     {
       const noisyQ = []
       for (const jointValue of this.configuration) {
-        noisyQ.push(jointValue + THREE.Math.randFloat(-5, 5))
+        noisyQ.push(jointValue + THREE.MathUtils.randFloat(-5, 5))
       }
 
       this.configuration = noisyQ
@@ -550,7 +544,7 @@ export class Robot {
         // Try to optimize the best one
         let opt = { fitness: generation[0].fitness, q: generation[0].q }
         const maxOptIterations = 25
-        const wiggleAmount = 2 * THREE.Math.DEG2RAD
+        const wiggleAmount = 2 * THREE.MathUtils.DEG2RAD
 
         for (let i = 0; i < maxOptIterations; i++) {
           const initialFitness = opt.fitness
@@ -598,7 +592,7 @@ export class Robot {
         if (verbose) console.log(rouletteSize)
 
         function selectIndividualWithRoulette () {
-          let randomRouletteSpin = THREE.Math.randFloat(0, rouletteSize)
+          let randomRouletteSpin = THREE.MathUtils.randFloat(0, rouletteSize)
 
           let selectedIndividualId = -1
           for (let i = 0; i < generation.length; i++) {

@@ -1,4 +1,4 @@
-var ColladaRobotsList = [
+const ColladaRobotsList = [
 
   { brand: 'ABB', name: 'IRB 52-7/1.2',     id: 'abb_irb52_7_120',     reach: 1.2,   weight:  250, payload:   7, dof: 6, tipLinks: ['tool0'], dataSheet: 'http://search.abb.com/library/Download.aspx?DocumentID=ROB0037EN&LanguageCode=en&DocumentPartId=&Action=Launch' },
   { brand: 'ABB', name: 'IRB 120-3/0.6',    id: 'abb_irb120_3_58',     reach: 0.58,  weight:   25, payload:   3, dof: 6, tipLinks: ['tool0'], dataSheet: 'http://search.abb.com/library/Download.aspx?DocumentID=ROBO149EN_D&LanguageCode=en&DocumentPartId=2&Action=Launch' },
@@ -43,6 +43,4 @@ var ColladaRobotsList = [
 
 ]
 
-if (typeof module === 'object') {
-  module.exports = ColladaRobotsList
-}
+export default ColladaRobotsList

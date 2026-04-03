@@ -3,24 +3,25 @@
 import { IkSolverEnum } from './IkSolver.js'
 import { Robot } from './Robot.js'
 
-const Detector = require('./three.js/Detector')
-if (!Detector.webgl) Detector.addGetWebGLMessage()
+import WebGL from 'three/addons/capabilities/WebGL.js'
+if (!WebGL.isWebGLAvailable()) document.body.appendChild(WebGL.getWebGLErrorMessage())
 
 const gamepad = new Gamepad()
 
-const FileSaver = require('file-saver')
-const JSZip = require('jszip')
-const JSZipUtils = require('jszip-utils')
-const THREE = require('three')
-const TWEEN = require('tween.js')
-const Stats = require('stats.js')
+import FileSaver from 'file-saver'
+import JSZip from 'jszip'
+import JSZipUtils from 'jszip-utils'
+import * as THREE from 'three'
+import TWEEN from 'tween.js'
+import Stats from 'stats.js'
 
-require('./three.js/controls/OrbitControls')(THREE)
-require('./three.js/controls/TransformControls')(THREE)
-require('./three.js/exporters/STLExporter')(THREE)
-require('./three.js/geometries/ConvexGeometry')(THREE)
-require('./three.js/geometries/QuickHull')(THREE)
-require('./three.js/loaders/ColladaLoader')(THREE)
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
+import { TransformControls } from 'three/addons/controls/TransformControls.js'
+import { STLExporter } from 'three/addons/exporters/STLExporter.js'
+import { ConvexGeometry } from 'three/addons/geometries/ConvexGeometry.js'
+import { ColladaLoader } from 'three/addons/loaders/ColladaLoader.js'
+
+import colladaRobotsList from './ColladaRobotsList.js'
 
 const stats = new Stats()
 stats.dom.id = 'statsjs'
@@ -50,10 +51,9 @@ const camera = new THREE.PerspectiveCamera(75, RENDERER_WIDTH / window.innerHeig
 camera.position.set(1, 1, 1)
 
 // Orbit Controls
-const orbitControls = new THREE.OrbitControls(camera, renderer.domElement)
+const orbitControls = new OrbitControls(camera, renderer.domElement)
 orbitControls.target = cameraTarget
-orbitControls.enableKeys = false
-orbitControls.mouseButtons = { ORBIT: THREE.MOUSE.LEFT, PAN: THREE.MOUSE.MIDDLE, ZOOM: THREE.MOUSE.RIGHT }
+orbitControls.mouseButtons = { LEFT: THREE.MOUSE.ROTATE, MIDDLE: THREE.MOUSE.PAN, RIGHT: THREE.MOUSE.DOLLY }
 orbitControls.screenSpacePanning = true
 orbitControls.zoomSpeed = 0.8
 
@@ -151,8 +151,7 @@ $(document).ready(function () {
     for (let j = 0; j < robot.tipLinks.length; j++) {
       totalPoints += rawPoints[j].length
 
-      let geometry = new THREE.Geometry()
-      for (const point of rawPoints[j]) { geometry.vertices.push(point) }
+      let geometry = new THREE.BufferGeometry().setFromPoints(rawPoints[j])
 
       let pointCloud = new THREE.Points(geometry, pointsMaterials[j])
 
@@ -205,7 +204,7 @@ function main () {
   ikGoal = addSphereAtXYZ(0.4, 0.5, 0)
   ikGoal.name = 'ikGoal'
 
-  ikGoalControl = new THREE.TransformControls(camera, renderer.domElement)
+  ikGoalControl = new TransformControls(camera, renderer.domElement)
   ikGoalControl.name = 'ikGoalControl'
   ikGoalControl.addEventListener('change', function () {
     if (ikSolver !== IkSolverEnum.OFF) { robot.moveTipToPose(ikGoal, ikSolver, scene) }
@@ -241,11 +240,11 @@ directionalLight.shadow.camera.top = shadowCameraSize
 scene.add(directionalLight)
 
 // Create a plane that receives shadows (but does not cast them)
-const planeGeometry = new THREE.PlaneBufferGeometry(10, 10)
+const planeGeometry = new THREE.PlaneGeometry(10, 10)
 const planeMaterial = new THREE.ShadowMaterial({ opacity: 0.4 })
 const plane = new THREE.Mesh(planeGeometry, planeMaterial)
 plane.receiveShadow = true
-plane.rotateX(-90 * THREE.Math.DEG2RAD)
+plane.rotateX(-90 * THREE.MathUtils.DEG2RAD)
 scene.add(plane)
 
 // Create a helper for the shadow camera (optional)
@@ -310,7 +309,6 @@ function onWindowResize () {
   renderer.setSize(RENDERER_WIDTH, window.innerHeight)
 }
 
-const colladaRobotsList = require('./ColladaRobotsList')
 setupModelsList(colladaRobotsList)
 function setupModelsList (models) {
   for (const model of models) {
@@ -320,7 +318,7 @@ function setupModelsList (models) {
 }
 
 // instantiate a loader
-const loader = new THREE.ColladaLoader()
+const loader = new ColladaLoader()
 
 const modelsInScene = []
 
@@ -363,7 +361,7 @@ function loadModelZae (modelId) {
 
   $('#loader-modal').modal('open')
 
-  JSZipUtils.getBinaryContent(`../collada-robots-collection/${modelId}.zae`, function (err, data) {
+  JSZipUtils.getBinaryContent(`/collada-robots-collection/${modelId}.zae`, function (err, data) {
     if (err) throw err
     JSZip.loadAsync(data).then(function (zip) {
       zip.file(`${modelId}.dae`).async('string').then(function (content) {
@@ -430,12 +428,12 @@ window.addEventListener('keydown', function (event) {
 })
 
 function doConvexHullStuff () {
-  const exporter = new THREE.STLExporter()
+  const exporter = new STLExporter()
   const material = new THREE.MeshBasicMaterial({color: 0x00ff00})
 
   let rawPointsIdx = 0
   for (const link of robot.tipLinks) {
-    const geometry = new THREE.ConvexGeometry(rawPoints[rawPointsIdx++])
+    const geometry = new ConvexGeometry(rawPoints[rawPointsIdx++])
 
     const stlscene = new THREE.Scene()
     stlscene.add(new THREE.Mesh(geometry, material))
