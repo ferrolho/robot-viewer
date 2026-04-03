@@ -439,7 +439,7 @@ export class Robot {
       } else if (partial === 'rotational') {
         J.push(w)
       } else {
-        J.push(math.concat(v, w))
+        J.push(math.concat(v, w, 0))
       }
     }
 

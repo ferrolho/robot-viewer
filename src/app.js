@@ -204,7 +204,7 @@ function main () {
   ikGoalControl = new TransformControls(camera, renderer.domElement)
   ikGoalControlHelper = ikGoalControl.getHelper()
   ikGoalControlHelper.name = 'ikGoalControl'
-  ikGoalControl.addEventListener('change', function () {
+  ikGoalControl.addEventListener('objectChange', function () {
     if (ikSolver !== IkSolverEnum.OFF) { robot.moveTipToPose(ikGoal, ikSolver, scene) }
   })
   ikGoalControl.addEventListener('mouseDown', function () {
