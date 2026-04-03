@@ -50,7 +50,7 @@ export function tr2delta (T0, T1, partial = '') {
   } else if (partial === 'rotational') {
     return dr
   } else {
-    return math.concat(dt, dr)
+    return math.concat(dt, dr, 0)
   }
 }
 
