@@ -11,6 +11,7 @@ Robot Viewer is an interactive 3D web application for visualizing and manipulati
 - **Dev server:** `npm run dev` (Vite dev server with HMR)
 - **Build:** `npm run build` (Vite production build → `dist/`)
 - **Preview:** `npm run preview` (serve production build locally)
+- **Lint:** `npm run lint` (ESLint)
 
 ## Architecture
 
@@ -28,7 +29,6 @@ Single-page app using vanilla ES6 JavaScript (no framework), bundled with Vite.
 
 **Git submodules:**
 - `collada-robots-collection/` — 30+ robot COLLADA models
-- `gamepad.js/` — Gamepad API input handling
 
 ## Tech Stack
 
