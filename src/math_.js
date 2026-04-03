@@ -42,7 +42,7 @@ export function tr2delta (T0, T1, partial = '') {
   const R0 = math.subset(T0, math.index(math.range(0, 3), math.range(0, 3)))
   const R1 = math.subset(T1, math.index(math.range(0, 3), math.range(0, 3)))
 
-  const dt = math.transpose(math.subtract(t1, t0)).toArray()[0]
+  const dt = math.flatten(math.subtract(t1, t0)).toArray()
   const dr = vex(math.subtract(math.multiply(R1, math.transpose(R0)), math.identity(3)))
 
   if (partial === 'translational') {
@@ -61,7 +61,7 @@ export function tr2delta (T0, T1, partial = '') {
  * @returns {Vector3}     The translational part of a homogeneous transform T as a THREE.Vector3
  */
 export function transl (T) {
-  const v = math.transpose(math.subset(T, math.index(math.range(0, 3), 3))).toArray()[0]
+  const v = math.flatten(math.subset(T, math.index(math.range(0, 3), 3))).toArray()
   return { x: v[0], y: v[1], z: v[2] }
 }
 
