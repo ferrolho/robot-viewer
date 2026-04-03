@@ -26,7 +26,7 @@ jobs:
           node-version: 22
           cache: npm
 
-      - run: npm ci
+      - run: npm install
       - run: npx vite build
 
       - name: Copy runtime assets to dist
