@@ -1,5 +1,3 @@
-/* global $, Blob, requestAnimationFrame */
-
 import { IkSolverEnum } from './IkSolver.js'
 import { Robot } from './Robot.js'
 
@@ -396,7 +394,7 @@ window.addEventListener('keydown', function (event) {
       // console.log(robot.configuration)
       robot.saveMotionKeypoint()
       break
-    case 80: // P
+    case 80: { // P
       console.log('Executing keypoints motion...')
       robotTweens.length = 0
       let prevQ = robot.configuration
@@ -408,6 +406,7 @@ window.addEventListener('keydown', function (event) {
       }
       if (robotTweens.length !== 0) { robotTweens[0].start() }
       break
+    }
     case 81: // Q
       ikGoalControl.setSpace(ikGoalControl.space === 'local' ? 'world' : 'local')
       break

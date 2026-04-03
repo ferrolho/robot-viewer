@@ -121,10 +121,6 @@ export class Robot {
 
   computeInertia () {
     console.log('Robot.js@computeInertia: THIS IS NOT YET FUNCTIONAL !')
-    return
-
-    console.log(this._physics)
-    return math.random(6, 6)
   }
 
   get motionKeypoints () {
