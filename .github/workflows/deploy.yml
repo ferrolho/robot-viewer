@@ -30,10 +30,7 @@ jobs:
       - run: npx vite build
 
       - name: Copy runtime assets to dist
-        run: |
-          cp -r collada-robots-collection dist/
-          mkdir -p dist/gamepad.js
-          cp gamepad.js/gamepad.js dist/gamepad.js/
+        run: cp -r collada-robots-collection dist/
 
       - uses: actions/upload-pages-artifact@v3
         with:

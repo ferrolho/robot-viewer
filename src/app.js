@@ -1,12 +1,10 @@
-/* global $, Blob, Gamepad, requestAnimationFrame */
+/* global $, Blob, requestAnimationFrame */
 
 import { IkSolverEnum } from './IkSolver.js'
 import { Robot } from './Robot.js'
 
 import WebGL from 'three/addons/capabilities/WebGL.js'
 if (!WebGL.isWebGL2Available()) document.body.appendChild(WebGL.getWebGL2ErrorMessage())
-
-const gamepad = new Gamepad()
 
 import FileSaver from 'file-saver'
 import JSZip from 'jszip'
@@ -298,6 +296,7 @@ function animate () {
     }
   }
 
+  pollGamepad()
   renderer.render(scene, camera)
   TWEEN.update()
 
@@ -477,31 +476,29 @@ function moveFromTo (q_s, q_t, duration = 10, easing = TWEEN.Easing.Linear.None)
 }
 
 /**
- * Gamepad-related stuff.
+ * Gamepad support (native Gamepad API)
  */
 
-/*
- * Connection / Disconnection
- */
-
-gamepad.on('connect', e => {
-  console.log(`Controller ${e.index} connected!`)
+window.addEventListener('gamepadconnected', e => {
+  console.log(`Controller ${e.gamepad.index} connected: ${e.gamepad.id}`)
 })
 
-gamepad.on('disconnect', e => {
-  console.log(`Controller ${e.index} disconnected!`)
+window.addEventListener('gamepaddisconnected', e => {
+  console.log(`Controller ${e.gamepad.index} disconnected: ${e.gamepad.id}`)
 })
 
-/*
- * Stick movements
- */
-
-gamepad.on('hold', 'stick_axis_left', e => {
-  // console.log(e.value)
-})
-
-gamepad.on('hold', 'stick_axis_right', e => {
-  orbitControls.rotateLeft(e.value[0] * 0.05)
-  orbitControls.rotateUp(e.value[1] * 0.03)
-  orbitControls.update()
-})
+function pollGamepad () {
+  const gamepads = navigator.getGamepads()
+  for (const gp of gamepads) {
+    if (!gp) continue
+    // Right stick (axes 2,3) controls orbit camera
+    const rx = gp.axes[2] || 0
+    const ry = gp.axes[3] || 0
+    const deadzone = 0.1
+    if (Math.abs(rx) > deadzone || Math.abs(ry) > deadzone) {
+      orbitControls.rotateLeft(rx * 0.05)
+      orbitControls.rotateUp(ry * 0.03)
+      orbitControls.update()
+    }
+  }
+}
