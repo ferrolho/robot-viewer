@@ -431,7 +431,7 @@ export class Robot {
       const drdq = math.subset(dtdq, math.index(math.range(0, 3), math.range(0, 3)))
       const r0 = math.subset(t0, math.index(math.range(0, 3), math.range(0, 3)))
 
-      const v = math.transpose(math.subset(dtdq, math.index(math.range(0, 3), 3))).toArray()[0]
+      const v = math.flatten(math.subset(dtdq, math.index(math.range(0, 3), 3))).toArray()
       const w = math_.vex(math.multiply(drdq, math.transpose(r0)))
 
       if (partial === 'translational') {
