@@ -360,7 +360,7 @@ function loadModelZae (modelId) {
 
   $('#loader-modal').modal('open')
 
-  JSZipUtils.getBinaryContent(`/collada-robots-collection/${modelId}.zae`, function (err, data) {
+  JSZipUtils.getBinaryContent(`${import.meta.env.BASE_URL}collada-robots-collection/${modelId}.zae`, function (err, data) {
     if (err) throw err
     JSZip.loadAsync(data).then(function (zip) {
       zip.file(`${modelId}.dae`).async('string').then(function (content) {
