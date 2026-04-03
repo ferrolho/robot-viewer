@@ -1,5 +1,6 @@
 import math from 'mathjs'
 import numeric from 'numeric'
+window.numeric = numeric
 
 /**
  * Returns a number whose value is limited to the given range.
@@ -19,22 +20,8 @@ Number.prototype.clamp = function (min, max) {
 /**
  * Import the math library numeric.js, http://numericjs.com/
  */
-try {
-  // import the numeric.js library into math.js
-  math.import(numeric, {wrap: true, silent: true})
-
-  if (math.eig) {
-    // calculate eigenvalues of a matrix
-    console.log(math.eval('eig([1, 2; 4, 3])').lambda.x) // [5, -1];
-
-    // solve AX = b
-    var A = math.eval('[1, 2, 3; 2, -1, 1; 3, 0, -1]')
-    var b = [9, 8, 3]
-    console.log(math.solve(A, b)) // [2, -1, 3]
-  }
-} catch (err) {
-  console.log('Warning: Failed to import numeric.js into mathjs:', err.message)
-}
+// Import numeric.js functions (eig, solve, etc.) into mathjs
+math.import(numeric, {wrap: true, silent: true})
 
 /**
  * Convert homogeneous transform to differential motion
