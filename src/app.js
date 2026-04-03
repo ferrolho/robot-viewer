@@ -196,6 +196,7 @@ let ikSolver = IkSolverEnum.OFF
 
 let ikGoal
 let ikGoalControl
+let ikGoalControlHelper
 
 function main () {
   // loadModelZae('abb_irb52_7_120')
@@ -205,7 +206,8 @@ function main () {
   ikGoal.name = 'ikGoal'
 
   ikGoalControl = new TransformControls(camera, renderer.domElement)
-  ikGoalControl.name = 'ikGoalControl'
+  ikGoalControlHelper = ikGoalControl.getHelper()
+  ikGoalControlHelper.name = 'ikGoalControl'
   ikGoalControl.addEventListener('change', function () {
     if (ikSolver !== IkSolverEnum.OFF) { robot.moveTipToPose(ikGoal, ikSolver, scene) }
   })
@@ -286,13 +288,13 @@ function animate () {
     if (scene.getObjectByName('ikGoal')) { scene.remove(ikGoal) }
     if (scene.getObjectByName('ikGoalControl')) {
       ikGoalControl.detach(ikGoal)
-      scene.remove(ikGoalControl)
+      scene.remove(ikGoalControlHelper)
     }
   } else if (ikSolver !== IkSolverEnum.OFF) {
     if (!scene.getObjectByName('ikGoal')) { scene.add(ikGoal) }
     if (!scene.getObjectByName('ikGoalControl')) {
       ikGoalControl.attach(ikGoal)
-      scene.add(ikGoalControl)
+      scene.add(ikGoalControlHelper)
     }
   }
 

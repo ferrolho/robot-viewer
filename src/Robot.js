@@ -44,12 +44,17 @@ export class Robot {
    */
   plotEllipsoid (A, name) {
     const geometry = new THREE.SphereGeometry(0.5)
-    const ps = geometry.vertices.map(p => p.toArray())
+    const posAttr = geometry.getAttribute('position')
+    const ps = []
+    for (let i = 0; i < posAttr.count; i++) {
+      ps.push([posAttr.getX(i), posAttr.getY(i), posAttr.getZ(i)])
+    }
     const pe = math.multiply(math.sqrtm(A), math.transpose(ps))
 
-    for (let i = 0; i < geometry.vertices.length; i++) {
-      geometry.vertices[i].set(pe[0][i], pe[1][i], pe[2][i])
+    for (let i = 0; i < posAttr.count; i++) {
+      posAttr.setXYZ(i, pe[0][i], pe[1][i], pe[2][i])
     }
+    posAttr.needsUpdate = true
 
     const lineSegments = new THREE.LineSegments(new THREE.WireframeGeometry(geometry))
     lineSegments.material.depthTest = false
