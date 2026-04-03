@@ -287,8 +287,8 @@ function addSphereAtXYZ (x, y, z) {
   return sphere
 }
 
-animate()
-function animate () {
+requestAnimationFrame(animate)
+function animate (time) {
   requestAnimationFrame(animate)
 
   if (ikSolver === IkSolverEnum.OFF) {
@@ -307,7 +307,7 @@ function animate () {
 
   pollGamepad()
   renderer.render(scene, camera)
-  TWEEN.update()
+  TWEEN.update(time)
 
   stats.update()
 }
@@ -473,9 +473,9 @@ function moveFromTo (q_s, q_t, duration = 10, easing = TWEEN.Easing.Linear.None)
 
   const tween = new TWEEN.Tween(tweenStart).to(tweenFinal, duration).easing(easing)
 
-  tween.onUpdate(function () {
+  tween.onUpdate(function (obj) {
     // Update robot configuration, joint by joint.
-    for (const joint of robot._joints) { robot.setJointValue(joint, this[joint]) }
+    for (const joint of robot._joints) { robot.setJointValue(joint, obj[joint]) }
   })
 
   tween.onComplete(function () {
