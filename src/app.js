@@ -12,7 +12,7 @@ import FileSaver from 'file-saver'
 import JSZip from 'jszip'
 import JSZipUtils from 'jszip-utils'
 import * as THREE from 'three'
-import TWEEN from 'tween.js'
+import * as TWEEN from '@tweenjs/tween.js'
 import Stats from 'stats.js'
 
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
