@@ -4,7 +4,7 @@ import { IkSolverEnum } from './IkSolver.js'
 import { Robot } from './Robot.js'
 
 import WebGL from 'three/addons/capabilities/WebGL.js'
-if (!WebGL.isWebGLAvailable()) document.body.appendChild(WebGL.getWebGLErrorMessage())
+if (!WebGL.isWebGL2Available()) document.body.appendChild(WebGL.getWebGL2ErrorMessage())
 
 const gamepad = new Gamepad()
 
@@ -38,7 +38,7 @@ function updateRendererWidth () {
 // Renderer
 const renderer = new THREE.WebGLRenderer({ antialias: true })
 renderer.shadowMap.enabled = true
-renderer.shadowMap.type = THREE.PCFSoftShadowMap
+renderer.shadowMap.type = THREE.PCFShadowMap
 renderer.setClearColor(0xf0f0f0)
 renderer.setPixelRatio(window.devicePixelRatio)
 renderer.setSize(RENDERER_WIDTH, window.innerHeight)
