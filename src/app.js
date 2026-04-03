@@ -8,7 +8,8 @@ import FileSaver from 'file-saver'
 import JSZip from 'jszip'
 import JSZipUtils from 'jszip-utils'
 import * as THREE from 'three'
-import * as TWEEN from '@tweenjs/tween.js'
+import { Tween, Easing, Group } from '@tweenjs/tween.js'
+const tweenGroup = new Group()
 import Stats from 'stats.js'
 
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
@@ -103,13 +104,13 @@ $(document).ready(function () {
   // Reset configuration
   $('#reset-button').click(function () {
     console.log(`Moving robot to 'home' position...`)
-    moveFromTo(robot.configuration, robot.zeroConfiguration, 1000, TWEEN.Easing.Quadratic.Out).start()
+    moveFromTo(robot.configuration, robot.zeroConfiguration, 1000, Easing.Quadratic.Out).start()
   })
 
   // Random configuration
   $('#random-button').click(function () {
     console.log('Moving robot to random position...')
-    moveFromTo(robot.configuration, robot.randomConfiguration, 1000, TWEEN.Easing.Quadratic.Out).start()
+    moveFromTo(robot.configuration, robot.randomConfiguration, 1000, Easing.Quadratic.Out).start()
   })
 
   let pointCloudsInScene = []
@@ -307,7 +308,7 @@ function animate (time) {
 
   pollGamepad()
   renderer.render(scene, camera)
-  TWEEN.update(time)
+  tweenGroup.update(time)
 
   stats.update()
 }
@@ -461,7 +462,7 @@ function doConvexHullStuff () {
  * @param {Number[]} q_s The initial configuration, $q_s$.
  * @param {Number[]} q_t The final configuration, $q_t$.
  */
-function moveFromTo (q_s, q_t, duration = 10, easing = TWEEN.Easing.Linear.None) {
+function moveFromTo (q_s, q_t, duration = 10, easing = Easing.Linear.None) {
   let tweenStart = {}
   let tweenFinal = {}
 
@@ -471,7 +472,7 @@ function moveFromTo (q_s, q_t, duration = 10, easing = TWEEN.Easing.Linear.None)
     tweenFinal[joint] = q_t.shift()
   }
 
-  const tween = new TWEEN.Tween(tweenStart).to(tweenFinal, duration).easing(easing)
+  const tween = new Tween(tweenStart, tweenGroup).to(tweenFinal, duration).easing(easing)
 
   tween.onUpdate(function (obj) {
     // Update robot configuration, joint by joint.
