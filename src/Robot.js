@@ -374,9 +374,11 @@ export class Robot {
 
     this.configuration = q
 
-    // this.updateAccelerationEllipsoid()
-    this.updateForceEllipsoid()
-    this.updateVelocityEllipsoid()
+    if (this.showEllipsoids) {
+      // this.updateAccelerationEllipsoid()
+      this.updateForceEllipsoid()
+      this.updateVelocityEllipsoid()
+    }
 
     console.log(`Solved with ${iteration} iterations (${delta} ms).`)
   }

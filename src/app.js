@@ -63,6 +63,7 @@ let castShadows = false
 let robot
 
 let rawPoints = [[], [], [], []]
+let showEllipsoids = false
 
 $(document).ready(function () {
   // Initialize collapse button
@@ -183,6 +184,16 @@ $(document).ready(function () {
 
   $('input[id=pseudo-inverse-switch][type=checkbox]').change(function () {
     ikSolver = $(this).is(':checked') ? IkSolverEnum.PSEUDO_INVERSE : IkSolverEnum.OFF
+  })
+
+  $('input[id=vel-force-ellipsoids-switch][type=checkbox]').change(function () {
+    showEllipsoids = $(this).is(':checked')
+    if (robot) { robot.showEllipsoids = showEllipsoids }
+    if (!showEllipsoids) {
+      scene.remove(scene.getObjectByName('force-ellipsoid'))
+      scene.remove(scene.getObjectByName('velocity-ellipsoid'))
+      scene.remove(scene.getObjectByName('acceleration-ellipsoid'))
+    }
   })
 
   main()
