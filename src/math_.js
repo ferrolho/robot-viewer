@@ -1,6 +1,7 @@
-import math from 'mathjs'
+import { create, all } from 'mathjs'
 import numeric from 'numeric'
-window.numeric = numeric
+
+export const math = create(all)
 
 /**
  * Returns a number whose value is limited to the given range.
@@ -42,7 +43,7 @@ export function tr2delta (T0, T1, partial = '') {
   const R1 = math.subset(T1, math.index(math.range(0, 3), math.range(0, 3)))
 
   const dt = math.transpose(math.subtract(t1, t0)).toArray()[0]
-  const dr = vex(math.subtract(math.multiply(R1, math.transpose(R0)), math.eye(3)))
+  const dr = vex(math.subtract(math.multiply(R1, math.transpose(R0)), math.identity(3)))
 
   if (partial === 'translational') {
     return dt

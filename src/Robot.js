@@ -2,7 +2,7 @@ import { IkSolverEnum } from './IkSolver.js'
 import * as math_ from './math_.js'
 
 import Kinematics from 'kinematics'
-import math from 'mathjs'
+import { math } from './math_.js'
 import * as THREE from 'three'
 
 const _quadrupeds = ['anybotics_anymal', 'iit_hyq']
@@ -394,11 +394,11 @@ export class Robot {
    * @param {*} c
    */
   pseudoInverse (q, c = 1e-3, partial = '') {
-    const C = math.multiply(math.eye(partial === '' ? 6 : 3), c)
+    const C = math.multiply(math.identity(partial === '' ? 6 : 3), c)
     // const Cinv = c === 0 ? math.zeros(6) : math.inv(C)
 
     // const W = math.diag([6, 5, 4, 3, 2, 1])
-    const W = math.eye(q.length)
+    const W = math.identity(q.length)
     const Winv = math.inv(W)
 
     const J = this.jacob(q, partial)
