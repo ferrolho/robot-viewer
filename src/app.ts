@@ -154,9 +154,9 @@ axisSwitch.addEventListener('change', () => {
   if (axisSwitch.checked) { scene.add(axis) } else { scene.remove(axis) }
 })
 
-const grid = new THREE.Group()
-
-function createFatGrid(size: number, divisions: number, color: number, linewidth: number): LineSegments2 {
+const grid = (() => {
+  const size = 10
+  const divisions = 10
   const step = size / divisions
   const half = size / 2
   const positions: number[] = []
@@ -167,12 +167,9 @@ function createFatGrid(size: number, divisions: number, color: number, linewidth
   }
   const geo = new LineSegmentsGeometry()
   geo.setPositions(positions)
-  const mat = new LineMaterial({ color, linewidth, worldUnits: true })
+  const mat = new LineMaterial({ color: 0x3a3f48, linewidth: 0.008, worldUnits: true })
   return new LineSegments2(geo, mat)
-}
-
-grid.add(createFatGrid(10, 20, 0x2a2e35, 0.005))
-grid.add(createFatGrid(10, 4, 0x4a5060, 0.01))
+})()
 
 const gridSwitch = checkbox('grid-switch')
 gridSwitch.addEventListener('change', () => {
