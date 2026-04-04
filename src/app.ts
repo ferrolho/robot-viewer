@@ -33,10 +33,12 @@ document.body.appendChild(stats.dom)
 window.addEventListener('resize', onWindowResize, false)
 
 const SIDEBAR_WIDTH = 300
-let RENDERER_WIDTH = updateRendererWidth()
+let RENDERER_WIDTH = computeRendererWidth()
+function computeRendererWidth () {
+  return window.innerWidth > 992 ? window.innerWidth - SIDEBAR_WIDTH : window.innerWidth
+}
 function updateRendererWidth () {
-  RENDERER_WIDTH = window.innerWidth > 992 ? window.innerWidth - SIDEBAR_WIDTH : window.innerWidth
-  return RENDERER_WIDTH
+  RENDERER_WIDTH = computeRendererWidth()
 }
 
 // Renderer
