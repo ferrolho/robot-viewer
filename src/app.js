@@ -189,11 +189,16 @@ $(document).ready(function () {
 
   $('input[id=vel-force-ellipsoids-switch][type=checkbox]').change(function () {
     showEllipsoids = $(this).is(':checked')
-    if (robot) { robot.showEllipsoids = showEllipsoids }
-    if (!showEllipsoids) {
-      scene.remove(scene.getObjectByName('force-ellipsoid'))
-      scene.remove(scene.getObjectByName('velocity-ellipsoid'))
-      scene.remove(scene.getObjectByName('acceleration-ellipsoid'))
+    if (robot) {
+      robot.showEllipsoids = showEllipsoids
+      if (showEllipsoids) {
+        robot.updateForceEllipsoid()
+        robot.updateVelocityEllipsoid()
+      } else {
+        scene.remove(scene.getObjectByName('force-ellipsoid'))
+        scene.remove(scene.getObjectByName('velocity-ellipsoid'))
+        scene.remove(scene.getObjectByName('acceleration-ellipsoid'))
+      }
     }
   })
 
