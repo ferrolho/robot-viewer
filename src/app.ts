@@ -150,10 +150,11 @@ axisSwitch.addEventListener('change', () => {
   if (axisSwitch.checked) { scene.add(axis) } else { scene.remove(axis) }
 })
 
-const grid = new THREE.GridHelper(10)
-grid.material.color.setHex(0x888888)
-grid.material.opacity = 1
-grid.material.transparent = false
+const grid = new THREE.Group()
+const gridMinor = new THREE.GridHelper(10, 20, 0x333333, 0x333333)
+const gridMajor = new THREE.GridHelper(10, 4, 0x666666, 0x666666)
+grid.add(gridMinor)
+grid.add(gridMajor)
 
 const gridSwitch = checkbox('grid-switch')
 gridSwitch.addEventListener('change', () => {
