@@ -67,6 +67,7 @@ const scene = new THREE.Scene()
 // ── Resize: driven by container, not window math ──
 
 function handleResize(width: number, height: number) {
+  console.log(`[resize] container: ${width}x${height}, canvas: ${renderer.domElement.width}x${renderer.domElement.height}, viewport offset: ${$('viewport').offsetWidth}x${$('viewport').offsetHeight}`)
   camera.aspect = width / height
   camera.updateProjectionMatrix()
   renderer.setSize(width, height)
@@ -75,6 +76,7 @@ function handleResize(width: number, height: number) {
 const resizeObserver = new ResizeObserver((entries) => {
   for (const entry of entries) {
     const { width, height } = entry.contentRect
+    console.log(`[ResizeObserver] contentRect: ${width}x${height}`)
     if (width > 0 && height > 0) {
       handleResize(width, height)
     }
