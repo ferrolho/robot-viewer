@@ -49,9 +49,3 @@ declare module 'stats.js' {
   }
 }
 
-// Materialize CSS jQuery plugins
-interface JQuery {
-  sideNav(action?: string): JQuery
-  modal(options?: object | string): JQuery
-  collapsible(options?: object): JQuery
-}

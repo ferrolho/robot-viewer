@@ -1,6 +1,6 @@
 /*
-* Removes mobile highlight
-*/
+ * Removes mobile highlight
+ */
 * {
   -webkit-tap-highlight-color: rgba(0, 0, 0, 0);
 }
@@ -10,6 +10,9 @@ body, html {
   margin: 0;
   padding: 0;
   overflow: hidden;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
+  font-size: 15px;
+  color: #333;
 }
 
 canvas {
@@ -17,92 +20,404 @@ canvas {
   height: 100%;
 }
 
+h5 {
+  font-size: 1.2rem;
+  font-weight: 400;
+  margin: 0.4rem 0;
+}
+
+h4 {
+  font-size: 1.6rem;
+  font-weight: 400;
+  margin: 0.6rem 0 0.4rem;
+}
+
+a {
+  color: #26a69a;
+  text-decoration: none;
+}
+
+/* ── Stats.js ── */
+
 #statsjs {
   left: initial !important;
   right: 0;
 }
 
+/* ── Sidebar ── */
+
+#sidebar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 300px;
+  height: 100vh;
+  overflow-y: auto;
+  background: #fff;
+  border-right: 1px solid #e0e0e0;
+  z-index: 10;
+  box-sizing: border-box;
+  padding: 0;
+}
+
+#sidebar h5 {
+  padding: 0 16px;
+  margin: 12px 0 4px;
+}
+
+#sidebar .sidebar-section {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+#sidebar .sidebar-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  height: 48px;
+}
+
+#sidebar .sidebar-item .label {
+  font-size: 15px;
+}
+
+#sidebar hr {
+  border: none;
+  border-top: 1px solid #e0e0e0;
+  margin: 8px 0;
+}
+
+/* ── Toggle Switch ── */
+
+.toggle-switch {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: #999;
+  cursor: pointer;
+  user-select: none;
+}
+
+.toggle-switch input {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.toggle-switch .lever {
+  display: inline-block;
+  width: 36px;
+  height: 14px;
+  background: #ccc;
+  border-radius: 7px;
+  position: relative;
+  transition: background 0.2s;
+}
+
+.toggle-switch .lever::after {
+  content: '';
+  position: absolute;
+  top: -3px;
+  left: -1px;
+  width: 20px;
+  height: 20px;
+  background: #f1f1f1;
+  border-radius: 50%;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+  transition: left 0.2s, background 0.2s;
+}
+
+.toggle-switch input:checked + .lever {
+  background: #a0d4cf;
+}
+
+.toggle-switch input:checked + .lever::after {
+  left: 17px;
+  background: #26a69a;
+}
+
+/* ── Buttons ── */
+
+.btn {
+  display: block;
+  margin: 4px 16px;
+  padding: 0 16px;
+  height: 36px;
+  line-height: 36px;
+  background: #26a69a;
+  color: #fff;
+  border: none;
+  border-radius: 2px;
+  cursor: pointer;
+  text-transform: uppercase;
+  font-size: 14px;
+  text-align: center;
+  letter-spacing: 0.5px;
+  transition: background 0.15s;
+}
+
+.btn:hover {
+  background: #2bbbad;
+}
+
+.btn:active {
+  background: #1e8e82;
+}
+
+/* ── Accordion (details/summary) ── */
+
+#models-list {
+  padding: 0;
+  margin: 0;
+}
+
+#models-list details {
+  border-top: 1px solid #e0e0e0;
+}
+
+#models-list details:last-child {
+  border-bottom: 1px solid #e0e0e0;
+}
+
+#models-list summary {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px;
+  cursor: pointer;
+  font-size: 16px;
+  list-style: none;
+  user-select: none;
+}
+
+#models-list summary::-webkit-details-marker {
+  display: none;
+}
+
+#models-list summary img {
+  width: 40px;
+  height: 40px;
+  object-fit: contain;
+}
+
+#models-list .brand-models {
+  box-shadow: inset 0  4px 8px -4px rgba(0, 0, 0, 0.4),
+              inset 0 -4px 8px -4px rgba(0, 0, 0, 0.4);
+  padding: 0;
+}
+
+#models-list .brand-models ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+#models-list .brand-models li a {
+  display: block;
+  padding: 8px 16px;
+  color: #333;
+  text-decoration: none;
+  transition: background 0.15s;
+  font-weight: 400;
+}
+
+#models-list .brand-models li a:hover {
+  background: #eee;
+}
+
+#models-list .brand-models li.active {
+  background-color: #26a69a;
+}
+
+#models-list .brand-models li.active a {
+  color: #eafaf9;
+}
+
+/* ── Modal (dialog) ── */
+
+dialog {
+  border: none;
+  border-radius: 4px;
+  padding: 24px;
+  max-width: 520px;
+  width: 90%;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+}
+
+dialog::backdrop {
+  background: rgba(0,0,0,0.5);
+}
+
+dialog h4 {
+  margin-top: 0;
+}
+
+dialog footer {
+  padding: 0;
+  text-align: right;
+  margin-top: 16px;
+}
+
+dialog footer button {
+  background: none;
+  border: none;
+  color: #26a69a;
+  font-size: 14px;
+  text-transform: uppercase;
+  cursor: pointer;
+  padding: 8px 16px;
+  letter-spacing: 0.5px;
+}
+
+dialog footer button:hover {
+  background: #f5f5f5;
+  border-radius: 2px;
+}
+
+/* ── Shortcuts Table ── */
+
+.shortcuts-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.shortcuts-table tr:nth-child(even) {
+  background: #f5f5f5;
+}
+
+.shortcuts-table td {
+  padding: 8px 12px;
+}
+
+/* ── Progress bar ── */
+
+.progress-bar {
+  height: 4px;
+  background: #e0e0e0;
+  border-radius: 2px;
+  overflow: hidden;
+  margin-top: 16px;
+}
+
+.progress-bar::after {
+  content: '';
+  display: block;
+  height: 100%;
+  width: 40%;
+  background: #26a69a;
+  border-radius: 2px;
+  animation: indeterminate 1.5s ease-in-out infinite;
+}
+
+@keyframes indeterminate {
+  0%   { transform: translateX(-100%); }
+  100% { transform: translateX(350%); }
+}
+
+/* ── HUD ── */
+
+#hud-container {
+  width: 100%;
+  pointer-events: none;
+  position: relative;
+}
+
+#hud {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr 1fr 1fr;
+  width: 100%;
+  position: absolute;
+  bottom: 0;
+  text-align: right;
+  padding-right: 1rem;
+  box-sizing: border-box;
+}
+
+@media (max-width: 992px) {
+  #hud {
+    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+  }
+}
+
+#hud p {
+  font-style: italic;
+  margin: 0;
+}
+
+#hud h5 {
+  margin-top: 0;
+}
+
+/* ── Three.js container ── */
+
 #threejs-container {
   padding: 0;
 }
+
+/* ── Layout: sidebar offset ── */
 
 header, main, footer {
   padding-left: 300px;
 }
 
-@media only screen and (max-width : 992px) {
+@media only screen and (max-width: 992px) {
   header, main, footer {
     padding-left: 0;
   }
 }
 
-.side-nav .row {
-  margin-bottom: initial;
-}
+/* ── Mobile menu button ── */
 
-a.button-collapse.top-nav {
+#menu-toggle {
+  display: none;
   position: absolute;
-  text-align: center;
-  height: 48px;
-  width: 48px;
   left: 0.6em;
   top: 0.6em;
-  float: none;
-  font-size: 36px;
-  z-index: 2;
+  z-index: 12;
+  width: 48px;
+  height: 48px;
+  border: none;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.9);
+  cursor: pointer;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+  align-items: center;
+  justify-content: center;
 }
 
-a.button-collapse.top-nav i {
-  font-size: 32px;
+#menu-toggle svg {
+  width: 24px;
+  height: 24px;
 }
 
-#models-list .collapsible-header {
-  font-size: 16px;
-}
+@media only screen and (max-width: 992px) {
+  #menu-toggle {
+    display: flex;
+  }
 
-#models-list div li a {
-  font-weight: initial;
-}
+  #sidebar {
+    transform: translateX(-100%);
+    transition: transform 0.3s;
+  }
 
-#models-list div li.active {
-  background-color: #26a69a !important;
-}
+  #sidebar.open {
+    transform: translateX(0);
+  }
 
-#models-list div li.active a {
-  color: #eafaf9;
-}
+  #sidebar-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.4);
+    z-index: 9;
+  }
 
-#models-list .collapsible-body {
-  box-shadow: inset 0  4px 8px -4px rgba(0, 0, 0, 0.4),
-              inset 0 -4px 8px -4px rgba(0, 0, 0, 0.4);
-}
-
-#hud-container {
-  width: 100%;
-  pointer-events:none;
-  position: relative;
-}
-
-#hud-container .row {
-  margin-bottom: initial;
-}
-
-#hud {
-  width: 100%;
-  margin-right: 0.82rem;
-  position: absolute;
-  bottom: 0;
-}
-
-#hud p {
-  font-style: italic;
-  margin: initial;
-}
-
-#hud h1,
-#hud h2,
-#hud h3,
-#hud h4,
-#hud h5 {
-  margin-top: initial;
+  #sidebar-overlay.visible {
+    display: block;
+  }
 }

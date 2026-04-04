@@ -36,7 +36,6 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
-    "@types/jquery": "^4.0.0",
     "@types/three": "^0.183.1",
     "eslint": "^10.1.0",
     "typescript": "^6.0.2",

@@ -31,7 +31,7 @@
 ### Phase 5: Drop Legacy Dependencies
 - [x] Evaluate removing `numeric.js` — mathjs v15 has built-in `eig()` and `solve()`; would eliminate the `window.numeric` hack and `eval()` warnings
 - [x] Remove `Number.prototype.clamp` polyfill — replace with a standalone `clamp()` utility
-- [ ] Replace jQuery + Materialize v0.100 (unmaintained) with vanilla JS + modern CSS
+- [x] Replace jQuery + Materialize v0.100 (unmaintained) with vanilla JS + modern CSS
 - [ ] Consider `lil-gui` or `dat.gui` for the control panel (standard in Three.js projects)
 
 ### Phase 6: Code Quality

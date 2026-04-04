@@ -6,198 +6,165 @@
 		<title>Robot Viewer</title>
 
 		<!-- CSS  -->
-		<link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
-		<link href="/css/materialize.css" type="text/css" rel="stylesheet" media="screen,projection"/>
-		<link href="/css/style.css" type="text/css" rel="stylesheet" media="screen,projection"/>
 		<link href="/css/styles.css" rel="stylesheet" type="text/css">
 	</head>
 	<body>
 		<header>
-			<a href="#" data-activates="nav-mobile" class="button-collapse top-nav waves-effect waves-light circle hide-on-large-only"><i class="material-icons">menu</i></a>
+			<button id="menu-toggle" aria-label="Toggle menu">
+				<svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/></svg>
+			</button>
 
-			<ul id="nav-mobile" class="side-nav fixed">
-				<li><h5 style="padding: 0 16px">View Options</h5></li>
+			<aside id="sidebar">
+				<h5>View Options</h5>
 
-				<li><a><span class="left">Axis</span><div class="switch right">
-					<label>Off<input id="axis-switch" type="checkbox"><span class="lever"></span>On</label>
-				</div></a></li><div style="clear: both"></div>
+				<div class="sidebar-item">
+					<span class="label">Axis</span>
+					<label class="toggle-switch">
+						Off<input id="axis-switch" type="checkbox"><span class="lever"></span>On
+					</label>
+				</div>
 
-				<li><a><span class="left">Grid</span><div class="switch right">
-					<label>Off<input id="grid-switch" type="checkbox"><span class="lever"></span>On</label>
-				</div></a></li><div style="clear: both"></div>
+				<div class="sidebar-item">
+					<span class="label">Grid</span>
+					<label class="toggle-switch">
+						Off<input id="grid-switch" type="checkbox"><span class="lever"></span>On
+					</label>
+				</div>
 
-				<li><a><span class="left">Shadows</span><div class="switch right">
-					<label>Off<input id="shadows-switch" type="checkbox"><span class="lever"></span>On</label>
-				</div></a></li><div style="clear: both"></div>
+				<div class="sidebar-item">
+					<span class="label">Shadows</span>
+					<label class="toggle-switch">
+						Off<input id="shadows-switch" type="checkbox"><span class="lever"></span>On
+					</label>
+				</div>
 
-				<li><a><span class="left">Stats</span><div class="switch right">
-					<label>Off<input id="stats-switch" type="checkbox"><span class="lever"></span>On</label>
-				</div></a></li><div style="clear: both"></div>
+				<div class="sidebar-item">
+					<span class="label">Stats</span>
+					<label class="toggle-switch">
+						Off<input id="stats-switch" type="checkbox"><span class="lever"></span>On
+					</label>
+				</div>
 
-				<li><div class="divider"></div></li>
+				<hr>
 
-				<!--  -->
+				<h5>Commands</h5>
 
-				<li><h5 style="padding: 0 16px">Commands</h5></li>
+				<button id="reset-button" class="btn">Home Configuration</button>
+				<button id="random-button" class="btn">Random Configuration</button>
+				<button id="reachability-button" class="btn">Show Reachability</button>
+				<button id="clear-clouds-button" class="btn">Clear Point Clouds</button>
 
-				<li><a id="reset-button" class="btn waves-effect waves-light">Home Configuration</a></li>
+				<hr>
 
-				<li><a id="random-button" class="btn waves-effect waves-light">Random Configuration</a></li>
+				<h5>Advanced</h5>
 
-				<li><a id="reachability-button" class="btn waves-effect waves-light">Show Reachability</a></li>
+				<div class="sidebar-item">
+					<span class="label">Inverse Kinematics</span>
+					<label class="toggle-switch">
+						<input id="pseudo-inverse-switch" type="checkbox"><span class="lever"></span>
+					</label>
+				</div>
 
-				<li><a id="clear-clouds-button" class="btn waves-effect waves-light">Clear Point Clouds</a></li>
+				<div class="sidebar-item">
+					<span class="label">Vel-Force Ellipsoids</span>
+					<label class="toggle-switch">
+						<input id="vel-force-ellipsoids-switch" type="checkbox"><span class="lever"></span>
+					</label>
+				</div>
 
-				<li><div class="divider"></div></li>
+				<hr>
 
-				<!--  -->
+				<h5>Robots</h5>
 
-				<li><h5 style="padding: 0 16px">Advanced</h5></li>
-
-				<li><a><span class="left">Inverse Kinematics</span><div class="switch right">
-					<label><input id="pseudo-inverse-switch" type="checkbox"><span class="lever"></span></label>
-				</div></a></li><div style="clear: both"></div>
-
-				<li><a><span class="left">Vel-Force Ellipsoids</span><div class="switch right">
-					<label><input id="vel-force-ellipsoids-switch" type="checkbox"><span class="lever"></span></label>
-				</div></a></li><div style="clear: both"></div>
-
-				<li><div class="divider"></div></li>
-
-				<!--  -->
-
-				<li><h5 style="padding: 0 16px">Robots</h5></li>
-
-				<li><ul id="models-list" class="collapsible" data-collapsible="accordion">
-					<li>
-						<div class="collapsible-header row valign-wrapper">
-							<img class="col s2 responsive-img" src="/images/logos/abb.png">
-							<div class="col s10">ABB</div>
-						</div>
-						<div id="abb-models" class="collapsible-body"></div>
-					</li>
-					<li>
-						<div class="collapsible-header row valign-wrapper">
-							<img class="col s2 responsive-img" src="/images/logos/anybotics.png">
-							<div class="col s10">ANYbotics</div>
-						</div>
-						<div id="anybotics-models" class="collapsible-body"></div>
-					</li>
-					<li>
-						<div class="collapsible-header row valign-wrapper">
-							<img class="col s2 responsive-img" src="/images/logos/clearpath.png">
-							<div class="col s10">Clearpath</div>
-						</div>
-						<div id="clearpath-models" class="collapsible-body"></div>
-					</li>
-					<li>
-						<div class="collapsible-header row valign-wrapper">
-							<img class="col s2 responsive-img" src="/images/logos/franka.png">
-							<div class="col s10">Franka</div>
-						</div>
-						<div id="franka-models" class="collapsible-body"></div>
-					</li>
-					<li>
-						<div class="collapsible-header row valign-wrapper">
-							<img class="col s2 responsive-img" src="/images/logos/iit.png">
-							<div class="col s10">iit</div>
-						</div>
-						<div id="iit-models" class="collapsible-body"></div>
-					</li>
-					<li>
-						<div class="collapsible-header row valign-wrapper">
-							<img class="col s2 responsive-img" src="/images/logos/kawada.png">
-							<div class="col s10">KAWADA</div>
-						</div>
-						<div id="kawada-models" class="collapsible-body"></div>
-					</li>
-					<li>
-						<div class="collapsible-header row valign-wrapper">
-							<img class="col s2 responsive-img" src="/images/logos/kuka.png">
-							<div class="col s10">KUKA</div>
-						</div>
-						<div id="kuka-models" class="collapsible-body"></div>
-					</li>
-					<li>
-						<div class="collapsible-header row valign-wrapper">
-							<img class="col s2 responsive-img" src="/images/logos/nasa.png">
-							<div class="col s10">NASA</div>
-						</div>
-						<div id="nasa-models" class="collapsible-body"></div>
-					</li>
-					<li>
-						<div class="collapsible-header row valign-wrapper">
-							<img class="col s2 responsive-img" src="/images/logos/pal-robotics.png">
-							<div class="col s10">PAL Robotics</div>
-						</div>
-						<div id="pal-robotics-models" class="collapsible-body"></div>
-					</li>
-					<li>
-						<div class="collapsible-header row valign-wrapper">
-							<img class="col s2 responsive-img" src="/images/logos/puma560.png">
-							<div class="col s10">Unimation</div>
-						</div>
-						<div id="unimation-models" class="collapsible-body"></div>
-					</li>
-					<li>
-						<div class="collapsible-header row valign-wrapper">
-							<img class="col s2 responsive-img" src="/images/logos/universal-robots.png">
-							<div class="col s10">Universal Robots</div>
-						</div>
-						<div id="universal-robots-models" class="collapsible-body"></div>
-					</li>
-				</ul></li>
-			</ul>
+				<div id="models-list">
+					<details>
+						<summary><img src="/images/logos/abb.png" alt="ABB"><span>ABB</span></summary>
+						<div id="abb-models" class="brand-models"><ul></ul></div>
+					</details>
+					<details>
+						<summary><img src="/images/logos/anybotics.png" alt="ANYbotics"><span>ANYbotics</span></summary>
+						<div id="anybotics-models" class="brand-models"><ul></ul></div>
+					</details>
+					<details>
+						<summary><img src="/images/logos/clearpath.png" alt="Clearpath"><span>Clearpath</span></summary>
+						<div id="clearpath-models" class="brand-models"><ul></ul></div>
+					</details>
+					<details>
+						<summary><img src="/images/logos/franka.png" alt="Franka"><span>Franka</span></summary>
+						<div id="franka-models" class="brand-models"><ul></ul></div>
+					</details>
+					<details>
+						<summary><img src="/images/logos/iit.png" alt="iit"><span>iit</span></summary>
+						<div id="iit-models" class="brand-models"><ul></ul></div>
+					</details>
+					<details>
+						<summary><img src="/images/logos/kawada.png" alt="KAWADA"><span>KAWADA</span></summary>
+						<div id="kawada-models" class="brand-models"><ul></ul></div>
+					</details>
+					<details>
+						<summary><img src="/images/logos/kuka.png" alt="KUKA"><span>KUKA</span></summary>
+						<div id="kuka-models" class="brand-models"><ul></ul></div>
+					</details>
+					<details>
+						<summary><img src="/images/logos/nasa.png" alt="NASA"><span>NASA</span></summary>
+						<div id="nasa-models" class="brand-models"><ul></ul></div>
+					</details>
+					<details>
+						<summary><img src="/images/logos/pal-robotics.png" alt="PAL Robotics"><span>PAL Robotics</span></summary>
+						<div id="pal-robotics-models" class="brand-models"><ul></ul></div>
+					</details>
+					<details>
+						<summary><img src="/images/logos/puma560.png" alt="Unimation"><span>Unimation</span></summary>
+						<div id="unimation-models" class="brand-models"><ul></ul></div>
+					</details>
+					<details>
+						<summary><img src="/images/logos/universal-robots.png" alt="Universal Robots"><span>Universal Robots</span></summary>
+						<div id="universal-robots-models" class="brand-models"><ul></ul></div>
+					</details>
+				</div>
+			</aside>
 		</header>
 
-		<main>
-			<div id="shortcuts-modal" class="modal">
-				<div class="modal-content">
-					<h4>Keyboard Shortcuts</h4>
-					<table class="striped">
-						<tbody>
-							<tr><td><b>?</b></td><td>Show this help</td></tr>
-							<tr><td><b>T</b></td><td>IK gizmo: translate mode (world frame)</td></tr>
-							<tr><td><b>R</b></td><td>IK gizmo: rotate mode (local frame)</td></tr>
-							<tr><td><b>Q</b></td><td>IK gizmo: toggle local/world frame</td></tr>
-							<tr><td><b>K</b></td><td>Record motion keypoint</td></tr>
-							<tr><td><b>P</b></td><td>Play recorded keypoints</td></tr>
-							<tr><td><b>C</b></td><td>Clear motion keypoints</td></tr>
-							<tr><td><b>X</b></td><td>Export convex hull as STL</td></tr>
-						</tbody>
-					</table>
-				</div>
-				<div class="modal-footer">
-					<a class="modal-close btn-flat">Close</a>
-				</div>
-			</div>
+		<div id="sidebar-overlay"></div>
 
-			<div id="loader-modal" class="modal">
-				<div class="modal-content">
-					<h4>Loading robot model</h4>
-					<p class="left">Please stand by...</p><p class="right"></p><div style="clear: both"></div>
-					<div class="progress"><div class="indeterminate"></div></div>
-				</div>
-			</div>
+		<main>
+			<dialog id="shortcuts-modal">
+				<h4>Keyboard Shortcuts</h4>
+				<table class="shortcuts-table">
+					<tbody>
+						<tr><td><b>?</b></td><td>Show this help</td></tr>
+						<tr><td><b>T</b></td><td>IK gizmo: translate mode (world frame)</td></tr>
+						<tr><td><b>R</b></td><td>IK gizmo: rotate mode (local frame)</td></tr>
+						<tr><td><b>Q</b></td><td>IK gizmo: toggle local/world frame</td></tr>
+						<tr><td><b>K</b></td><td>Record motion keypoint</td></tr>
+						<tr><td><b>P</b></td><td>Play recorded keypoints</td></tr>
+						<tr><td><b>C</b></td><td>Clear motion keypoints</td></tr>
+						<tr><td><b>X</b></td><td>Export convex hull as STL</td></tr>
+					</tbody>
+				</table>
+				<footer>
+					<button id="shortcuts-close">Close</button>
+				</footer>
+			</dialog>
+
+			<dialog id="loader-modal">
+				<h4>Loading robot model</h4>
+				<p>Please stand by...</p>
+				<div class="progress-bar"></div>
+			</dialog>
 
 			<div id="threejs-container"></div>
 
 			<div id="hud-container">
-				<div id="hud" class="right-align row">
-					<div class="col l4 s8"><p>Model</p><h5 id="hud-model"></h5></div>
-					<div class="col l2 s4"><p>Brand</p><h5 id="hud-brand"></h5></div>
-					<div class="col l2 s4"><p>Reach (m)</p><h5 id="hud-reach"></h5></div>
-					<div class="col l2 s4"><p>Payload (kg)</p><h5 id="hud-payload"></h5></div>
-					<div class="col l2 s4"><p>No. Axes</p><h5 id="hud-dof"></h5></div>
+				<div id="hud">
+					<div><p>Model</p><h5 id="hud-model"></h5></div>
+					<div><p>Brand</p><h5 id="hud-brand"></h5></div>
+					<div><p>Reach (m)</p><h5 id="hud-reach"></h5></div>
+					<div><p>Payload (kg)</p><h5 id="hud-payload"></h5></div>
+					<div><p>No. Axes</p><h5 id="hud-dof"></h5></div>
 				</div>
 			</div>
 		</main>
-
-		<!--Import jQuery before materialize.js-->
-		<script type="text/javascript" src="https://code.jquery.com/jquery-3.2.1.min.js"></script>
-
-		<!-- Compiled and minified JavaScript -->
-		<script type="text/javascript" src="/js/materialize.min.js"></script>
 
 		<script type="module" src="/src/app.ts"></script>
 	</body>

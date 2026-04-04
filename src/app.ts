@@ -21,15 +21,21 @@ import { ColladaLoader } from 'three/addons/loaders/ColladaLoader.js'
 import colladaRobotsList from './ColladaRobotsList.ts'
 import type { RobotModel } from './ColladaRobotsList.ts'
 
+// Helper to get an element by ID with a type assertion
+function $<T extends HTMLElement>(id: string): T {
+  return document.getElementById(id) as T
+}
+
 const stats = new Stats()
 stats.dom.id = 'statsjs'
 document.body.appendChild(stats.dom)
 
 window.addEventListener('resize', onWindowResize, false)
 
+const SIDEBAR_WIDTH = 300
 let RENDERER_WIDTH = updateRendererWidth()
 function updateRendererWidth () {
-  RENDERER_WIDTH = window.innerWidth > 992 ? window.innerWidth - ($('.side-nav').width() ?? 0) : window.innerWidth
+  RENDERER_WIDTH = window.innerWidth > 992 ? window.innerWidth - SIDEBAR_WIDTH : window.innerWidth
   return RENDERER_WIDTH
 }
 
@@ -40,7 +46,7 @@ renderer.shadowMap.type = THREE.PCFShadowMap
 renderer.setClearColor(0xf0f0f0)
 renderer.setPixelRatio(window.devicePixelRatio)
 renderer.setSize(RENDERER_WIDTH, window.innerHeight)
-$('#threejs-container').append(renderer.domElement)
+$('threejs-container').appendChild(renderer.domElement)
 
 const cameraTarget = new THREE.Vector3(0, 0.4, 0)
 
@@ -67,152 +73,183 @@ let robot: Robot
 let rawPoints: THREE.Vector3[][] = [[], [], [], []]
 let showEllipsoids = false
 
-$(document).ready(function () {
-  // Initialize collapse button
-  $('.button-collapse').sideNav()
+// ── Sidebar (mobile toggle) ──
 
-  $('#loader-modal').modal({ dismissible: false })
-  $('#shortcuts-modal').modal()
+const sidebar = $('sidebar')
+const menuToggle = $('menu-toggle')
+const sidebarOverlay = $('sidebar-overlay')
 
-  // Axes Helper
-  const axis = new THREE.AxesHelper(1)
-
-  $('input[id=axis-switch][type=checkbox]').change(function () {
-    if ($(this).is(':checked')) { scene.add(axis) } else { scene.remove(axis) }
-  })
-
-  // Grid Helper
-  const grid = new THREE.GridHelper(10)
-  grid.material.color.setHex(0x000000)
-  grid.material.opacity = 0.2
-  grid.material.transparent = true
-
-  $('input[id=grid-switch][type=checkbox]').change(function () {
-    if ($(this).is(':checked')) { scene.add(grid) } else { scene.remove(grid) }
-  }).click()
-
-  // Shadows
-  $('input[id=shadows-switch][type=checkbox]').change(function () {
-    castShadows = $(this).is(':checked')
-    updateShadowsState()
-  })
-
-  // Performance Monitor
-  $('#statsjs').hide()
-  $('input[id=stats-switch][type=checkbox]').change(function () {
-    if ($(this).is(':checked')) { $('#statsjs').show() } else { $('#statsjs').hide() }
-  })
-
-  // Reset configuration
-  $('#reset-button').click(function () {
-    console.log(`Moving robot to 'home' position...`)
-    moveFromTo(robot.configuration, robot.zeroConfiguration, 1000, Easing.Quadratic.Out).start()
-  })
-
-  // Random configuration
-  $('#random-button').click(function () {
-    console.log('Moving robot to random position...')
-    moveFromTo(robot.configuration, robot.randomConfiguration, 1000, Easing.Quadratic.Out).start()
-  })
-
-  const pointCloudsInScene: THREE.Points[] = []
-
-  const pointsMaterials = [
-    new THREE.PointsMaterial({ color: 0xff0000, transparent: true, opacity: 0.5, size: 0.01 }),
-    new THREE.PointsMaterial({ color: 0xff00ff, transparent: true, opacity: 0.5, size: 0.01 }),
-    new THREE.PointsMaterial({ color: 0xffff00, transparent: true, opacity: 0.5, size: 0.01 }),
-    new THREE.PointsMaterial({ color: 0x00ffff, transparent: true, opacity: 0.5, size: 0.01 })
-  ]
-
-  /**
-   * Robot Reachability
-   *
-   * Randomly samples robot configurations 1000 times and,
-   * for each sample, adds a visual point marker to the scene.
-   */
-  $('#reachability-button').click(function () {
-    while (pointCloudsInScene.length) { scene.remove(pointCloudsInScene.shift()!) }
-
-    const q_backup = robot.configuration
-
-    for (let i = 0; i < 1e4; i++) {
-      robot.configuration = robot.randomConfiguration
-
-      for (let j = 0; j < robot.tipLinks.length; j++) {
-        const point = new THREE.Vector3()
-        point.setFromMatrixPosition(robot.getLinkPose(robot.tipLinks[j]))
-        rawPoints[j].push(point)
-      }
-    }
-
-    robot.configuration = q_backup
-
-    let totalPoints = 0
-    for (let j = 0; j < robot.tipLinks.length; j++) {
-      totalPoints += rawPoints[j].length
-
-      const geometry = new THREE.BufferGeometry().setFromPoints(rawPoints[j])
-
-      const pointCloud = new THREE.Points(geometry, pointsMaterials[j])
-
-      scene.add(pointCloud)
-      pointCloudsInScene.push(pointCloud)
-    }
-
-    console.log(`The cloud now has ${totalPoints} particles.`)
-  })
-
-  // Clear clouds
-  $('#clear-clouds-button').click(function () {
-    rawPoints = [[], [], [], []]
-    while (pointCloudsInScene.length) { scene.remove(pointCloudsInScene.shift()!) }
-
-    let totalPoints = 0
-    for (let j = 0; j < robot.tipLinks.length; j++) {
-      totalPoints += rawPoints[j].length
-    }
-
-    console.log(`The cloud now has ${totalPoints} particles.`)
-  })
-
-  // Inverse Kinematics
-
-  $('input[id=ik-switch][type=checkbox]').change(function () {
-    ikSolver = $(this).is(':checked') ? IkSolverEnum.IK : IkSolverEnum.OFF
-  })
-
-  $('input[id=genetic-algorithm-switch][type=checkbox]').change(function () {
-    ikSolver = $(this).is(':checked') ? IkSolverEnum.GENETIC_ALGORITHM : IkSolverEnum.OFF
-  })
-
-  $('input[id=pseudo-inverse-switch][type=checkbox]').change(function () {
-    ikSolver = $(this).is(':checked') ? IkSolverEnum.PSEUDO_INVERSE : IkSolverEnum.OFF
-    if (ikSolver !== IkSolverEnum.OFF && robot) {
-      const pose = robot.getLinkPose(robot.tipLinks[0])
-      ikGoal.position.setFromMatrixPosition(pose)
-      ikGoal.quaternion.setFromRotationMatrix(pose)
-      ikGoalControl.setMode('translate')
-      ikGoalControl.setSpace('local')
-    }
-  })
-
-  $('input[id=vel-force-ellipsoids-switch][type=checkbox]').change(function () {
-    showEllipsoids = $(this).is(':checked')
-    if (robot) {
-      robot.showEllipsoids = showEllipsoids
-      if (showEllipsoids) {
-        robot.updateForceEllipsoid()
-        robot.updateVelocityEllipsoid()
-      } else {
-        const fe = scene.getObjectByName('force-ellipsoid'); if (fe) scene.remove(fe)
-        const ve = scene.getObjectByName('velocity-ellipsoid'); if (ve) scene.remove(ve)
-        const ae = scene.getObjectByName('acceleration-ellipsoid'); if (ae) scene.remove(ae)
-      }
-    }
-  })
-
-  main()
+menuToggle.addEventListener('click', () => {
+  sidebar.classList.toggle('open')
+  sidebarOverlay.classList.toggle('visible')
 })
+
+sidebarOverlay.addEventListener('click', () => {
+  sidebar.classList.remove('open')
+  sidebarOverlay.classList.remove('visible')
+})
+
+function hideSidebar() {
+  sidebar.classList.remove('open')
+  sidebarOverlay.classList.remove('visible')
+}
+
+// ── Modals ──
+
+const loaderModal = $<HTMLDialogElement>('loader-modal')
+const shortcutsModal = $<HTMLDialogElement>('shortcuts-modal')
+
+// Prevent closing the loader modal with Escape
+loaderModal.addEventListener('cancel', (e) => e.preventDefault())
+
+// Close shortcuts modal
+$('shortcuts-close').addEventListener('click', () => shortcutsModal.close())
+
+// Close shortcuts modal on backdrop click
+shortcutsModal.addEventListener('click', (e) => {
+  if (e.target === shortcutsModal) shortcutsModal.close()
+})
+
+// ── View Options ──
+
+// Axes Helper
+const axis = new THREE.AxesHelper(1)
+const axisSwitch = $<HTMLInputElement>('axis-switch')
+axisSwitch.addEventListener('change', () => {
+  if (axisSwitch.checked) { scene.add(axis) } else { scene.remove(axis) }
+})
+
+// Grid Helper
+const grid = new THREE.GridHelper(10)
+grid.material.color.setHex(0x000000)
+grid.material.opacity = 0.2
+grid.material.transparent = true
+
+const gridSwitch = $<HTMLInputElement>('grid-switch')
+gridSwitch.addEventListener('change', () => {
+  if (gridSwitch.checked) { scene.add(grid) } else { scene.remove(grid) }
+})
+// Start with grid visible
+gridSwitch.checked = true
+gridSwitch.dispatchEvent(new Event('change'))
+
+// Shadows
+const shadowsSwitch = $<HTMLInputElement>('shadows-switch')
+shadowsSwitch.addEventListener('change', () => {
+  castShadows = shadowsSwitch.checked
+  updateShadowsState()
+})
+
+// Performance Monitor
+const statsEl = $('statsjs')
+statsEl.style.display = 'none'
+const statsSwitch = $<HTMLInputElement>('stats-switch')
+statsSwitch.addEventListener('change', () => {
+  statsEl.style.display = statsSwitch.checked ? '' : 'none'
+})
+
+// ── Commands ──
+
+$('reset-button').addEventListener('click', () => {
+  console.log(`Moving robot to 'home' position...`)
+  moveFromTo(robot.configuration, robot.zeroConfiguration, 1000, Easing.Quadratic.Out).start()
+})
+
+$('random-button').addEventListener('click', () => {
+  console.log('Moving robot to random position...')
+  moveFromTo(robot.configuration, robot.randomConfiguration, 1000, Easing.Quadratic.Out).start()
+})
+
+const pointCloudsInScene: THREE.Points[] = []
+
+const pointsMaterials = [
+  new THREE.PointsMaterial({ color: 0xff0000, transparent: true, opacity: 0.5, size: 0.01 }),
+  new THREE.PointsMaterial({ color: 0xff00ff, transparent: true, opacity: 0.5, size: 0.01 }),
+  new THREE.PointsMaterial({ color: 0xffff00, transparent: true, opacity: 0.5, size: 0.01 }),
+  new THREE.PointsMaterial({ color: 0x00ffff, transparent: true, opacity: 0.5, size: 0.01 })
+]
+
+/**
+ * Robot Reachability
+ *
+ * Randomly samples robot configurations 1000 times and,
+ * for each sample, adds a visual point marker to the scene.
+ */
+$('reachability-button').addEventListener('click', () => {
+  while (pointCloudsInScene.length) { scene.remove(pointCloudsInScene.shift()!) }
+
+  const q_backup = robot.configuration
+
+  for (let i = 0; i < 1e4; i++) {
+    robot.configuration = robot.randomConfiguration
+
+    for (let j = 0; j < robot.tipLinks.length; j++) {
+      const point = new THREE.Vector3()
+      point.setFromMatrixPosition(robot.getLinkPose(robot.tipLinks[j]))
+      rawPoints[j].push(point)
+    }
+  }
+
+  robot.configuration = q_backup
+
+  let totalPoints = 0
+  for (let j = 0; j < robot.tipLinks.length; j++) {
+    totalPoints += rawPoints[j].length
+
+    const geometry = new THREE.BufferGeometry().setFromPoints(rawPoints[j])
+    const pointCloud = new THREE.Points(geometry, pointsMaterials[j])
+
+    scene.add(pointCloud)
+    pointCloudsInScene.push(pointCloud)
+  }
+
+  console.log(`The cloud now has ${totalPoints} particles.`)
+})
+
+// Clear clouds
+$('clear-clouds-button').addEventListener('click', () => {
+  rawPoints = [[], [], [], []]
+  while (pointCloudsInScene.length) { scene.remove(pointCloudsInScene.shift()!) }
+
+  let totalPoints = 0
+  for (let j = 0; j < robot.tipLinks.length; j++) {
+    totalPoints += rawPoints[j].length
+  }
+
+  console.log(`The cloud now has ${totalPoints} particles.`)
+})
+
+// ── Inverse Kinematics ──
+
+const pseudoInverseSwitch = $<HTMLInputElement>('pseudo-inverse-switch')
+pseudoInverseSwitch.addEventListener('change', () => {
+  ikSolver = pseudoInverseSwitch.checked ? IkSolverEnum.PSEUDO_INVERSE : IkSolverEnum.OFF
+  if (ikSolver !== IkSolverEnum.OFF && robot) {
+    const pose = robot.getLinkPose(robot.tipLinks[0])
+    ikGoal.position.setFromMatrixPosition(pose)
+    ikGoal.quaternion.setFromRotationMatrix(pose)
+    ikGoalControl.setMode('translate')
+    ikGoalControl.setSpace('local')
+  }
+})
+
+const ellipsoidsSwitch = $<HTMLInputElement>('vel-force-ellipsoids-switch')
+ellipsoidsSwitch.addEventListener('change', () => {
+  showEllipsoids = ellipsoidsSwitch.checked
+  if (robot) {
+    robot.showEllipsoids = showEllipsoids
+    if (showEllipsoids) {
+      robot.updateForceEllipsoid()
+      robot.updateVelocityEllipsoid()
+    } else {
+      const fe = scene.getObjectByName('force-ellipsoid'); if (fe) scene.remove(fe)
+      const ve = scene.getObjectByName('velocity-ellipsoid'); if (ve) scene.remove(ve)
+      const ae = scene.getObjectByName('acceleration-ellipsoid'); if (ae) scene.remove(ae)
+    }
+  }
+})
+
+// ── Main ──
 
 let ikSolver: IkSolverType = IkSolverEnum.OFF
 
@@ -240,6 +277,8 @@ function main () {
     orbitControls.enabled = true
   })
 }
+
+main()
 
 function updateShadowsState () {
   plane.visible = castShadows
@@ -337,8 +376,19 @@ function onWindowResize () {
 setupModelsList(colladaRobotsList)
 function setupModelsList (models: RobotModel[]) {
   for (const model of models) {
-    $(`#${model.brand.replace(/\s+/g, '-').toLowerCase()}-models`).append(`<li id="${model.id}"><a class="waves-effect" href="#!">${model.name}</a></li>`)
-    $(`#${model.brand.replace(/\s+/g, '-').toLowerCase()}-models`).children().last().click(function () { loadModelZae(model.id); $('.button-collapse').sideNav('hide') })
+    const brandSlug = model.brand.replace(/\s+/g, '-').toLowerCase()
+    const container = document.querySelector(`#${brandSlug}-models ul`)!
+    const li = document.createElement('li')
+    li.id = model.id
+    const a = document.createElement('a')
+    a.href = '#!'
+    a.textContent = model.name
+    a.addEventListener('click', () => {
+      loadModelZae(model.id)
+      hideSidebar()
+    })
+    li.appendChild(a)
+    container.appendChild(li)
   }
 }
 
@@ -381,26 +431,27 @@ async function addCollada (modelId: string, collada: ColladaResult) {
 function loadModelZae (modelId: string) {
   console.log(`Loading ${modelId}...`)
 
-  $('#models-list li').removeClass('active')
-  $(`#models-list #${modelId}`).addClass('active')
+  document.querySelectorAll('#models-list li').forEach(el => el.classList.remove('active'))
+  const activeEl = document.getElementById(modelId)
+  if (activeEl) activeEl.classList.add('active')
 
-  $('#loader-modal').modal('open')
+  loaderModal.showModal()
 
   JSZipUtils.getBinaryContent(`${(import.meta as any).env.BASE_URL}collada-robots-collection/${modelId}.zae`, function (err: Error | null, data: ArrayBuffer) {
     if (err) throw err
     JSZip.loadAsync(data).then(function (zip) {
       zip.file(`${modelId}.dae`)!.async('string').then(function (content: string) {
         addCollada(modelId, loader.parse(content, '') as unknown as ColladaResult).then(function () {
-          $('#loader-modal').modal('close')
+          loaderModal.close()
 
           const model = colladaRobotsList.find(e => e.id === modelId)!
 
           // Fill in HUD information
-          $('#hud-brand').text(model.brand ? model.brand : '—')
-          $('#hud-model').text(model.name ? model.name : '—')
-          $('#hud-reach').text(model.reach ? model.reach : '—')
-          $('#hud-payload').text(model.payload ? model.payload : '—')
-          $('#hud-dof').text(model.dof ? model.dof : '—')
+          $('hud-brand').textContent = model.brand ? model.brand : '—'
+          $('hud-model').textContent = model.name ? model.name : '—'
+          $('hud-reach').textContent = model.reach ? String(model.reach) : '—'
+          $('hud-payload').textContent = model.payload ? String(model.payload) : '—'
+          $('hud-dof').textContent = model.dof ? String(model.dof) : '—'
         })
       })
     })
@@ -445,13 +496,15 @@ window.addEventListener('keydown', function (event) {
     case 'x':
       doConvexHullStuff()
       break
-    case '?':
-      if ($('#shortcuts-modal').hasClass('open')) {
-        $('#shortcuts-modal').modal('close')
+    case '?': {
+      const dialog = $<HTMLDialogElement>('shortcuts-modal')
+      if (dialog.open) {
+        dialog.close()
       } else {
-        $('#shortcuts-modal').modal('open')
+        dialog.showModal()
       }
       break
+    }
   }
 })
 

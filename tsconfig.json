@@ -12,7 +12,7 @@
     "skipLibCheck": true,
     "esModuleInterop": true,
     "resolveJsonModule": true,
-    "types": ["three", "jquery"],
+    "types": ["three"],
     "paths": {
       "three/addons/*": ["./node_modules/three/examples/jsm/*"]
     }
