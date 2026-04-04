@@ -78,7 +78,7 @@ $(document).ready(function () {
   const axis = new THREE.AxesHelper(1)
 
   $('input[id=axis-switch][type=checkbox]').change(function () {
-    $(this).is(':checked') ? scene.add(axis) : scene.remove(axis)
+    if ($(this).is(':checked')) { scene.add(axis) } else { scene.remove(axis) }
   })
 
   // Grid Helper
@@ -88,7 +88,7 @@ $(document).ready(function () {
   grid.material.transparent = true
 
   $('input[id=grid-switch][type=checkbox]').change(function () {
-    $(this).is(':checked') ? scene.add(grid) : scene.remove(grid)
+    if ($(this).is(':checked')) { scene.add(grid) } else { scene.remove(grid) }
   }).click()
 
   // Shadows
@@ -100,7 +100,7 @@ $(document).ready(function () {
   // Performance Monitor
   $('#statsjs').hide()
   $('input[id=stats-switch][type=checkbox]').change(function () {
-    $(this).is(':checked') ? $('#statsjs').show() : $('#statsjs').hide()
+    if ($(this).is(':checked')) { $('#statsjs').show() } else { $('#statsjs').hide() }
   })
 
   // Reset configuration
@@ -115,7 +115,7 @@ $(document).ready(function () {
     moveFromTo(robot.configuration, robot.randomConfiguration, 1000, Easing.Quadratic.Out).start()
   })
 
-  let pointCloudsInScene: THREE.Points[] = []
+  const pointCloudsInScene: THREE.Points[] = []
 
   const pointsMaterials = [
     new THREE.PointsMaterial({ color: 0xff0000, transparent: true, opacity: 0.5, size: 0.01 }),
@@ -151,9 +151,9 @@ $(document).ready(function () {
     for (let j = 0; j < robot.tipLinks.length; j++) {
       totalPoints += rawPoints[j].length
 
-      let geometry = new THREE.BufferGeometry().setFromPoints(rawPoints[j])
+      const geometry = new THREE.BufferGeometry().setFromPoints(rawPoints[j])
 
-      let pointCloud = new THREE.Points(geometry, pointsMaterials[j])
+      const pointCloud = new THREE.Points(geometry, pointsMaterials[j])
 
       scene.add(pointCloud)
       pointCloudsInScene.push(pointCloud)
@@ -250,7 +250,7 @@ function updateShadowsState () {
 const ambientLight = new THREE.AmbientLight(0xcccccc, 0.6)
 scene.add(ambientLight)
 
-let directionalLight = new THREE.DirectionalLight(0xffffff, 0.8)
+const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8)
 directionalLight.castShadow = true
 directionalLight.position.set(20, 20, 0)
 const shadowCameraSize = 2
@@ -285,7 +285,7 @@ const sphereGeometry = new THREE.SphereGeometry(0.01)
 const sphereMaterialRed = new THREE.MeshLambertMaterial({ color: 0xff0000, transparent: true, opacity: 0.8 })
 const sphereMaterialBlue = new THREE.MeshLambertMaterial({ color: 0x0000ff, transparent: true, opacity: 0.8 })
 
-function addSphereAtPose (pose: THREE.Matrix4) {
+function _addSphereAtPose (pose: THREE.Matrix4) {
   const sphere = new THREE.Mesh(sphereGeometry, sphereMaterialRed)
   sphere.position.setFromMatrixPosition(pose)
   scene.add(sphere)
@@ -423,7 +423,7 @@ window.addEventListener('keydown', function (event) {
       console.log('Executing keypoints motion...')
       robotTweens.length = 0
       let prevQ = robot.configuration
-      for (let q of robot.motionKeypoints) {
+      for (const q of robot.motionKeypoints) {
         const tween = moveFromTo(prevQ, q.slice())
         if (robotTweens.length !== 0) { robotTweens[robotTweens.length - 1].chain(tween) }
         robotTweens.push(tween)

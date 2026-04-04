@@ -1,12 +1,12 @@
 import js from '@eslint/js'
+import tseslint from 'typescript-eslint'
 
-export default [
+export default tseslint.config(
   js.configs.recommended,
+  ...tseslint.configs.recommended,
   {
     files: ['src/**/*.ts'],
     languageOptions: {
-      ecmaVersion: 2022,
-      sourceType: 'module',
       globals: {
         window: 'readonly',
         document: 'readonly',
@@ -20,9 +20,9 @@ export default [
       }
     },
     rules: {
-      'no-unused-vars': ['warn', { argsIgnorePattern: '^_' }],
+      '@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }],
       'no-prototype-builtins': 'off',
-      'no-undef': 'off' // TypeScript handles this
+      '@typescript-eslint/no-explicit-any': 'off'
     }
   }
-]
+)
