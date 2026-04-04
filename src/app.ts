@@ -286,18 +286,8 @@ ellipsoidsSwitch.addEventListener('change', () => {
   }
 })
 
-let showAccelEllipsoid = false
-const accelEllipsoidSwitch = checkbox('accel-ellipsoid-switch')
-accelEllipsoidSwitch.addEventListener('change', () => {
-  showAccelEllipsoid = accelEllipsoidSwitch.checked
-  if (robot) {
-    if (showAccelEllipsoid) {
-      robot.updateAccelerationEllipsoid()
-    } else {
-      const ae = scene.getObjectByName('acceleration-ellipsoid'); if (ae) scene.remove(ae)
-    }
-  }
-})
+// Acceleration ellipsoid toggle — disabled until computeInertia() is implemented
+// const accelEllipsoidSwitch = checkbox('accel-ellipsoid-switch')
 
 // ── Scene setup ──
 
@@ -544,9 +534,6 @@ function moveFromTo (q_s: number[], q_t: number[], duration = 10, easing: (t: nu
     if (robot.showEllipsoids) {
       robot.updateForceEllipsoid()
       robot.updateVelocityEllipsoid()
-    }
-    if (showAccelEllipsoid) {
-      robot.updateAccelerationEllipsoid()
     }
   })
 

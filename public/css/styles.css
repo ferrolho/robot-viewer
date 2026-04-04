@@ -210,6 +210,12 @@ body.sidebar-collapsed #menu-toggle {
   background: var(--bg-hover);
 }
 
+.toggle-row.disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
 .toggle-row input {
   position: absolute;
   opacity: 0;
