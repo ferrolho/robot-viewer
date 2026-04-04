@@ -71,6 +71,7 @@ $(document).ready(function () {
   $('.button-collapse').sideNav()
 
   $('#loader-modal').modal({ dismissible: false })
+  $('#shortcuts-modal').modal()
 
   // Axes Helper
   const axis = new THREE.AxesHelper(1)
@@ -408,17 +409,16 @@ function loadModelZae (modelId) {
 const robotTweens = []
 
 window.addEventListener('keydown', function (event) {
-  switch (event.keyCode) {
-    case 67: // C
+  switch (event.key) {
+    case 'c':
       console.log(`Motion keypoints deleted.`)
       robot.clearMotionKeypoints()
       break
-    case 75: // K
+    case 'k':
       console.log(`Motion keypoint recorded. (total = ${robot.motionKeypoints.length})`)
-      // console.log(robot.configuration)
       robot.saveMotionKeypoint()
       break
-    case 80: { // P
+    case 'p': {
       console.log('Executing keypoints motion...')
       robotTweens.length = 0
       let prevQ = robot.configuration
@@ -431,22 +431,22 @@ window.addEventListener('keydown', function (event) {
       if (robotTweens.length !== 0) { robotTweens[0].start() }
       break
     }
-    case 81: // Q
+    case 'q':
       ikGoalControl.setSpace(ikGoalControl.space === 'local' ? 'world' : 'local')
       break
-    case 82: // R
+    case 'r':
       ikGoalControl.setMode('rotate')
       ikGoalControl.setSpace('local')
       break
-    case 84: // T
+    case 't':
       ikGoalControl.setMode('translate')
       ikGoalControl.setSpace('world')
       break
-    case 88: // X
+    case 'x':
       doConvexHullStuff()
       break
-    default:
-      console.log('Pressed key code: ' + event.keyCode)
+    case '?':
+      $('#shortcuts-modal').modal('open')
       break
   }
 })
