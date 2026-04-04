@@ -108,18 +108,19 @@ function getTheme(): 'dark' | 'light' {
   return (localStorage.getItem('theme') as 'dark' | 'light') || 'dark'
 }
 
+let sceneThemeReady = false
+
 function applyTheme(theme: 'dark' | 'light') {
   document.documentElement.setAttribute('data-theme', theme)
   localStorage.setItem('theme', theme)
-  updateSceneTheme(theme)
-}
-
-function updateSceneTheme(theme: 'dark' | 'light') {
   const isDark = theme === 'dark'
   renderer.setClearColor(isDark ? 0x0f1114 : 0xe8eaed)
-  ;(grid.material as LineMaterial).color.set(isDark ? 0x3a3f48 : 0xb0b4bc)
+  if (sceneThemeReady) {
+    ;(grid.material as LineMaterial).color.set(isDark ? 0x3a3f48 : 0xb0b4bc)
+  }
 }
 
+// Apply CSS theme immediately; scene objects update after they're created
 applyTheme(getTheme())
 
 $('theme-toggle').addEventListener('click', () => {
@@ -200,6 +201,10 @@ gridSwitch.addEventListener('change', () => {
 })
 gridSwitch.checked = true
 gridSwitch.dispatchEvent(new Event('change'))
+
+// Grid is ready — sync its color with the current theme
+sceneThemeReady = true
+applyTheme(getTheme())
 
 const shadowsSwitch = checkbox('shadows-switch')
 shadowsSwitch.addEventListener('change', () => {
