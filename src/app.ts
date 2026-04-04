@@ -143,14 +143,16 @@ shortcutsModal.addEventListener('click', (e) => {
 // ── View Options ──
 
 const axis = new THREE.AxesHelper(1)
+;(axis.material as THREE.LineBasicMaterial).depthTest = false
+axis.renderOrder = 1
 const axisSwitch = checkbox('axis-switch')
 axisSwitch.addEventListener('change', () => {
   if (axisSwitch.checked) { scene.add(axis) } else { scene.remove(axis) }
 })
 
 const grid = new THREE.GridHelper(10)
-grid.material.color.setHex(0x333840)
-grid.material.opacity = 0.6
+grid.material.color.setHex(0x4a5568)
+grid.material.opacity = 0.4
 grid.material.transparent = true
 
 const gridSwitch = checkbox('grid-switch')

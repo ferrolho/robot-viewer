@@ -114,10 +114,10 @@ export class Robot {
 
     mat.color = ((name: string) => {
       switch (name) {
-        case 'acceleration-ellipsoid': return new THREE.Color('yellow')
-        case 'force-ellipsoid': return new THREE.Color('red')
-        case 'velocity-ellipsoid': return new THREE.Color('blue')
-        default: return new THREE.Color('black')
+        case 'acceleration-ellipsoid': return new THREE.Color(0xfbbf24)
+        case 'force-ellipsoid': return new THREE.Color(0xf87171)
+        case 'velocity-ellipsoid': return new THREE.Color(0x60a5fa)
+        default: return new THREE.Color(0x9ca3af)
       }
     })(name)
 
