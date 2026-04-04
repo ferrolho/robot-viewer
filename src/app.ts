@@ -46,6 +46,7 @@ renderer.shadowMap.enabled = true
 renderer.shadowMap.type = THREE.PCFShadowMap
 renderer.setClearColor(0x0f1114)
 renderer.setPixelRatio(window.devicePixelRatio)
+renderer.domElement.style.display = 'block'
 canvasContainer.appendChild(renderer.domElement)
 
 // Initial size sync before ResizeObserver kicks in
@@ -64,6 +65,7 @@ orbitControls.target = cameraTarget
 orbitControls.mouseButtons = { LEFT: THREE.MOUSE.ROTATE, MIDDLE: THREE.MOUSE.PAN, RIGHT: THREE.MOUSE.DOLLY }
 orbitControls.screenSpacePanning = true
 orbitControls.zoomSpeed = 0.8
+orbitControls.update()
 
 // Scene
 const scene = new THREE.Scene()
