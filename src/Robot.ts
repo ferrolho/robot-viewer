@@ -296,7 +296,7 @@ export class Robot {
   }
 
   setJointValue(name: string, value: number): void {
-    value = value.clamp(this._kinematics.joints[name].limits.min, this._kinematics.joints[name].limits.max)
+    value = math_.clamp(value, this._kinematics.joints[name].limits.min, this._kinematics.joints[name].limits.max)
 
     this._kinematics.setJointValue(name, value)
     this._q[this._joints.indexOf(name)] = value

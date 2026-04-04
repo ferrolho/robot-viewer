@@ -3,11 +3,11 @@ import numeric from 'numeric'
 
 // mathjs types are overly complex for our usage; we use a loose type to avoid
 // fighting MathType vs MathCollection narrowing across the codebase.
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 export const math: any = create(all)
 
-Number.prototype.clamp = function (min: number, max: number): number {
-  return Math.min(Math.max(this as number, min), max)
+export function clamp(value: number, min: number, max: number): number {
+  return Math.min(Math.max(value, min), max)
 }
 
 // Import numeric.js functions (eig, solve, etc.) into mathjs
@@ -21,7 +21,7 @@ export type Partial = '' | 'translational' | 'rotational'
  * Returns the differential motion (6x1) corresponding to infinitesimal motion
  * from pose T0 to T1 (4x4 homogeneous transforms).
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 export function tr2delta(T0: any, T1: any, partial: Partial = ''): any {
   const t0 = math.subset(T0, math.index(math.range(0, 3), 3))
   const t1 = math.subset(T1, math.index(math.range(0, 3), 3))
@@ -44,7 +44,7 @@ export function tr2delta(T0: any, T1: any, partial: Partial = ''): any {
 /**
  * Unpacks the translational part of a transformation matrix.
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 export function transl(T: any): { x: number; y: number; z: number } {
   const v = math.flatten(math.subset(T, math.index(math.range(0, 3), 3))).toArray() as number[]
   return { x: v[0], y: v[1], z: v[2] }
@@ -55,7 +55,7 @@ export function transl(T: any): { x: number; y: number; z: number } {
  *
  * V = vex(S) is the vector (3x1) from skew-symmetric matrix S (3x3).
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 export function vex(S: any): any {
   if (math.deepEqual(math.size(S), [3, 3])) {
     return math.multiply(0.5, [

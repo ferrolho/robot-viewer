@@ -54,10 +54,6 @@ declare module 'stats.js' {
   }
 }
 
-declare interface Number {
-  clamp(min: number, max: number): number
-}
-
 // Materialize CSS jQuery plugins
 interface JQuery {
   sideNav(action?: string): JQuery
