@@ -524,6 +524,9 @@ body.sidebar-collapsed #menu-toggle {
 /* ── Dialogs ── */
 
 dialog {
+  position: fixed;
+  inset: 0;
+  margin: auto;
   border: 1px solid var(--border);
   border-radius: var(--radius);
   padding: 0;
@@ -531,6 +534,7 @@ dialog {
   color: var(--text);
   max-width: 440px;
   width: 90%;
+  max-height: 90vh;
   box-shadow: 0 24px 48px rgba(0, 0, 0, 0.5);
   animation: dialog-in 0.2s ease-out;
 }
