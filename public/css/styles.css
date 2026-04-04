@@ -61,6 +61,21 @@ html, body {
   }
 }
 
+/* ── Sidebar Overlay (always out of grid flow) ── */
+
+#sidebar-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  z-index: 15;
+  backdrop-filter: blur(2px);
+}
+
+#sidebar-overlay.visible {
+  display: block;
+}
+
 /* ── Sidebar ── */
 
 #sidebar {
@@ -500,18 +515,6 @@ body.sidebar-collapsed #menu-toggle {
     transform: translateX(0);
   }
 
-  #sidebar-overlay {
-    display: none;
-    position: fixed;
-    inset: 0;
-    background: rgba(0, 0, 0, 0.6);
-    z-index: 15;
-    backdrop-filter: blur(2px);
-  }
-
-  #sidebar-overlay.visible {
-    display: block;
-  }
 
   #sidebar-collapse {
     display: none;
