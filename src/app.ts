@@ -47,7 +47,6 @@ const canvasContainer = $('canvas-container')
 const renderer = new THREE.WebGLRenderer({ antialias: true })
 renderer.shadowMap.enabled = true
 renderer.shadowMap.type = THREE.PCFShadowMap
-renderer.setClearColor(0x0f1114)
 renderer.setPixelRatio(window.devicePixelRatio)
 renderer.domElement.style.display = 'block'
 canvasContainer.appendChild(renderer.domElement)
@@ -102,6 +101,30 @@ let ikSolver: IkSolverType = IkSolverEnum.OFF
 let ikGoal: THREE.Mesh
 let ikGoalControl: InstanceType<typeof TransformControls>
 let ikGoalControlHelper: THREE.Object3D
+
+// ── Theme ──
+
+function getTheme(): 'dark' | 'light' {
+  return (localStorage.getItem('theme') as 'dark' | 'light') || 'dark'
+}
+
+function applyTheme(theme: 'dark' | 'light') {
+  document.documentElement.setAttribute('data-theme', theme)
+  localStorage.setItem('theme', theme)
+  updateSceneTheme(theme)
+}
+
+function updateSceneTheme(theme: 'dark' | 'light') {
+  const isDark = theme === 'dark'
+  renderer.setClearColor(isDark ? 0x0f1114 : 0xe8eaed)
+  ;(grid.material as LineMaterial).color.set(isDark ? 0x3a3f48 : 0xb0b4bc)
+}
+
+applyTheme(getTheme())
+
+$('theme-toggle').addEventListener('click', () => {
+  applyTheme(getTheme() === 'dark' ? 'light' : 'dark')
+})
 
 // ── Sidebar ──
 

@@ -1,8 +1,9 @@
 /* ═══════════════════════════════════════════════════
-   Robot Viewer — Dark industrial control panel theme
+   Robot Viewer — Themeable industrial control panel
    ═══════════════════════════════════════════════════ */
 
-:root {
+:root,
+[data-theme="dark"] {
   --bg-dark:       #0f1114;
   --bg-panel:      #181b20;
   --bg-surface:    #1e2228;
@@ -21,12 +22,38 @@
   --accent-glow:   rgba(34, 211, 167, 0.15);
   --accent-text:   #0f1114;
 
+  --scene-bg:      #0f1114;
+  --scene-grid:    #3a3f48;
+
   --font-body:     'DM Sans', system-ui, sans-serif;
   --font-mono:     'JetBrains Mono', ui-monospace, monospace;
 
   --sidebar-w:     280px;
   --radius:        6px;
   --radius-sm:     4px;
+}
+
+[data-theme="light"] {
+  --bg-dark:       #f0f1f3;
+  --bg-panel:      #ffffff;
+  --bg-surface:    #f5f5f7;
+  --bg-hover:      #ecedf0;
+  --bg-active:     #e4e5e9;
+
+  --border:        #d8dae0;
+  --border-light:  #c8cad0;
+
+  --text:          #1a1d23;
+  --text-muted:    #6b7280;
+  --text-dim:      #9ca3af;
+
+  --accent:        #0d9373;
+  --accent-dim:    #0b7d63;
+  --accent-glow:   rgba(13, 147, 115, 0.12);
+  --accent-text:   #ffffff;
+
+  --scene-bg:      #e8eaed;
+  --scene-grid:    #b0b4bc;
 }
 
 /* ── Reset ── */
@@ -110,6 +137,30 @@ html, body {
 .logo svg {
   color: var(--accent);
 }
+
+/* ── Theme Toggle ── */
+
+.sidebar-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+#theme-toggle svg {
+  transition: transform 0.3s;
+}
+
+#theme-toggle:hover svg {
+  transform: rotate(30deg);
+}
+
+/* Dark theme: show sun icon (to switch to light) */
+#theme-toggle .icon-moon { display: none; }
+#theme-toggle .icon-sun  { display: block; }
+
+/* Light theme: show moon icon (to switch to dark) */
+[data-theme="light"] #theme-toggle .icon-moon { display: block; }
+[data-theme="light"] #theme-toggle .icon-sun  { display: none; }
 
 .sidebar-scroll {
   flex: 1;
