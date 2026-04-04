@@ -48,9 +48,13 @@ renderer.setClearColor(0x0f1114)
 renderer.setPixelRatio(window.devicePixelRatio)
 canvasContainer.appendChild(renderer.domElement)
 
+// Initial size sync before ResizeObserver kicks in
+const initRect = canvasContainer.getBoundingClientRect()
+renderer.setSize(initRect.width, initRect.height)
+
 // Camera
 const cameraTarget = new THREE.Vector3(0, 0.4, 0)
-const camera = new THREE.PerspectiveCamera(75, 1, 0.01, 1000)
+const camera = new THREE.PerspectiveCamera(75, initRect.width / initRect.height, 0.01, 1000)
 camera.position.set(1, 1, 1)
 camera.lookAt(cameraTarget)
 
