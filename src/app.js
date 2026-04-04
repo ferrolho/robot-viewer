@@ -482,6 +482,10 @@ function moveFromTo (q_s, q_t, duration = 10, easing = Easing.Linear.None) {
   tween.onUpdate(function (obj) {
     // Update robot configuration, joint by joint.
     for (const joint of robot._joints) { robot.setJointValue(joint, obj[joint]) }
+    if (robot.showEllipsoids) {
+      robot.updateForceEllipsoid()
+      robot.updateVelocityEllipsoid()
+    }
   })
 
   tween.onComplete(function () {
