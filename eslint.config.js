@@ -3,6 +3,7 @@ import js from '@eslint/js'
 export default [
   js.configs.recommended,
   {
+    files: ['src/**/*.ts'],
     languageOptions: {
       ecmaVersion: 2022,
       sourceType: 'module',
@@ -20,7 +21,8 @@ export default [
     },
     rules: {
       'no-unused-vars': ['warn', { argsIgnorePattern: '^_' }],
-      'no-prototype-builtins': 'off'
+      'no-prototype-builtins': 'off',
+      'no-undef': 'off' // TypeScript handles this
     }
   }
 ]

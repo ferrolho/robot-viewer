@@ -1,5 +1,5 @@
-import { IkSolverEnum } from './IkSolver.js'
-import { Robot } from './Robot.js'
+import { IkSolverEnum, type IkSolverType } from './IkSolver.ts'
+import { Robot, type ColladaResult } from './Robot.ts'
 
 import WebGL from 'three/addons/capabilities/WebGL.js'
 if (!WebGL.isWebGL2Available()) document.body.appendChild(WebGL.getWebGL2ErrorMessage())
@@ -18,7 +18,8 @@ import { STLExporter } from 'three/addons/exporters/STLExporter.js'
 import { ConvexGeometry } from 'three/addons/geometries/ConvexGeometry.js'
 import { ColladaLoader } from 'three/addons/loaders/ColladaLoader.js'
 
-import colladaRobotsList from './ColladaRobotsList.js'
+import colladaRobotsList from './ColladaRobotsList.ts'
+import type { RobotModel } from './ColladaRobotsList.ts'
 
 const stats = new Stats()
 stats.dom.id = 'statsjs'
@@ -26,10 +27,10 @@ document.body.appendChild(stats.dom)
 
 window.addEventListener('resize', onWindowResize, false)
 
-let RENDERER_WIDTH
-updateRendererWidth()
+let RENDERER_WIDTH = updateRendererWidth()
 function updateRendererWidth () {
-  RENDERER_WIDTH = window.innerWidth > 992 ? window.innerWidth - $('.side-nav').width() : window.innerWidth
+  RENDERER_WIDTH = window.innerWidth > 992 ? window.innerWidth - ($('.side-nav').width() ?? 0) : window.innerWidth
+  return RENDERER_WIDTH
 }
 
 // Renderer
@@ -44,7 +45,7 @@ $('#threejs-container').append(renderer.domElement)
 const cameraTarget = new THREE.Vector3(0, 0.4, 0)
 
 // Camera
-const camera = new THREE.PerspectiveCamera(75, RENDERER_WIDTH / window.innerHeight, 0.01)
+const camera = new THREE.PerspectiveCamera(75, RENDERER_WIDTH / window.innerHeight, 0.01, 1000)
 camera.position.set(1, 1, 1)
 
 // Orbit Controls
@@ -61,9 +62,9 @@ const scene = new THREE.Scene()
 
 // Global variables
 let castShadows = false
-let robot
+let robot: Robot
 
-let rawPoints = [[], [], [], []]
+let rawPoints: THREE.Vector3[][] = [[], [], [], []]
 let showEllipsoids = false
 
 $(document).ready(function () {
@@ -114,7 +115,7 @@ $(document).ready(function () {
     moveFromTo(robot.configuration, robot.randomConfiguration, 1000, Easing.Quadratic.Out).start()
   })
 
-  let pointCloudsInScene = []
+  let pointCloudsInScene: THREE.Points[] = []
 
   const pointsMaterials = [
     new THREE.PointsMaterial({ color: 0xff0000, transparent: true, opacity: 0.5, size: 0.01 }),
@@ -130,7 +131,7 @@ $(document).ready(function () {
    * for each sample, adds a visual point marker to the scene.
    */
   $('#reachability-button').click(function () {
-    while (pointCloudsInScene.length) { scene.remove(pointCloudsInScene.shift()) }
+    while (pointCloudsInScene.length) { scene.remove(pointCloudsInScene.shift()!) }
 
     const q_backup = robot.configuration
 
@@ -164,7 +165,7 @@ $(document).ready(function () {
   // Clear clouds
   $('#clear-clouds-button').click(function () {
     rawPoints = [[], [], [], []]
-    while (pointCloudsInScene.length) { scene.remove(pointCloudsInScene.shift()) }
+    while (pointCloudsInScene.length) { scene.remove(pointCloudsInScene.shift()!) }
 
     let totalPoints = 0
     for (let j = 0; j < robot.tipLinks.length; j++) {
@@ -203,9 +204,9 @@ $(document).ready(function () {
         robot.updateForceEllipsoid()
         robot.updateVelocityEllipsoid()
       } else {
-        scene.remove(scene.getObjectByName('force-ellipsoid'))
-        scene.remove(scene.getObjectByName('velocity-ellipsoid'))
-        scene.remove(scene.getObjectByName('acceleration-ellipsoid'))
+        const fe = scene.getObjectByName('force-ellipsoid'); if (fe) scene.remove(fe)
+        const ve = scene.getObjectByName('velocity-ellipsoid'); if (ve) scene.remove(ve)
+        const ae = scene.getObjectByName('acceleration-ellipsoid'); if (ae) scene.remove(ae)
       }
     }
   })
@@ -213,11 +214,11 @@ $(document).ready(function () {
   main()
 })
 
-let ikSolver = IkSolverEnum.OFF
+let ikSolver: IkSolverType = IkSolverEnum.OFF
 
-let ikGoal
-let ikGoalControl
-let ikGoalControlHelper
+let ikGoal: THREE.Mesh
+let ikGoalControl: InstanceType<typeof TransformControls>
+let ikGoalControlHelper: THREE.Object3D
 
 function main () {
   // loadModelZae('abb_irb52_7_120')
@@ -230,7 +231,7 @@ function main () {
   ikGoalControlHelper = ikGoalControl.getHelper()
   ikGoalControlHelper.name = 'ikGoalControl'
   ikGoalControl.addEventListener('objectChange', function () {
-    if (ikSolver !== IkSolverEnum.OFF) { robot.moveTipToPose(ikGoal, ikSolver, scene) }
+    if (ikSolver !== IkSolverEnum.OFF) { robot.moveTipToPose(ikGoal, ikSolver) }
   })
   ikGoalControl.addEventListener('mouseDown', function () {
     orbitControls.enabled = false
@@ -284,7 +285,7 @@ const sphereGeometry = new THREE.SphereGeometry(0.01)
 const sphereMaterialRed = new THREE.MeshLambertMaterial({ color: 0xff0000, transparent: true, opacity: 0.8 })
 const sphereMaterialBlue = new THREE.MeshLambertMaterial({ color: 0x0000ff, transparent: true, opacity: 0.8 })
 
-function addSphereAtPose (pose) {
+function addSphereAtPose (pose: THREE.Matrix4) {
   const sphere = new THREE.Mesh(sphereGeometry, sphereMaterialRed)
   sphere.position.setFromMatrixPosition(pose)
   scene.add(sphere)
@@ -292,7 +293,7 @@ function addSphereAtPose (pose) {
   console.log(`Added sphere at (${sphere.position.x}, ${sphere.position.y}, ${sphere.position.z})`)
 }
 
-function addSphereAtXYZ (x, y, z) {
+function addSphereAtXYZ (x: number, y: number, z: number) {
   const sphere = new THREE.Mesh(sphereGeometry, sphereMaterialBlue)
   sphere.position.set(x, y, z)
 
@@ -302,16 +303,16 @@ function addSphereAtXYZ (x, y, z) {
 }
 
 requestAnimationFrame(animate)
-function animate (time) {
+function animate (time: number) {
   requestAnimationFrame(animate)
 
   if (ikSolver === IkSolverEnum.OFF) {
     if (scene.getObjectByName('ikGoal')) { scene.remove(ikGoal) }
     if (scene.getObjectByName('ikGoalControl')) {
-      ikGoalControl.detach(ikGoal)
+      ikGoalControl.detach()
       scene.remove(ikGoalControlHelper)
     }
-  } else if (ikSolver !== IkSolverEnum.OFF) {
+  } else {
     if (!scene.getObjectByName('ikGoal')) { scene.add(ikGoal) }
     if (!scene.getObjectByName('ikGoalControl')) {
       ikGoalControl.attach(ikGoal)
@@ -334,7 +335,7 @@ function onWindowResize () {
 }
 
 setupModelsList(colladaRobotsList)
-function setupModelsList (models) {
+function setupModelsList (models: RobotModel[]) {
   for (const model of models) {
     $(`#${model.brand.replace(/\s+/g, '-').toLowerCase()}-models`).append(`<li id="${model.id}"><a class="waves-effect" href="#!">${model.name}</a></li>`)
     $(`#${model.brand.replace(/\s+/g, '-').toLowerCase()}-models`).children().last().click(function () { loadModelZae(model.id); $('.button-collapse').sideNav('hide') })
@@ -344,15 +345,15 @@ function setupModelsList (models) {
 // instantiate a loader
 const loader = new ColladaLoader()
 
-const modelsInScene = []
+const modelsInScene: THREE.Group[] = []
 
-async function addCollada (modelId, collada) {
-  let dae = collada.scene
+async function addCollada (modelId: string, collada: ColladaResult) {
+  const dae = collada.scene
 
   dae.traverse(function (child) {
     if (child instanceof THREE.Mesh) {
       // Most of the models do not have normals
-      child.material.flatShading = true
+      ;(child.material as THREE.MeshStandardMaterial).flatShading = true
 
       // child.material.transparent = true
       // child.material.opacity = 0.3
@@ -363,13 +364,13 @@ async function addCollada (modelId, collada) {
   dae.updateMatrix()
 
   while (modelsInScene.length) {
-    scene.remove(modelsInScene.pop())
+    scene.remove(modelsInScene.pop()!)
   }
 
   scene.add(dae)
   modelsInScene.push(dae)
 
-  const tipLinks = $.grep(colladaRobotsList, function (e) { return e.id === modelId })[0].tipLinks
+  const tipLinks = colladaRobotsList.find(e => e.id === modelId)!.tipLinks
 
   robot = new Robot(scene, dae, collada, tipLinks)
   robot.id = modelId
@@ -377,7 +378,7 @@ async function addCollada (modelId, collada) {
   updateShadowsState()
 }
 
-function loadModelZae (modelId) {
+function loadModelZae (modelId: string) {
   console.log(`Loading ${modelId}...`)
 
   $('#models-list li').removeClass('active')
@@ -385,14 +386,14 @@ function loadModelZae (modelId) {
 
   $('#loader-modal').modal('open')
 
-  JSZipUtils.getBinaryContent(`${import.meta.env.BASE_URL}collada-robots-collection/${modelId}.zae`, function (err, data) {
+  JSZipUtils.getBinaryContent(`${(import.meta as any).env.BASE_URL}collada-robots-collection/${modelId}.zae`, function (err: Error | null, data: ArrayBuffer) {
     if (err) throw err
     JSZip.loadAsync(data).then(function (zip) {
-      zip.file(`${modelId}.dae`).async('string').then(function (content) {
-        addCollada(modelId, loader.parse(content)).then(function (result) {
+      zip.file(`${modelId}.dae`)!.async('string').then(function (content: string) {
+        addCollada(modelId, loader.parse(content, '') as unknown as ColladaResult).then(function () {
           $('#loader-modal').modal('close')
 
-          const model = $.grep(colladaRobotsList, function (e) { return e.id === modelId })[0]
+          const model = colladaRobotsList.find(e => e.id === modelId)!
 
           // Fill in HUD information
           $('#hud-brand').text(model.brand ? model.brand : '—')
@@ -406,7 +407,7 @@ function loadModelZae (modelId) {
   })
 }
 
-const robotTweens = []
+const robotTweens: Tween<Record<string, number>>[] = []
 
 window.addEventListener('keydown', function (event) {
   switch (event.key) {
@@ -477,14 +478,14 @@ function doConvexHullStuff () {
  * @param {Number[]} q_s The initial configuration, $q_s$.
  * @param {Number[]} q_t The final configuration, $q_t$.
  */
-function moveFromTo (q_s, q_t, duration = 10, easing = Easing.Linear.None) {
-  let tweenStart = {}
-  let tweenFinal = {}
+function moveFromTo (q_s: number[], q_t: number[], duration = 10, easing: (t: number) => number = Easing.Linear.None) {
+  const tweenStart: Record<string, number> = {}
+  const tweenFinal: Record<string, number> = {}
 
   // Initialises data structures for tween.js
   for (const joint of robot._joints) {
-    tweenStart[joint] = q_s.shift()
-    tweenFinal[joint] = q_t.shift()
+    tweenStart[joint] = q_s.shift()!
+    tweenFinal[joint] = q_t.shift()!
   }
 
   const tween = new Tween(tweenStart, tweenGroup).to(tweenFinal, duration).easing(easing)

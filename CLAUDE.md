@@ -12,17 +12,19 @@ Robot Viewer is an interactive 3D web application for visualizing and manipulati
 - **Build:** `npm run build` (Vite production build → `dist/`)
 - **Preview:** `npm run preview` (serve production build locally)
 - **Lint:** `npm run lint` (ESLint)
+- **Type check:** `npm run typecheck` (TypeScript)
 
 ## Architecture
 
-Single-page app using vanilla ES6 JavaScript (no framework), bundled with Vite.
+Single-page app using TypeScript (no framework), bundled with Vite.
 
 **Key source files:**
-- `src/app.js` — Main entry point: Three.js scene setup, UI event handlers, animation loop
-- `src/Robot.js` — Core robot class: COLLADA loading, FK/IK computation, Jacobian, joint control
-- `src/ColladaRobotsList.js` — Catalog of 30+ robot model definitions (paths, joint configs)
-- `src/math_.js` — Robotics math utilities (transform matrices, Jacobians)
-- `src/IkSolver.js` — IK solver type enum (Pseudo Inverse, Genetic Algorithm)
+- `src/app.ts` — Main entry point: Three.js scene setup, UI event handlers, animation loop
+- `src/Robot.ts` — Core robot class: COLLADA loading, FK/IK computation, Jacobian, joint control
+- `src/ColladaRobotsList.ts` — Catalog of 30+ robot model definitions (paths, joint configs)
+- `src/math_.ts` — Robotics math utilities (transform matrices, Jacobians)
+- `src/IkSolver.ts` — IK solver type enum (Pseudo Inverse, Genetic Algorithm)
+- `src/types.d.ts` — Type declarations for untyped dependencies
 - Three.js addons imported from `three/addons/...` (OrbitControls, TransformControls, ColladaLoader, STLExporter, ConvexGeometry)
 
 **Output:** `dist/` is the Vite build output (gitignored). Static assets live in `public/`. Entry point is `index.html` at project root.

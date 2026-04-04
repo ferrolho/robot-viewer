@@ -3,4 +3,6 @@ export const IkSolverEnum = Object.freeze({
   IK: 1,
   GENETIC_ALGORITHM: 2,
   PSEUDO_INVERSE: 3
-})
+} as const)
+
+export type IkSolverType = typeof IkSolverEnum[keyof typeof IkSolverEnum]
