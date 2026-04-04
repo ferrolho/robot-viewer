@@ -280,8 +280,6 @@ function main () {
   })
 }
 
-main()
-
 function updateShadowsState () {
   plane.visible = castShadows
   robot.updateShadowsState(castShadows)
@@ -593,3 +591,7 @@ function pollGamepad () {
     }
   }
 }
+
+// ── Start ──
+
+main()
