@@ -440,13 +440,16 @@ window.addEventListener('keydown', function (event) {
       break
     case 't':
       ikGoalControl.setMode('translate')
-      ikGoalControl.setSpace('world')
       break
     case 'x':
       doConvexHullStuff()
       break
     case '?':
-      $('#shortcuts-modal').modal('open')
+      if ($('#shortcuts-modal').hasClass('open')) {
+        $('#shortcuts-modal').modal('close')
+      } else {
+        $('#shortcuts-modal').modal('open')
+      }
       break
   }
 })
