@@ -159,7 +159,7 @@ html, body {
 }
 
 body.sidebar-collapsed #app {
-  grid-template-columns: 0 1fr;
+  grid-template-columns: 1fr;
 }
 
 body.sidebar-collapsed #sidebar {
