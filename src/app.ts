@@ -151,9 +151,9 @@ axisSwitch.addEventListener('change', () => {
 })
 
 const grid = new THREE.GridHelper(10)
-grid.material.color.setHex(0x4a5568)
-grid.material.opacity = 0.4
-grid.material.transparent = true
+grid.material.color.setHex(0x888888)
+grid.material.opacity = 1
+grid.material.transparent = false
 
 const gridSwitch = checkbox('grid-switch')
 gridSwitch.addEventListener('change', () => {
