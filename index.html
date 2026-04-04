@@ -1,170 +1,198 @@
 <!DOCTYPE html>
 <html lang="en">
 	<head>
-		<meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
-		<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1.0"/>
+		<meta charset="UTF-8"/>
+		<meta name="viewport" content="width=device-width, initial-scale=1"/>
 		<title>Robot Viewer</title>
-
-		<!-- CSS  -->
+		<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 		<link href="/css/styles.css" rel="stylesheet" type="text/css">
 	</head>
 	<body>
-		<header>
-			<button id="menu-toggle" aria-label="Toggle menu">
-				<svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/></svg>
-			</button>
 
+		<div id="app">
 			<aside id="sidebar">
-				<h5>View Options</h5>
-
-				<div class="sidebar-item">
-					<span class="label">Axis</span>
-					<label class="toggle-switch">
-						Off<input id="axis-switch" type="checkbox"><span class="lever"></span>On
-					</label>
+				<div class="sidebar-header">
+					<div class="logo">
+						<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v6m0 8v6M4.93 4.93l4.24 4.24m5.66 5.66 4.24 4.24M2 12h6m8 0h6M4.93 19.07l4.24-4.24m5.66-5.66 4.24-4.24"/></svg>
+						<span>Robot Viewer</span>
+					</div>
+					<button id="sidebar-collapse" class="icon-btn" aria-label="Collapse sidebar">
+						<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 17l-5-5 5-5M18 17l-5-5 5-5"/></svg>
+					</button>
 				</div>
 
-				<div class="sidebar-item">
-					<span class="label">Grid</span>
-					<label class="toggle-switch">
-						Off<input id="grid-switch" type="checkbox"><span class="lever"></span>On
-					</label>
-				</div>
+				<div class="sidebar-scroll">
+					<section class="panel-section">
+						<h6 class="section-label">Display</h6>
+						<label class="toggle-row">
+							<span>Grid</span>
+							<input id="grid-switch" type="checkbox">
+							<span class="toggle-track"><span class="toggle-thumb"></span></span>
+						</label>
+						<label class="toggle-row">
+							<span>Axis</span>
+							<input id="axis-switch" type="checkbox">
+							<span class="toggle-track"><span class="toggle-thumb"></span></span>
+						</label>
+						<label class="toggle-row">
+							<span>Shadows</span>
+							<input id="shadows-switch" type="checkbox">
+							<span class="toggle-track"><span class="toggle-thumb"></span></span>
+						</label>
+						<label class="toggle-row">
+							<span>Performance</span>
+							<input id="stats-switch" type="checkbox">
+							<span class="toggle-track"><span class="toggle-thumb"></span></span>
+						</label>
+					</section>
 
-				<div class="sidebar-item">
-					<span class="label">Shadows</span>
-					<label class="toggle-switch">
-						Off<input id="shadows-switch" type="checkbox"><span class="lever"></span>On
-					</label>
-				</div>
+					<section class="panel-section">
+						<h6 class="section-label">Controls</h6>
+						<div class="btn-group">
+							<button id="reset-button" class="btn">Home</button>
+							<button id="random-button" class="btn">Random</button>
+						</div>
+						<div class="btn-group">
+							<button id="reachability-button" class="btn btn-outline">Reachability</button>
+							<button id="clear-clouds-button" class="btn btn-outline">Clear Points</button>
+						</div>
+					</section>
 
-				<div class="sidebar-item">
-					<span class="label">Stats</span>
-					<label class="toggle-switch">
-						Off<input id="stats-switch" type="checkbox"><span class="lever"></span>On
-					</label>
-				</div>
+					<section class="panel-section">
+						<h6 class="section-label">Solvers</h6>
+						<label class="toggle-row">
+							<span>Inverse Kinematics</span>
+							<input id="pseudo-inverse-switch" type="checkbox">
+							<span class="toggle-track"><span class="toggle-thumb"></span></span>
+						</label>
+						<label class="toggle-row">
+							<span>Vel-Force Ellipsoids</span>
+							<input id="vel-force-ellipsoids-switch" type="checkbox">
+							<span class="toggle-track"><span class="toggle-thumb"></span></span>
+						</label>
+					</section>
 
-				<hr>
+					<section class="panel-section panel-section--models">
+						<h6 class="section-label">Models</h6>
+						<div id="models-list">
+							<details>
+								<summary><img src="/images/logos/abb.png" alt="ABB"><span>ABB</span></summary>
+								<ul id="abb-models" class="model-list"></ul>
+							</details>
+							<details>
+								<summary><img src="/images/logos/anybotics.png" alt="ANYbotics"><span>ANYbotics</span></summary>
+								<ul id="anybotics-models" class="model-list"></ul>
+							</details>
+							<details>
+								<summary><img src="/images/logos/clearpath.png" alt="Clearpath"><span>Clearpath</span></summary>
+								<ul id="clearpath-models" class="model-list"></ul>
+							</details>
+							<details>
+								<summary><img src="/images/logos/franka.png" alt="Franka"><span>Franka</span></summary>
+								<ul id="franka-models" class="model-list"></ul>
+							</details>
+							<details>
+								<summary><img src="/images/logos/iit.png" alt="iit"><span>iit</span></summary>
+								<ul id="iit-models" class="model-list"></ul>
+							</details>
+							<details>
+								<summary><img src="/images/logos/kawada.png" alt="KAWADA"><span>KAWADA</span></summary>
+								<ul id="kawada-models" class="model-list"></ul>
+							</details>
+							<details>
+								<summary><img src="/images/logos/kuka.png" alt="KUKA"><span>KUKA</span></summary>
+								<ul id="kuka-models" class="model-list"></ul>
+							</details>
+							<details>
+								<summary><img src="/images/logos/nasa.png" alt="NASA"><span>NASA</span></summary>
+								<ul id="nasa-models" class="model-list"></ul>
+							</details>
+							<details>
+								<summary><img src="/images/logos/pal-robotics.png" alt="PAL Robotics"><span>PAL Robotics</span></summary>
+								<ul id="pal-robotics-models" class="model-list"></ul>
+							</details>
+							<details>
+								<summary><img src="/images/logos/puma560.png" alt="Unimation"><span>Unimation</span></summary>
+								<ul id="unimation-models" class="model-list"></ul>
+							</details>
+							<details>
+								<summary><img src="/images/logos/universal-robots.png" alt="Universal Robots"><span>Universal Robots</span></summary>
+								<ul id="universal-robots-models" class="model-list"></ul>
+							</details>
+						</div>
+					</section>
 
-				<h5>Commands</h5>
-
-				<button id="reset-button" class="btn">Home Configuration</button>
-				<button id="random-button" class="btn">Random Configuration</button>
-				<button id="reachability-button" class="btn">Show Reachability</button>
-				<button id="clear-clouds-button" class="btn">Clear Point Clouds</button>
-
-				<hr>
-
-				<h5>Advanced</h5>
-
-				<div class="sidebar-item">
-					<span class="label">Inverse Kinematics</span>
-					<label class="toggle-switch">
-						<input id="pseudo-inverse-switch" type="checkbox"><span class="lever"></span>
-					</label>
-				</div>
-
-				<div class="sidebar-item">
-					<span class="label">Vel-Force Ellipsoids</span>
-					<label class="toggle-switch">
-						<input id="vel-force-ellipsoids-switch" type="checkbox"><span class="lever"></span>
-					</label>
-				</div>
-
-				<hr>
-
-				<h5>Robots</h5>
-
-				<div id="models-list">
-					<details>
-						<summary><img src="/images/logos/abb.png" alt="ABB"><span>ABB</span></summary>
-						<div id="abb-models" class="brand-models"><ul></ul></div>
-					</details>
-					<details>
-						<summary><img src="/images/logos/anybotics.png" alt="ANYbotics"><span>ANYbotics</span></summary>
-						<div id="anybotics-models" class="brand-models"><ul></ul></div>
-					</details>
-					<details>
-						<summary><img src="/images/logos/clearpath.png" alt="Clearpath"><span>Clearpath</span></summary>
-						<div id="clearpath-models" class="brand-models"><ul></ul></div>
-					</details>
-					<details>
-						<summary><img src="/images/logos/franka.png" alt="Franka"><span>Franka</span></summary>
-						<div id="franka-models" class="brand-models"><ul></ul></div>
-					</details>
-					<details>
-						<summary><img src="/images/logos/iit.png" alt="iit"><span>iit</span></summary>
-						<div id="iit-models" class="brand-models"><ul></ul></div>
-					</details>
-					<details>
-						<summary><img src="/images/logos/kawada.png" alt="KAWADA"><span>KAWADA</span></summary>
-						<div id="kawada-models" class="brand-models"><ul></ul></div>
-					</details>
-					<details>
-						<summary><img src="/images/logos/kuka.png" alt="KUKA"><span>KUKA</span></summary>
-						<div id="kuka-models" class="brand-models"><ul></ul></div>
-					</details>
-					<details>
-						<summary><img src="/images/logos/nasa.png" alt="NASA"><span>NASA</span></summary>
-						<div id="nasa-models" class="brand-models"><ul></ul></div>
-					</details>
-					<details>
-						<summary><img src="/images/logos/pal-robotics.png" alt="PAL Robotics"><span>PAL Robotics</span></summary>
-						<div id="pal-robotics-models" class="brand-models"><ul></ul></div>
-					</details>
-					<details>
-						<summary><img src="/images/logos/puma560.png" alt="Unimation"><span>Unimation</span></summary>
-						<div id="unimation-models" class="brand-models"><ul></ul></div>
-					</details>
-					<details>
-						<summary><img src="/images/logos/universal-robots.png" alt="Universal Robots"><span>Universal Robots</span></summary>
-						<div id="universal-robots-models" class="brand-models"><ul></ul></div>
-					</details>
+					<div class="sidebar-footer">
+						<button id="shortcuts-btn" class="icon-btn" aria-label="Keyboard shortcuts">
+							<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M6 8h.01M10 8h.01M14 8h.01M18 8h.01M8 12h.01M12 12h.01M16 12h.01M8 16h8"/></svg>
+							<span>Shortcuts</span>
+							<kbd>?</kbd>
+						</button>
+					</div>
 				</div>
 			</aside>
-		</header>
 
-		<div id="sidebar-overlay"></div>
+			<div id="sidebar-overlay"></div>
 
-		<main>
-			<dialog id="shortcuts-modal">
-				<h4>Keyboard Shortcuts</h4>
-				<table class="shortcuts-table">
-					<tbody>
-						<tr><td><b>?</b></td><td>Show this help</td></tr>
-						<tr><td><b>T</b></td><td>IK gizmo: translate mode (world frame)</td></tr>
-						<tr><td><b>R</b></td><td>IK gizmo: rotate mode (local frame)</td></tr>
-						<tr><td><b>Q</b></td><td>IK gizmo: toggle local/world frame</td></tr>
-						<tr><td><b>K</b></td><td>Record motion keypoint</td></tr>
-						<tr><td><b>P</b></td><td>Play recorded keypoints</td></tr>
-						<tr><td><b>C</b></td><td>Clear motion keypoints</td></tr>
-						<tr><td><b>X</b></td><td>Export convex hull as STL</td></tr>
-					</tbody>
-				</table>
-				<footer>
-					<button id="shortcuts-close">Close</button>
-				</footer>
-			</dialog>
+			<main id="viewport">
+				<button id="menu-toggle" aria-label="Toggle menu">
+					<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h18M3 6h18M3 18h18"/></svg>
+				</button>
 
-			<dialog id="loader-modal">
-				<h4>Loading robot model</h4>
-				<p>Please stand by...</p>
-				<div class="progress-bar"></div>
-			</dialog>
+				<div id="canvas-container"></div>
 
-			<div id="threejs-container"></div>
-
-			<div id="hud-container">
 				<div id="hud">
-					<div><p>Model</p><h5 id="hud-model"></h5></div>
-					<div><p>Brand</p><h5 id="hud-brand"></h5></div>
-					<div><p>Reach (m)</p><h5 id="hud-reach"></h5></div>
-					<div><p>Payload (kg)</p><h5 id="hud-payload"></h5></div>
-					<div><p>No. Axes</p><h5 id="hud-dof"></h5></div>
+					<div class="hud-item">
+						<span class="hud-label">Model</span>
+						<span class="hud-value" id="hud-model">--</span>
+					</div>
+					<div class="hud-item">
+						<span class="hud-label">Brand</span>
+						<span class="hud-value" id="hud-brand">--</span>
+					</div>
+					<div class="hud-item">
+						<span class="hud-label">Reach</span>
+						<span class="hud-value" id="hud-reach">--</span>
+					</div>
+					<div class="hud-item">
+						<span class="hud-label">Payload</span>
+						<span class="hud-value" id="hud-payload">--</span>
+					</div>
+					<div class="hud-item">
+						<span class="hud-label">DOF</span>
+						<span class="hud-value" id="hud-dof">--</span>
+					</div>
 				</div>
+			</main>
+		</div>
+
+		<dialog id="shortcuts-modal">
+			<div class="dialog-header">
+				<h4>Keyboard Shortcuts</h4>
+				<button id="shortcuts-close" class="icon-btn" aria-label="Close">
+					<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+				</button>
 			</div>
-		</main>
+			<table class="shortcuts-table">
+				<tbody>
+					<tr><td><kbd>?</kbd></td><td>Show this help</td></tr>
+					<tr><td><kbd>T</kbd></td><td>IK gizmo: translate mode</td></tr>
+					<tr><td><kbd>R</kbd></td><td>IK gizmo: rotate mode</td></tr>
+					<tr><td><kbd>Q</kbd></td><td>Toggle local / world frame</td></tr>
+					<tr><td><kbd>K</kbd></td><td>Record motion keypoint</td></tr>
+					<tr><td><kbd>P</kbd></td><td>Play recorded keypoints</td></tr>
+					<tr><td><kbd>C</kbd></td><td>Clear motion keypoints</td></tr>
+					<tr><td><kbd>X</kbd></td><td>Export convex hull as STL</td></tr>
+				</tbody>
+			</table>
+		</dialog>
+
+		<dialog id="loader-modal">
+			<div class="loader-content">
+				<div class="loader-spinner"></div>
+				<p>Loading robot model...</p>
+			</div>
+		</dialog>
 
 		<script type="module" src="/src/app.ts"></script>
 	</body>

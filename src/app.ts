@@ -21,40 +21,38 @@ import { ColladaLoader } from 'three/addons/loaders/ColladaLoader.js'
 import colladaRobotsList from './ColladaRobotsList.ts'
 import type { RobotModel } from './ColladaRobotsList.ts'
 
-// Helper to get an element by ID with a type assertion
+// ── DOM helpers ──
+
 function $<T extends HTMLElement>(id: string): T {
   return document.getElementById(id) as T
 }
+
+function checkbox(id: string): HTMLInputElement {
+  return $(id) as HTMLInputElement
+}
+
+// ── Stats ──
 
 const stats = new Stats()
 stats.dom.id = 'statsjs'
 document.body.appendChild(stats.dom)
 
-window.addEventListener('resize', onWindowResize, false)
+// ── Renderer (sized by container via ResizeObserver) ──
 
-const SIDEBAR_WIDTH = 300
-let RENDERER_WIDTH = computeRendererWidth()
-function computeRendererWidth () {
-  return window.innerWidth > 992 ? window.innerWidth - SIDEBAR_WIDTH : window.innerWidth
-}
-function updateRendererWidth () {
-  RENDERER_WIDTH = computeRendererWidth()
-}
+const canvasContainer = $('canvas-container')
 
-// Renderer
 const renderer = new THREE.WebGLRenderer({ antialias: true })
 renderer.shadowMap.enabled = true
 renderer.shadowMap.type = THREE.PCFShadowMap
-renderer.setClearColor(0xf0f0f0)
+renderer.setClearColor(0x0f1114)
 renderer.setPixelRatio(window.devicePixelRatio)
-renderer.setSize(RENDERER_WIDTH, window.innerHeight)
-$('threejs-container').appendChild(renderer.domElement)
-
-const cameraTarget = new THREE.Vector3(0, 0.4, 0)
+canvasContainer.appendChild(renderer.domElement)
 
 // Camera
-const camera = new THREE.PerspectiveCamera(75, RENDERER_WIDTH / window.innerHeight, 0.01, 1000)
+const cameraTarget = new THREE.Vector3(0, 0.4, 0)
+const camera = new THREE.PerspectiveCamera(75, 1, 0.01, 1000)
 camera.position.set(1, 1, 1)
+camera.lookAt(cameraTarget)
 
 // Orbit Controls
 const orbitControls = new OrbitControls(camera, renderer.domElement)
@@ -63,32 +61,54 @@ orbitControls.mouseButtons = { LEFT: THREE.MOUSE.ROTATE, MIDDLE: THREE.MOUSE.PAN
 orbitControls.screenSpacePanning = true
 orbitControls.zoomSpeed = 0.8
 
-camera.lookAt(cameraTarget)
-
 // Scene
 const scene = new THREE.Scene()
 
-// Global variables
+// ── Resize: driven by container, not window math ──
+
+function handleResize(width: number, height: number) {
+  camera.aspect = width / height
+  camera.updateProjectionMatrix()
+  renderer.setSize(width, height, false)
+}
+
+const resizeObserver = new ResizeObserver((entries) => {
+  for (const entry of entries) {
+    const { width, height } = entry.contentRect
+    if (width > 0 && height > 0) {
+      handleResize(width, height)
+    }
+  }
+})
+resizeObserver.observe(canvasContainer)
+
+// ── Global state ──
+
 let castShadows = false
 let robot: Robot
-
 let rawPoints: THREE.Vector3[][] = [[], [], [], []]
 let showEllipsoids = false
+let ikSolver: IkSolverType = IkSolverEnum.OFF
+let ikGoal: THREE.Mesh
+let ikGoalControl: InstanceType<typeof TransformControls>
+let ikGoalControlHelper: THREE.Object3D
 
-// ── Sidebar (mobile toggle) ──
+// ── Sidebar ──
 
 const sidebar = $('sidebar')
 const menuToggle = $('menu-toggle')
 const sidebarOverlay = $('sidebar-overlay')
+const sidebarCollapse = $('sidebar-collapse')
 
 menuToggle.addEventListener('click', () => {
   sidebar.classList.toggle('open')
   sidebarOverlay.classList.toggle('visible')
 })
 
-sidebarOverlay.addEventListener('click', () => {
-  sidebar.classList.remove('open')
-  sidebarOverlay.classList.remove('visible')
+sidebarOverlay.addEventListener('click', hideSidebar)
+
+sidebarCollapse.addEventListener('click', () => {
+  document.body.classList.toggle('sidebar-collapsed')
 })
 
 function hideSidebar() {
@@ -101,51 +121,44 @@ function hideSidebar() {
 const loaderModal = $<HTMLDialogElement>('loader-modal')
 const shortcutsModal = $<HTMLDialogElement>('shortcuts-modal')
 
-// Prevent closing the loader modal with Escape
 loaderModal.addEventListener('cancel', (e) => e.preventDefault())
 
-// Close shortcuts modal
 $('shortcuts-close').addEventListener('click', () => shortcutsModal.close())
+$('shortcuts-btn').addEventListener('click', () => shortcutsModal.showModal())
 
-// Close shortcuts modal on backdrop click
 shortcutsModal.addEventListener('click', (e) => {
   if (e.target === shortcutsModal) shortcutsModal.close()
 })
 
 // ── View Options ──
 
-// Axes Helper
 const axis = new THREE.AxesHelper(1)
-const axisSwitch = $<HTMLInputElement>('axis-switch')
+const axisSwitch = checkbox('axis-switch')
 axisSwitch.addEventListener('change', () => {
   if (axisSwitch.checked) { scene.add(axis) } else { scene.remove(axis) }
 })
 
-// Grid Helper
 const grid = new THREE.GridHelper(10)
-grid.material.color.setHex(0x000000)
-grid.material.opacity = 0.2
+grid.material.color.setHex(0x333840)
+grid.material.opacity = 0.6
 grid.material.transparent = true
 
-const gridSwitch = $<HTMLInputElement>('grid-switch')
+const gridSwitch = checkbox('grid-switch')
 gridSwitch.addEventListener('change', () => {
   if (gridSwitch.checked) { scene.add(grid) } else { scene.remove(grid) }
 })
-// Start with grid visible
 gridSwitch.checked = true
 gridSwitch.dispatchEvent(new Event('change'))
 
-// Shadows
-const shadowsSwitch = $<HTMLInputElement>('shadows-switch')
+const shadowsSwitch = checkbox('shadows-switch')
 shadowsSwitch.addEventListener('change', () => {
   castShadows = shadowsSwitch.checked
   updateShadowsState()
 })
 
-// Performance Monitor
 const statsEl = $('statsjs')
 statsEl.style.display = 'none'
-const statsSwitch = $<HTMLInputElement>('stats-switch')
+const statsSwitch = checkbox('stats-switch')
 statsSwitch.addEventListener('change', () => {
   statsEl.style.display = statsSwitch.checked ? '' : 'none'
 })
@@ -171,12 +184,6 @@ const pointsMaterials = [
   new THREE.PointsMaterial({ color: 0x00ffff, transparent: true, opacity: 0.5, size: 0.01 })
 ]
 
-/**
- * Robot Reachability
- *
- * Randomly samples robot configurations 1000 times and,
- * for each sample, adds a visual point marker to the scene.
- */
 $('reachability-button').addEventListener('click', () => {
   while (pointCloudsInScene.length) { scene.remove(pointCloudsInScene.shift()!) }
 
@@ -208,7 +215,6 @@ $('reachability-button').addEventListener('click', () => {
   console.log(`The cloud now has ${totalPoints} particles.`)
 })
 
-// Clear clouds
 $('clear-clouds-button').addEventListener('click', () => {
   rawPoints = [[], [], [], []]
   while (pointCloudsInScene.length) { scene.remove(pointCloudsInScene.shift()!) }
@@ -223,7 +229,7 @@ $('clear-clouds-button').addEventListener('click', () => {
 
 // ── Inverse Kinematics ──
 
-const pseudoInverseSwitch = $<HTMLInputElement>('pseudo-inverse-switch')
+const pseudoInverseSwitch = checkbox('pseudo-inverse-switch')
 pseudoInverseSwitch.addEventListener('change', () => {
   ikSolver = pseudoInverseSwitch.checked ? IkSolverEnum.PSEUDO_INVERSE : IkSolverEnum.OFF
   if (ikSolver !== IkSolverEnum.OFF && robot) {
@@ -235,7 +241,7 @@ pseudoInverseSwitch.addEventListener('change', () => {
   }
 })
 
-const ellipsoidsSwitch = $<HTMLInputElement>('vel-force-ellipsoids-switch')
+const ellipsoidsSwitch = checkbox('vel-force-ellipsoids-switch')
 ellipsoidsSwitch.addEventListener('change', () => {
   showEllipsoids = ellipsoidsSwitch.checked
   if (robot) {
@@ -251,34 +257,7 @@ ellipsoidsSwitch.addEventListener('change', () => {
   }
 })
 
-// ── Main ──
-
-let ikSolver: IkSolverType = IkSolverEnum.OFF
-
-let ikGoal: THREE.Mesh
-let ikGoalControl: InstanceType<typeof TransformControls>
-let ikGoalControlHelper: THREE.Object3D
-
-function main () {
-  // loadModelZae('abb_irb52_7_120')
-  loadModelZae('abb_irb120_3_58')
-
-  ikGoal = addSphereAtXYZ(0.4, 0.5, 0)
-  ikGoal.name = 'ikGoal'
-
-  ikGoalControl = new TransformControls(camera, renderer.domElement)
-  ikGoalControlHelper = ikGoalControl.getHelper()
-  ikGoalControlHelper.name = 'ikGoalControl'
-  ikGoalControl.addEventListener('objectChange', function () {
-    if (ikSolver !== IkSolverEnum.OFF) { robot.moveTipToPose(ikGoal, ikSolver) }
-  })
-  ikGoalControl.addEventListener('mouseDown', function () {
-    orbitControls.enabled = false
-  })
-  ikGoalControl.addEventListener('mouseUp', function () {
-    orbitControls.enabled = true
-  })
-}
+// ── Scene setup ──
 
 function updateShadowsState () {
   plane.visible = castShadows
@@ -298,11 +277,9 @@ directionalLight.shadow.camera.bottom = -shadowCameraSize
 directionalLight.shadow.camera.left = -shadowCameraSize
 directionalLight.shadow.camera.right = shadowCameraSize
 directionalLight.shadow.camera.top = shadowCameraSize
-// directionalLight.shadow.mapSize.width = 2048
-// directionalLight.shadow.mapSize.height = 2048
 scene.add(directionalLight)
 
-// Create a plane that receives shadows (but does not cast them)
+// Shadow plane
 const planeGeometry = new THREE.PlaneGeometry(10, 10)
 const planeMaterial = new THREE.ShadowMaterial({ opacity: 0.4 })
 const plane = new THREE.Mesh(planeGeometry, planeMaterial)
@@ -310,16 +287,7 @@ plane.receiveShadow = true
 plane.rotateX(-90 * THREE.MathUtils.DEG2RAD)
 scene.add(plane)
 
-// Create a helper for the shadow camera (optional)
-// var helper = new THREE.CameraHelper(directionalLight.shadow.camera)
-// scene.add(helper)
-
-const geometry = new THREE.BoxGeometry(0.1, 0.01, 0.1)
-const material = new THREE.MeshLambertMaterial({ color: 0x00ff00, transparent: true, opacity: 0.4 })
-const cube = new THREE.Mesh(geometry, material)
-cube.position.set(0, 1.306, 0)
-// scene.add(cube)
-
+// Sphere helpers
 const sphereGeometry = new THREE.SphereGeometry(0.01)
 const sphereMaterialRed = new THREE.MeshLambertMaterial({ color: 0xff0000, transparent: true, opacity: 0.8 })
 const sphereMaterialBlue = new THREE.MeshLambertMaterial({ color: 0x0000ff, transparent: true, opacity: 0.8 })
@@ -328,18 +296,17 @@ function _addSphereAtPose (pose: THREE.Matrix4) {
   const sphere = new THREE.Mesh(sphereGeometry, sphereMaterialRed)
   sphere.position.setFromMatrixPosition(pose)
   scene.add(sphere)
-
   console.log(`Added sphere at (${sphere.position.x}, ${sphere.position.y}, ${sphere.position.z})`)
 }
 
 function addSphereAtXYZ (x: number, y: number, z: number) {
   const sphere = new THREE.Mesh(sphereGeometry, sphereMaterialBlue)
   sphere.position.set(x, y, z)
-
   console.log(`Added sphere at (${x}, ${y}, ${z})`)
-
   return sphere
 }
+
+// ── Animation loop ──
 
 requestAnimationFrame(animate)
 function animate (time: number) {
@@ -362,22 +329,16 @@ function animate (time: number) {
   pollGamepad()
   renderer.render(scene, camera)
   tweenGroup.update(time)
-
   stats.update()
 }
 
-function onWindowResize () {
-  updateRendererWidth()
-  camera.aspect = RENDERER_WIDTH / window.innerHeight
-  camera.updateProjectionMatrix()
-  renderer.setSize(RENDERER_WIDTH, window.innerHeight)
-}
+// ── Model list ──
 
 setupModelsList(colladaRobotsList)
 function setupModelsList (models: RobotModel[]) {
   for (const model of models) {
     const brandSlug = model.brand.replace(/\s+/g, '-').toLowerCase()
-    const container = document.querySelector(`#${brandSlug}-models ul`)!
+    const container = document.querySelector(`#${brandSlug}-models`)!
     const li = document.createElement('li')
     li.id = model.id
     const a = document.createElement('a')
@@ -392,9 +353,9 @@ function setupModelsList (models: RobotModel[]) {
   }
 }
 
-// instantiate a loader
-const loader = new ColladaLoader()
+// ── Model loading ──
 
+const loader = new ColladaLoader()
 const modelsInScene: THREE.Group[] = []
 
 async function addCollada (modelId: string, collada: ColladaResult) {
@@ -402,11 +363,7 @@ async function addCollada (modelId: string, collada: ColladaResult) {
 
   dae.traverse(function (child) {
     if (child instanceof THREE.Mesh) {
-      // Most of the models do not have normals
       ;(child.material as THREE.MeshStandardMaterial).flatShading = true
-
-      // child.material.transparent = true
-      // child.material.opacity = 0.3
     }
   })
 
@@ -446,17 +403,18 @@ function loadModelZae (modelId: string) {
 
           const model = colladaRobotsList.find(e => e.id === modelId)!
 
-          // Fill in HUD information
-          $('hud-brand').textContent = model.brand ? model.brand : '—'
-          $('hud-model').textContent = model.name ? model.name : '—'
-          $('hud-reach').textContent = model.reach ? String(model.reach) : '—'
-          $('hud-payload').textContent = model.payload ? String(model.payload) : '—'
-          $('hud-dof').textContent = model.dof ? String(model.dof) : '—'
+          $('hud-brand').textContent = model.brand ? model.brand : '--'
+          $('hud-model').textContent = model.name ? model.name : '--'
+          $('hud-reach').textContent = model.reach ? `${model.reach} m` : '--'
+          $('hud-payload').textContent = model.payload ? `${model.payload} kg` : '--'
+          $('hud-dof').textContent = model.dof ? String(model.dof) : '--'
         })
       })
     })
   })
 }
+
+// ── Keyboard shortcuts ──
 
 const robotTweens: Tween<Record<string, number>>[] = []
 
@@ -496,15 +454,13 @@ window.addEventListener('keydown', function (event) {
     case 'x':
       doConvexHullStuff()
       break
-    case '?': {
-      const dialog = $<HTMLDialogElement>('shortcuts-modal')
-      if (dialog.open) {
-        dialog.close()
+    case '?':
+      if (shortcutsModal.open) {
+        shortcutsModal.close()
       } else {
-        dialog.showModal()
+        shortcutsModal.showModal()
       }
       break
-    }
   }
 })
 
@@ -523,19 +479,12 @@ function doConvexHullStuff () {
   }
 }
 
-/**
- * Robot Motion (without accounting for any collisions)
- *
- * Moves the robot from an initial configuration $q_s$ to a final configuration $q_t$.
- *
- * @param {Number[]} q_s The initial configuration, $q_s$.
- * @param {Number[]} q_t The final configuration, $q_t$.
- */
+// ── Motion ──
+
 function moveFromTo (q_s: number[], q_t: number[], duration = 10, easing: (t: number) => number = Easing.Linear.None) {
   const tweenStart: Record<string, number> = {}
   const tweenFinal: Record<string, number> = {}
 
-  // Initialises data structures for tween.js
   for (const joint of robot._joints) {
     tweenStart[joint] = q_s.shift()!
     tweenFinal[joint] = q_t.shift()!
@@ -544,7 +493,6 @@ function moveFromTo (q_s: number[], q_t: number[], duration = 10, easing: (t: nu
   const tween = new Tween(tweenStart, tweenGroup).to(tweenFinal, duration).easing(easing)
 
   tween.onUpdate(function (obj) {
-    // Update robot configuration, joint by joint.
     for (const joint of robot._joints) { robot.setJointValue(joint, obj[joint]) }
     if (ikSolver !== IkSolverEnum.OFF) {
       const pose = robot.getLinkPose(robot.tipLinks[0])
@@ -564,9 +512,7 @@ function moveFromTo (q_s: number[], q_t: number[], duration = 10, easing: (t: nu
   return tween
 }
 
-/**
- * Gamepad support (native Gamepad API)
- */
+// ── Gamepad ──
 
 window.addEventListener('gamepadconnected', e => {
   console.log(`Controller ${e.gamepad.index} connected: ${e.gamepad.id}`)
@@ -580,7 +526,6 @@ function pollGamepad () {
   const gamepads = navigator.getGamepads()
   for (const gp of gamepads) {
     if (!gp) continue
-    // Right stick (axes 2,3) controls orbit camera
     const rx = gp.axes[2] || 0
     const ry = gp.axes[3] || 0
     const deadzone = 0.1
@@ -593,5 +538,25 @@ function pollGamepad () {
 }
 
 // ── Start ──
+
+function main () {
+  loadModelZae('abb_irb120_3_58')
+
+  ikGoal = addSphereAtXYZ(0.4, 0.5, 0)
+  ikGoal.name = 'ikGoal'
+
+  ikGoalControl = new TransformControls(camera, renderer.domElement)
+  ikGoalControlHelper = ikGoalControl.getHelper()
+  ikGoalControlHelper.name = 'ikGoalControl'
+  ikGoalControl.addEventListener('objectChange', function () {
+    if (ikSolver !== IkSolverEnum.OFF) { robot.moveTipToPose(ikGoal, ikSolver) }
+  })
+  ikGoalControl.addEventListener('mouseDown', function () {
+    orbitControls.enabled = false
+  })
+  ikGoalControl.addEventListener('mouseUp', function () {
+    orbitControls.enabled = true
+  })
+}
 
 main()
