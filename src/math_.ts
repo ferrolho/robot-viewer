@@ -1,17 +1,13 @@
 import { create, all } from 'mathjs'
-import numeric from 'numeric'
 
 // mathjs types are overly complex for our usage; we use a loose type to avoid
 // fighting MathType vs MathCollection narrowing across the codebase.
- 
+
 export const math: any = create(all)
 
 export function clamp(value: number, min: number, max: number): number {
   return Math.min(Math.max(value, min), max)
 }
-
-// Import numeric.js functions (eig, solve, etc.) into mathjs
-math.import(numeric, { wrap: true, silent: true })
 
 export type Partial = '' | 'translational' | 'rotational'
 

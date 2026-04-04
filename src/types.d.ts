@@ -38,11 +38,6 @@ declare module 'kinematics' {
   }
 }
 
-declare module 'numeric' {
-  const numeric: Record<string, unknown>
-  export default numeric
-}
-
 declare module 'jszip-utils' {
   export function getBinaryContent(path: string, callback: (err: Error | null, data: ArrayBuffer) => void): void
 }
