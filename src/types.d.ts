@@ -27,6 +27,18 @@ declare module 'three/addons/loaders/ColladaLoader.js' {
   export { ColladaLoader } from 'three/examples/jsm/loaders/ColladaLoader.js'
 }
 
+declare module 'three/addons/lines/LineSegments2.js' {
+  export { LineSegments2 } from 'three/examples/jsm/lines/LineSegments2.js'
+}
+
+declare module 'three/addons/lines/LineSegmentsGeometry.js' {
+  export { LineSegmentsGeometry } from 'three/examples/jsm/lines/LineSegmentsGeometry.js'
+}
+
+declare module 'three/addons/lines/LineMaterial.js' {
+  export { LineMaterial } from 'three/examples/jsm/lines/LineMaterial.js'
+}
+
 declare module 'file-saver' {
   export function saveAs(blob: Blob, filename: string): void
 }

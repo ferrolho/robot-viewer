@@ -17,6 +17,9 @@ import { TransformControls } from 'three/addons/controls/TransformControls.js'
 import { STLExporter } from 'three/addons/exporters/STLExporter.js'
 import { ConvexGeometry } from 'three/addons/geometries/ConvexGeometry.js'
 import { ColladaLoader } from 'three/addons/loaders/ColladaLoader.js'
+import { LineSegments2 } from 'three/addons/lines/LineSegments2.js'
+import { LineSegmentsGeometry } from 'three/addons/lines/LineSegmentsGeometry.js'
+import { LineMaterial } from 'three/addons/lines/LineMaterial.js'
 
 import colladaRobotsList from './ColladaRobotsList.ts'
 import type { RobotModel } from './ColladaRobotsList.ts'
@@ -151,10 +154,24 @@ axisSwitch.addEventListener('change', () => {
 })
 
 const grid = new THREE.Group()
-const gridMinor = new THREE.GridHelper(10, 20, 0x333333, 0x333333)
-const gridMajor = new THREE.GridHelper(10, 4, 0x666666, 0x666666)
-grid.add(gridMinor)
-grid.add(gridMajor)
+
+function createFatGrid(size: number, divisions: number, color: number, linewidth: number): LineSegments2 {
+  const step = size / divisions
+  const half = size / 2
+  const positions: number[] = []
+  for (let i = 0; i <= divisions; i++) {
+    const pos = -half + i * step
+    positions.push(-half, 0, pos, half, 0, pos)
+    positions.push(pos, 0, -half, pos, 0, half)
+  }
+  const geo = new LineSegmentsGeometry()
+  geo.setPositions(positions)
+  const mat = new LineMaterial({ color, linewidth, worldUnits: true })
+  return new LineSegments2(geo, mat)
+}
+
+grid.add(createFatGrid(10, 20, 0x2a2e35, 0.005))
+grid.add(createFatGrid(10, 4, 0x4a5060, 0.01))
 
 const gridSwitch = checkbox('grid-switch')
 gridSwitch.addEventListener('change', () => {
@@ -265,6 +282,18 @@ ellipsoidsSwitch.addEventListener('change', () => {
     } else {
       const fe = scene.getObjectByName('force-ellipsoid'); if (fe) scene.remove(fe)
       const ve = scene.getObjectByName('velocity-ellipsoid'); if (ve) scene.remove(ve)
+    }
+  }
+})
+
+let showAccelEllipsoid = false
+const accelEllipsoidSwitch = checkbox('accel-ellipsoid-switch')
+accelEllipsoidSwitch.addEventListener('change', () => {
+  showAccelEllipsoid = accelEllipsoidSwitch.checked
+  if (robot) {
+    if (showAccelEllipsoid) {
+      robot.updateAccelerationEllipsoid()
+    } else {
       const ae = scene.getObjectByName('acceleration-ellipsoid'); if (ae) scene.remove(ae)
     }
   }
@@ -515,6 +544,9 @@ function moveFromTo (q_s: number[], q_t: number[], duration = 10, easing: (t: nu
     if (robot.showEllipsoids) {
       robot.updateForceEllipsoid()
       robot.updateVelocityEllipsoid()
+    }
+    if (showAccelEllipsoid) {
+      robot.updateAccelerationEllipsoid()
     }
   })
 
