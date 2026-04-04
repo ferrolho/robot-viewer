@@ -26,13 +26,13 @@
 - [x] Add `tsconfig.json` with strict mode
 - [x] Add `npm run typecheck`
 
-## Upcoming
-
 ### Phase 5: Drop Legacy Dependencies
 - [x] Evaluate removing `numeric.js` — mathjs v15 has built-in `eig()` and `solve()`; would eliminate the `window.numeric` hack and `eval()` warnings
 - [x] Remove `Number.prototype.clamp` polyfill — replace with a standalone `clamp()` utility
 - [x] Replace jQuery + Materialize v0.100 (unmaintained) with vanilla JS + modern CSS
-- [ ] Consider `lil-gui` or `dat.gui` for the control panel (standard in Three.js projects)
+- [x] Custom sidebar panel with dark/light theme, ResizeObserver-driven canvas, fat grid lines
+
+## Upcoming
 
 ### Phase 6: Code Quality
 - [ ] Split `app.ts` into modules: scene setup, UI handlers, model loader, animation loop
