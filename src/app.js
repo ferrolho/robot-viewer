@@ -185,6 +185,9 @@ $(document).ready(function () {
 
   $('input[id=pseudo-inverse-switch][type=checkbox]').change(function () {
     ikSolver = $(this).is(':checked') ? IkSolverEnum.PSEUDO_INVERSE : IkSolverEnum.OFF
+    if (ikSolver !== IkSolverEnum.OFF && robot) {
+      ikGoal.position.setFromMatrixPosition(robot.getLinkPose(robot.tipLinks[0]))
+    }
   })
 
   $('input[id=vel-force-ellipsoids-switch][type=checkbox]').change(function () {
