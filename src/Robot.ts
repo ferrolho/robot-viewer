@@ -49,7 +49,8 @@ const _quadrupeds = ['anybotics_anymal', 'iit_hyq']
 
 export class Robot {
   id = ''
-  showEllipsoids = false
+  showVelocityEllipsoid = false
+  showForceEllipsoid = false
   robotKin: Kinematics | null = null
   robotKinInitialized = false
 
@@ -393,10 +394,8 @@ export class Robot {
 
     this.configuration = q
 
-    if (this.showEllipsoids) {
-      this.updateForceEllipsoid()
-      this.updateVelocityEllipsoid()
-    }
+    if (this.showVelocityEllipsoid) this.updateVelocityEllipsoid()
+    if (this.showForceEllipsoid) this.updateForceEllipsoid()
 
     console.log(`Solved with ${iteration} iterations (${delta} ms).`)
   }

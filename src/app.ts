@@ -96,7 +96,8 @@ resizeObserver.observe(canvasContainer)
 let castShadows = false
 let robot: Robot
 let rawPoints: THREE.Vector3[][] = [[], [], [], []]
-let showEllipsoids = false
+let showVelocityEllipsoid = false
+let showForceEllipsoid = false
 let ikSolver: IkSolverType = IkSolverEnum.OFF
 let ikGoal: THREE.Mesh
 let ikGoalControl: InstanceType<typeof TransformControls>
@@ -271,23 +272,31 @@ pseudoInverseSwitch.addEventListener('change', () => {
   }
 })
 
-const ellipsoidsSwitch = checkbox('vel-force-ellipsoids-switch')
-ellipsoidsSwitch.addEventListener('change', () => {
-  showEllipsoids = ellipsoidsSwitch.checked
+const velocityEllipsoidSwitch = checkbox('velocity-ellipsoid-switch')
+velocityEllipsoidSwitch.addEventListener('change', () => {
+  showVelocityEllipsoid = velocityEllipsoidSwitch.checked
   if (robot) {
-    robot.showEllipsoids = showEllipsoids
-    if (showEllipsoids) {
-      robot.updateForceEllipsoid()
+    robot.showVelocityEllipsoid = showVelocityEllipsoid
+    if (showVelocityEllipsoid) {
       robot.updateVelocityEllipsoid()
     } else {
-      const fe = scene.getObjectByName('force-ellipsoid'); if (fe) scene.remove(fe)
       const ve = scene.getObjectByName('velocity-ellipsoid'); if (ve) scene.remove(ve)
     }
   }
 })
 
-// Acceleration ellipsoid toggle — disabled until computeInertia() is implemented
-// const accelEllipsoidSwitch = checkbox('accel-ellipsoid-switch')
+const forceEllipsoidSwitch = checkbox('force-ellipsoid-switch')
+forceEllipsoidSwitch.addEventListener('change', () => {
+  showForceEllipsoid = forceEllipsoidSwitch.checked
+  if (robot) {
+    robot.showForceEllipsoid = showForceEllipsoid
+    if (showForceEllipsoid) {
+      robot.updateForceEllipsoid()
+    } else {
+      const fe = scene.getObjectByName('force-ellipsoid'); if (fe) scene.remove(fe)
+    }
+  }
+})
 
 // ── Scene setup ──
 
@@ -531,10 +540,8 @@ function moveFromTo (q_s: number[], q_t: number[], duration = 10, easing: (t: nu
       ikGoal.position.setFromMatrixPosition(pose)
       ikGoal.quaternion.setFromRotationMatrix(pose)
     }
-    if (robot.showEllipsoids) {
-      robot.updateForceEllipsoid()
-      robot.updateVelocityEllipsoid()
-    }
+    if (robot.showVelocityEllipsoid) robot.updateVelocityEllipsoid()
+    if (robot.showForceEllipsoid) robot.updateForceEllipsoid()
   })
 
   tween.onComplete(function () {
