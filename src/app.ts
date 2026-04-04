@@ -101,8 +101,12 @@ const sidebarOverlay = $('sidebar-overlay')
 const sidebarCollapse = $('sidebar-collapse')
 
 menuToggle.addEventListener('click', () => {
-  sidebar.classList.toggle('open')
-  sidebarOverlay.classList.toggle('visible')
+  if (document.body.classList.contains('sidebar-collapsed')) {
+    document.body.classList.remove('sidebar-collapsed')
+  } else {
+    sidebar.classList.toggle('open')
+    sidebarOverlay.classList.toggle('visible')
+  }
 })
 
 sidebarOverlay.addEventListener('click', hideSidebar)
