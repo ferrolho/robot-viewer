@@ -336,55 +336,120 @@ export class Robot {
     return rows
   }
 
-  // ── IK Solvers ──
+  // ── IK Solver ──
 
-  moveTipToPose(goal: THREE.Object3D, tipIndex = 0): void {
-    this.moveTipToPoseWithPseudoInverse(goal, tipIndex)
-  }
-
-  moveTipsToPoses(goals: THREE.Object3D[]): void {
+  /**
+   * Damped least-squares IK with adaptive damping and null-space regularization.
+   *
+   * - Adaptive damping (Nakamura & Hanafusa): increases damping near singularities
+   *   based on the manipulability measure w = sqrt(det(J·Jᵀ)).
+   * - Null-space bias: when there are more joints than task DOFs (e.g. 7-DOF arm
+   *   with 6D task), projects a secondary objective (pull toward joint midpoints)
+   *   into the null space to escape singularities and avoid joint limits.
+   */
+  private _solveIk(tipIndex: number, Tf: any, jointIndices: number[], partial: Partial): number {
     const maxIterations = 50
     const tolerance = 1e-3
     const alpha = 0.2
+    const lambdaMax = 0.04
+    const manipThreshold = 0.01
+    const nullSpaceGain = 0.5
+
+    const nj = jointIndices.length
+    const dim = partial === '' ? 6 : 3
+    const hasNullSpace = nj > dim
+
+    // Precompute joint midpoints for null-space bias
+    let qMid: number[] | null = null
+    if (hasNullSpace) {
+      qMid = new Array(nj)
+      for (let k = 0; k < nj; k++) {
+        const ji = jointIndices[k]
+        const joint = this._kinematics.joints[this._joints[ji]]
+        qMid[k] = (joint.limits.min + joint.limits.max) / 2
+      }
+    }
+
+    let iteration = 0
+
+    for (; iteration < maxIterations; iteration++) {
+      const T0 = this.threejs2mathjsMatrix(this._fkineTip(tipIndex))
+      const error = robotMath.tr2delta(T0, Tf, partial)
+
+      if ((math.norm(error) as number) <= tolerance) break
+
+      const J = this.geometricJacobian(tipIndex, partial, jointIndices)
+      const Jm = math.matrix(J)
+      const Jt = math.transpose(Jm)
+      const JJt = math.multiply(Jm, Jt)
+
+      // Adaptive damping: increase near singularities
+      const det = math.det(JJt) as number
+      const w = Math.sqrt(Math.max(det, 0))
+      const lambda = w < manipThreshold
+        ? lambdaMax * (1 - (w / manipThreshold) ** 2)
+        : 0
+      const C = math.multiply(math.identity(dim) as any, Math.max(lambda, 1e-4))
+
+      const pinv = math.multiply(Jt, math.inv(math.add(JJt, C) as any))
+
+      // Primary task: move toward goal
+      let dq = math.multiply(alpha, math.multiply(pinv, error))
+
+      // Null-space regularization: pull toward joint midpoints
+      if (hasNullSpace && qMid) {
+        const I = math.identity(nj) as any
+        const nullProj = math.subtract(I, math.multiply(pinv, Jm))
+        const qDiff: number[] = new Array(nj)
+        for (let k = 0; k < nj; k++) {
+          qDiff[k] = (qMid[k] - this._q[jointIndices[k]]) * THREE.MathUtils.DEG2RAD
+        }
+        const nullStep = math.multiply(nullSpaceGain, math.multiply(nullProj, qDiff))
+        dq = math.add(dq, nullStep)
+      }
+
+      const dqArr: number[] = (dq as any).toArray ? (dq as any).toArray() : dq
+
+      for (let k = 0; k < nj; k++) {
+        const ji = jointIndices[k]
+        this.setJointValue(this._joints[ji], this._q[ji] + dqArr[k] * THREE.MathUtils.RAD2DEG)
+      }
+    }
+
+    return iteration
+  }
+
+  moveTipToPose(goal: THREE.Object3D, tipIndex = 0): void {
+    const partial: Partial = this.category === 'quadruped' ? 'translational' : ''
+    const jointIndices = this._tipJointIndices[tipIndex]
+    const Tf = this.threejs2mathjsMatrix(goal.matrixWorld)
+
+    const start = Date.now()
+    const iterations = this._solveIk(tipIndex, Tf, jointIndices, partial)
+    const delta = Date.now() - start
+
+    this._dae.updateMatrixWorld()
+
+    if (this.showVelocityEllipsoid) this.updateVelocityEllipsoid()
+    if (this.showForceEllipsoid) this.updateForceEllipsoid()
+
+    console.log(`Solved with ${iterations} iterations (${delta} ms).`)
+  }
+
+  moveTipsToPoses(goals: THREE.Object3D[]): void {
     const partial: Partial = this.category === 'quadruped' ? 'translational' : ''
 
     const start = Date.now()
     let totalIterations = 0
 
-    // Solve each tip independently against only its relevant joints
     for (let ti = 0; ti < goals.length; ti++) {
       const jointIndices = this._tipJointIndices[ti]
       if (jointIndices.length === 0) continue
 
       const Tf = this.threejs2mathjsMatrix(goals[ti].matrixWorld)
-      const nj = jointIndices.length
-
-      for (let iteration = 0; iteration < maxIterations; iteration++) {
-        const T0 = this.threejs2mathjsMatrix(this._fkineTip(ti))
-        const error = robotMath.tr2delta(T0, Tf, partial)
-
-        if ((math.norm(error) as number) <= tolerance) break
-
-        const J = this.geometricJacobian(ti, partial, jointIndices)
-        const Jm = math.matrix(J)
-        const Jt = math.transpose(Jm)
-        const dim = partial === '' ? 6 : 3
-        const C = math.multiply(math.identity(dim) as any, 1e-3)
-        const pinv = math.multiply(Jt, math.inv(math.add(math.multiply(Jm, Jt), C) as any))
-
-        const dq = math.multiply(alpha, math.multiply(pinv, error))
-        const dqArr: number[] = (dq as any).toArray ? (dq as any).toArray() : dq
-
-        for (let k = 0; k < nj; k++) {
-          const ji = jointIndices[k]
-          this.setJointValue(this._joints[ji], this._q[ji] + dqArr[k] * THREE.MathUtils.RAD2DEG)
-        }
-
-        totalIterations++
-      }
+      totalIterations += this._solveIk(ti, Tf, jointIndices, partial)
     }
 
-    // Sync _dae scene graph once at the end
     this._dae.updateMatrixWorld()
 
     if (this.showVelocityEllipsoid) this.updateVelocityEllipsoid()
@@ -392,59 +457,5 @@ export class Robot {
 
     const delta = Date.now() - start
     console.log(`Multi-target IK: ${totalIterations} iterations (${delta} ms).`)
-  }
-
-  moveTipToPoseWithPseudoInverse(goal: THREE.Object3D, tipIndex = 0): void {
-    const maxIterations = 50
-    const tolerance = 1e-3
-    const alpha = 0.2
-
-    const Tf = this.threejs2mathjsMatrix(goal.matrixWorld)
-    let errorPrev: any = math.ones(6)
-
-    const partial: Partial = this.category === 'quadruped' ? 'translational' : ''
-    const jointIndices = this._tipJointIndices[tipIndex]
-    const nj = jointIndices.length
-    let iteration = 0
-
-    const start = Date.now()
-
-    while (iteration < maxIterations) {
-      const T0 = this.threejs2mathjsMatrix(this._fkineTip(tipIndex))
-      const error = robotMath.tr2delta(T0, Tf, partial)
-
-      if ((math.norm(error) as number) <= tolerance) { break }
-
-      if ((math.norm(error) as number) > 2 * (math.norm(errorPrev) as number)) {
-        console.log(`Solution diverging at step ${iteration}, try reducing alpha`)
-      }
-
-      const J = this.geometricJacobian(tipIndex, partial, jointIndices)
-      const Jm = math.matrix(J)
-      const Jt = math.transpose(Jm)
-      const dim = partial === '' ? 6 : 3
-      const C = math.multiply(math.identity(dim) as any, 1e-3)
-      const pinv = math.multiply(Jt, math.inv(math.add(math.multiply(Jm, Jt), C) as any))
-
-      const dq = math.multiply(alpha, math.multiply(pinv, error))
-      const dqArr: number[] = (dq as any).toArray ? (dq as any).toArray() : dq
-
-      for (let k = 0; k < nj; k++) {
-        const ji = jointIndices[k]
-        this.setJointValue(this._joints[ji], this._q[ji] + dqArr[k] * THREE.MathUtils.RAD2DEG)
-      }
-
-      errorPrev = error
-      iteration++
-    }
-
-    const delta = Date.now() - start
-
-    this._dae.updateMatrixWorld()
-
-    if (this.showVelocityEllipsoid) this.updateVelocityEllipsoid()
-    if (this.showForceEllipsoid) this.updateForceEllipsoid()
-
-    console.log(`Solved with ${iteration} iterations (${delta} ms).`)
   }
 }
