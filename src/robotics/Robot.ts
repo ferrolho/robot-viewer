@@ -14,7 +14,7 @@ export interface RobotKinematics {
   setJointValue(name: string, value: number): void
 }
 
-const _quadrupeds = ['anybotics_anymal_c', 'iit_hyq']
+/** Robots with multiple tip links use position-only IK (point contacts). */
 
 export class Robot {
   id = ''
@@ -347,7 +347,7 @@ export class Robot {
     const maxIterations = 50
     const tolerance = 1e-3
     const alpha = 0.2
-    const partial: Partial = _quadrupeds.indexOf(this.id) > -1 ? 'translational' : ''
+    const partial: Partial = this._tipLinks.length > 1 ? 'translational' : ''
 
     const start = Date.now()
     let totalIterations = 0
@@ -403,7 +403,7 @@ export class Robot {
     const Tf = this.threejs2mathjsMatrix(goal.matrixWorld)
     let errorPrev: any = math.ones(6)
 
-    const partial: Partial = _quadrupeds.indexOf(this.id) > -1 ? 'translational' : ''
+    const partial: Partial = this._tipLinks.length > 1 ? 'translational' : ''
     const jointIndices = this._tipJointIndices[tipIndex]
     const nj = jointIndices.length
     let iteration = 0
