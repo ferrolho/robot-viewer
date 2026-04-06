@@ -14,7 +14,11 @@ export function robotKinematicsFromURDF(urdf: URDFRobot): RobotKinematics {
   const joints: Record<string, RobotJoint> = {}
 
   for (const [name, joint] of Object.entries(urdf.joints)) {
-    const isStatic = joint.jointType === 'fixed'
+    // Mimic joints are driven automatically by urdf-loader when their
+    // parent joint is set, so treat them as static to keep them out of
+    // the controllable DOF list and random/zero configurations.
+    const isMimic = 'mimicJoint' in joint && (joint as any).mimicJoint != null
+    const isStatic = joint.jointType === 'fixed' || isMimic
     joints[name] = {
       static: isStatic,
       limits: {

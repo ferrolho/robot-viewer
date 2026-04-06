@@ -86,5 +86,5 @@ Create [`ferrolho/robot-viewer-models`](https://github.com/ferrolho/robot-viewer
 - [ ] Optional: service worker for offline model caching
 
 ### Known Issues
-- [ ] Closed-chain linkages (e.g. Robotiq parallel grippers) are not enforced — mimic joints move independently instead of closing the kinematic chain
+- [x] Closed-chain linkages (e.g. Robotiq parallel grippers) — mimic joints are now excluded from controllable DOFs and driven automatically by urdf-loader
 - [ ] IK goal is only created for the first tipLink — robots with multiple end-effectors (hands, feet) only have one IK target
