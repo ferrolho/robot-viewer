@@ -27,7 +27,7 @@ Single-page app using TypeScript (no framework), bundled with Vite.
 - `src/types.d.ts` — Type declarations for untyped dependencies
 - Three.js addons imported from `three/addons/...` (OrbitControls, TransformControls, GLTFLoader, STLExporter, ConvexGeometry)
 
-**Model hosting:** Robot models are processed and hosted in a separate repo ([ferrolho/robot-viewer-models](https://github.com/ferrolho/robot-viewer-models)) and served via jsDelivr CDN. The CDN base URL can be overridden with the `VITE_MODELS_BASE_URL` env var.
+**Model hosting:** Robot models are processed and hosted in a separate repo ([ferrolho/robot-viewer-models](https://github.com/ferrolho/robot-viewer-models)) and served via `raw.githubusercontent.com` from the `dist` branch. The base URL can be overridden with the `VITE_MODELS_BASE_URL` env var.
 
 **Output:** `dist/` is the Vite build output (gitignored). Static assets live in `public/`. Entry point is `index.html` at project root.
 

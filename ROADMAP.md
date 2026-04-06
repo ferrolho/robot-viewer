@@ -47,7 +47,7 @@ Create [`ferrolho/robot-viewer-models`](https://github.com/ferrolho/robot-viewer
 - [x] Rewrite URDF mesh paths to relative references
 - [x] Generate `manifest.json` with model metadata (id, brand, name, tipLinks, dof, etc.)
 - [x] Validate each model (URDF parses, meshes exist, DOF matches)
-- [x] Dist branch served via jsDelivr CDN (`cdn.jsdelivr.net/gh/...`)
+- [x] Dist branch served via `raw.githubusercontent.com` (switched from jsDelivr due to stale branch-cache issues)
 - [x] Initial set: 12 robots from robot_descriptions
 - [x] Xacro rendering via ROS Noetic Docker container for ABB and KUKA industrial robots
 - [x] Expanded to 81 robots from 35+ brands (ABB IRB series, KUKA KR series, Unitree, Boston Dynamics, etc.)
