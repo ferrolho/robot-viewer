@@ -40,32 +40,33 @@
 - [ ] Add Playwright E2E tests for critical flows (load model, IK drag, reachability)
 
 ### Phase 7: URDF Migration — Model Processing Pipeline (new repo)
-Create `ferrolho/robot-viewer-models` (name TBD) with a Python pipeline that:
-- [ ] Scaffold repo (scripts/, robots.yaml, pyproject.toml, CI workflow)
-- [ ] Pull URDF descriptions from upstream via `robot_descriptions` Python package
-- [ ] Decimate meshes to two LODs (low ~5k tris, medium ~25k tris) with `trimesh`
-- [ ] Convert meshes to Draco-compressed GLB via `gltf-transform`
-- [ ] Rewrite URDF mesh paths to relative GLB references
-- [ ] Generate `manifest.json` with model metadata (id, brand, name, tipLinks, dof, etc.)
-- [ ] Validate each model (URDF parses, meshes exist, DOF matches)
-- [ ] CI workflow: tag push → process models → commit to `dist` branch → jsDelivr serves via `cdn.jsdelivr.net/gh/...`
-- [ ] Initial set: UR3/5/10, KUKA iiwa/KR series, Panda, ANYmal, TALOS, TIAGo, Valkyrie, iCub, HyQ
+Create [`ferrolho/robot-viewer-models`](https://github.com/ferrolho/robot-viewer-models) with a Python pipeline that:
+- [x] Scaffold repo (scripts/, robots.yaml, pyproject.toml, CI workflow)
+- [x] Pull URDF descriptions from upstream via `robot_descriptions` Python package
+- [x] Decimate meshes to two LODs (low ~5k tris, medium ~25k tris) with `trimesh`
+- [x] Convert meshes to GLB via `trimesh` (Draco compression optional via `gltf-transform`)
+- [x] Rewrite URDF mesh paths to relative GLB references
+- [x] Generate `manifest.json` with model metadata (id, brand, name, tipLinks, dof, etc.)
+- [x] Validate each model (URDF parses, meshes exist, DOF matches)
+- [x] CI workflow: tag push → process models → commit to `dist` branch → jsDelivr serves via `cdn.jsdelivr.net/gh/...`
+- [x] Initial set: UR3/5/10, KUKA iiwa, Panda, ANYmal C, TALOS, TIAGo, Valkyrie, iCub, HyQ, NEXTAGE (12 robots)
 
 ### Phase 8: URDF Migration — Viewer (feature branch on robot-viewer)
-- [ ] Add `urdf-loader` dependency, remove `jszip`/`jszip-utils`
-- [ ] New `src/ModelLoader.ts` — fetch manifest from CDN, load URDF+GLB via `URDFLoader`+`GLTFLoader`
-- [ ] Refactor `src/Robot.ts` — replace COLLADA interfaces with loader-agnostic `RobotKinematics` interface; adapter converts URDF joints (radians) to internal convention (degrees)
-- [ ] Replace `computeKinematicsGeometry` — extract link offsets from URDF joint origins; return null for non-6-DOF (analytical IK gracefully unavailable, pseudo-inverse fallback)
-- [ ] Rewrite `src/app.ts` model loading — replace `loadModelZae` with URDF fetch; generate sidebar dynamically from manifest
-- [ ] Update `index.html` — replace hardcoded brand `<details>` with single `<div id="models-list">`
-- [ ] Update `src/types.d.ts` — add URDF/GLTF declarations, remove COLLADA/JSZip
+- [x] Add `urdf-loader` dependency, remove `jszip`/`jszip-utils`
+- [x] New `src/ModelLoader.ts` — fetch manifest from CDN, load URDF+GLB via `URDFLoader`+`GLTFLoader`
+- [x] Refactor `src/Robot.ts` — replace COLLADA interfaces with loader-agnostic `RobotKinematics` interface; adapter converts URDF joints (radians) to internal convention (degrees)
+- [x] Remove `computeKinematicsGeometry` — analytical IK disabled for now; pseudo-inverse is the default
+- [x] Rewrite `src/app.ts` model loading — replace `loadModelZae` with URDF fetch; generate sidebar dynamically from manifest
+- [x] Update `index.html` — replace hardcoded brand `<details>` with single `<div id="models-list">`
+- [x] Update `src/types.d.ts` — add URDF/GLTF declarations, remove COLLADA/JSZip
+- [x] Fix Z-up (ROS) to Y-up (Three.js) coordinate conversion
 
 ### Phase 9: URDF Migration — Cleanup
-- [ ] Remove `collada-robots-collection` submodule
-- [ ] Update `.github/workflows/deploy.yml` — remove submodule checkout and asset copy (deploy drops from ~84 MB to <1 MB)
-- [ ] Remove dead dependencies (`jszip`, `jszip-utils`)
-- [ ] Delete `src/ColladaRobotsList.ts`
-- [ ] Update `CLAUDE.md` and `README.md`
+- [x] Remove `collada-robots-collection` submodule
+- [x] Update `.github/workflows/deploy.yml` — remove submodule checkout and asset copy (deploy drops from ~84 MB to <1 MB)
+- [x] Remove dead dependencies (`jszip`, `jszip-utils`)
+- [x] Delete `src/ColladaRobotsList.ts`
+- [x] Update `CLAUDE.md`
 - [ ] Archive `ferrolho/collada-robots-collection` on GitHub (read-only, not deleted)
 
 ### Phase 10: Expand and Enhance
