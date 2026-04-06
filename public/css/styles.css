@@ -239,6 +239,10 @@ body.sidebar-right-collapsed #sidebar-right {
   display: none;
 }
 
+body.sidebar-right-collapsed #settings-toggle {
+  display: flex;
+}
+
 body.sidebar-left-collapsed.sidebar-right-collapsed #app {
   grid-template-columns: 1fr;
 }
@@ -654,8 +658,27 @@ body.sidebar-left-collapsed.sidebar-right-collapsed #app {
   transition: background 0.15s;
 }
 
-#menu-toggle:hover {
+#menu-toggle:hover,
+#settings-toggle:hover {
   background: var(--bg-hover);
+}
+
+#settings-toggle {
+  display: none;
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 15;
+  width: 40px;
+  height: 40px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-panel);
+  color: var(--text);
+  cursor: pointer;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s;
 }
 
 @media (max-width: 768px) {

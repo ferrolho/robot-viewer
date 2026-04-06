@@ -151,6 +151,10 @@ sidebarRightCollapse.addEventListener('click', () => {
   document.body.classList.toggle('sidebar-right-collapsed')
 })
 
+$('settings-toggle').addEventListener('click', () => {
+  document.body.classList.remove('sidebar-right-collapsed')
+})
+
 function hideSidebar() {
   sidebarLeft.classList.remove('open')
   sidebarOverlay.classList.remove('visible')
