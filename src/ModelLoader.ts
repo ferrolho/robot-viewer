@@ -1,7 +1,5 @@
 import URDFLoader from 'urdf-loader'
 import type { URDFRobot } from 'urdf-loader'
-import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
-import { LoadingManager, Object3D } from 'three'
 
 export interface ManifestModel {
   id: string
@@ -9,10 +7,9 @@ export interface ManifestModel {
   name: string
   tipLinks: string[]
   category: string
-  lods: string[]
   dof: number
   upstream: string
-  urdfs: Record<string, string>
+  urdf: string
   reach?: number
   weight?: number
   payload?: number
@@ -26,7 +23,7 @@ interface Manifest {
   models: ManifestModel[]
 }
 
-const DEFAULT_BASE_URL = 'https://cdn.jsdelivr.net/gh/ferrolho/robot-viewer-models@v0.1.0/'
+const DEFAULT_BASE_URL = 'https://cdn.jsdelivr.net/gh/ferrolho/robot-viewer-models@v0.2.0/'
 
 export class ModelLoader {
   private baseUrl: string
@@ -53,34 +50,21 @@ export class ModelLoader {
     return this.manifest?.models.find(m => m.id === id)
   }
 
-  async loadRobot(modelId: string, lod = 'medium'): Promise<URDFRobot> {
+  async loadRobot(modelId: string): Promise<URDFRobot> {
     const manifest = await this.fetchManifest()
     const model = manifest.models.find(m => m.id === modelId)
     if (!model) throw new Error(`Model not found: ${modelId}`)
 
-    const urdfRelPath = model.urdfs[lod] ?? model.urdfs[model.lods[0]]
-    const urdfUrl = `${this.baseUrl}${urdfRelPath}`
+    const urdfUrl = `${this.baseUrl}${model.urdf}`
 
-    // Create a fresh LoadingManager per load to track mesh completion
-    const manager = new LoadingManager()
-    const gltfLoader = new GLTFLoader(manager)
-
-    const urdfLoader = new URDFLoader(manager)
+    const urdfLoader = new URDFLoader()
     urdfLoader.parseVisual = true
     urdfLoader.parseCollision = false
 
     // Our rewritten URDFs use relative paths (no package:// prefix)
     urdfLoader.packages = ''
 
-    urdfLoader.loadMeshCb = (url: string, _manager: LoadingManager, onComplete: (obj: Object3D, err?: Error) => void) => {
-      gltfLoader.load(
-        url,
-        (gltf) => onComplete(gltf.scene),
-        undefined,
-        (err) => onComplete(new Object3D(), err as Error),
-      )
-    }
-
+    // Use the default mesh loader — it handles STL and DAE natively
     return urdfLoader.loadAsync(urdfUrl) as Promise<URDFRobot>
   }
 }

@@ -509,7 +509,7 @@ setupModelsList()
 
 const modelsInScene: THREE.Object3D[] = []
 
-async function loadModel (modelId: string, lod = 'medium') {
+async function loadModel (modelId: string) {
   console.log(`Loading ${modelId}...`)
 
   document.querySelectorAll('#models-list li').forEach(el => el.classList.remove('active'))
@@ -519,13 +519,7 @@ async function loadModel (modelId: string, lod = 'medium') {
   loaderModal.showModal()
 
   try {
-    const urdfRobot = await modelLoader.loadRobot(modelId, lod)
-
-    urdfRobot.traverse(function (child) {
-      if (child instanceof THREE.Mesh) {
-        ;(child.material as THREE.MeshStandardMaterial).flatShading = true
-      }
-    })
+    const urdfRobot = await modelLoader.loadRobot(modelId)
 
     // URDF uses Z-up (ROS convention), Three.js uses Y-up
     urdfRobot.rotation.x = -Math.PI / 2
