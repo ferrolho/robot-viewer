@@ -23,8 +23,8 @@ declare module 'three/addons/geometries/ConvexGeometry.js' {
   export { ConvexGeometry } from 'three/examples/jsm/geometries/ConvexGeometry.js'
 }
 
-declare module 'three/addons/loaders/ColladaLoader.js' {
-  export { ColladaLoader } from 'three/examples/jsm/loaders/ColladaLoader.js'
+declare module 'three/addons/loaders/GLTFLoader.js' {
+  export { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 }
 
 declare module 'three/addons/lines/LineSegments2.js' {
@@ -50,9 +50,6 @@ declare module 'kinematics' {
   }
 }
 
-declare module 'jszip-utils' {
-  export function getBinaryContent(path: string, callback: (err: Error | null, data: ArrayBuffer) => void): void
-}
 
 declare module 'stats.js' {
   export default class Stats {

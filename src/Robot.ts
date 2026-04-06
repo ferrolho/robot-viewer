@@ -6,38 +6,15 @@ import Kinematics from 'kinematics'
 import { math } from './math_.ts'
 import * as THREE from 'three'
 
-interface ColladaJoint {
+export interface RobotJoint {
   static: boolean
   limits: { min: number; max: number }
   axis: THREE.Vector3
 }
 
-interface ColladaKinematics {
-  joints: Record<string, ColladaJoint>
+export interface RobotKinematics {
+  joints: Record<string, RobotJoint>
   setJointValue(name: string, value: number): void
-}
-
-export interface ColladaResult {
-  scene: THREE.Group
-  kinematics: ColladaKinematics
-  library: {
-    kinematicsModels: Record<string, KinematicsTree>
-    physicsModels: Record<string, unknown>
-  }
-}
-
-interface KinematicsTree {
-  links: Array<{
-    attachments: KinematicsAttachment[]
-  }>
-}
-
-interface KinematicsAttachment {
-  joint: string
-  transforms: Array<{ obj: THREE.Vector3 }>
-  links: Array<{
-    attachments: KinematicsAttachment[]
-  }>
 }
 
 interface GAIndividual {
@@ -45,7 +22,7 @@ interface GAIndividual {
   q: number[]
 }
 
-const _quadrupeds = ['anybotics_anymal', 'iit_hyq']
+const _quadrupeds = ['anybotics_anymal_c', 'iit_hyq']
 
 export class Robot {
   id = ''
@@ -55,9 +32,8 @@ export class Robot {
   robotKinInitialized = false
 
   private _scene: THREE.Scene
-  private _dae: THREE.Group
-  private _kinematics: ColladaKinematics
-  private _physics: unknown
+  private _dae: THREE.Object3D
+  private _kinematics: RobotKinematics
   private _tipLinks: string[]
   private _degreesOfFreedom: number
   _joints: string[]
@@ -66,11 +42,10 @@ export class Robot {
   private _motionKeypoints: number[][] = []
   private _verbose = false
 
-  constructor(scene: THREE.Scene, dae: THREE.Group, collada: ColladaResult, tipLinks: string[]) {
+  constructor(scene: THREE.Scene, sceneRoot: THREE.Object3D, kinematics: RobotKinematics, tipLinks: string[], kinematicsGeometry?: number[][]) {
     this._scene = scene
-    this._dae = dae
-    this._kinematics = collada.kinematics
-    this._physics = collada.library.physicsModels.pmodel0
+    this._dae = sceneRoot
+    this._kinematics = kinematics
     this._tipLinks = tipLinks
 
     this._degreesOfFreedom = 0
@@ -85,8 +60,7 @@ export class Robot {
       }
     }
 
-    this._kinematicsGeometry = []
-    this.computeKinematicsGeometry(collada.library.kinematicsModels.kmodel0)
+    this._kinematicsGeometry = kinematicsGeometry ?? []
 
     this._q = this.zeroConfiguration
 
@@ -180,24 +154,6 @@ export class Robot {
     this._motionKeypoints.push(this.configuration)
   }
 
-  computeKinematicsGeometry(tree: KinematicsTree | undefined): void {
-    if (tree) {
-      for (const attachment of tree.links[0].attachments) {
-        if (this._joints.slice(1).includes(attachment.joint)) {
-          const v = attachment.transforms[0].obj
-
-          if (this._kinematicsGeometry.length < 4) {
-            this._kinematicsGeometry.push([v.x, v.z, v.y])
-          } else {
-            this._kinematicsGeometry.push([0.0, v.x + v.y + v.z, 0.0])
-            return
-          }
-        }
-
-        this.computeKinematicsGeometry(attachment as unknown as KinematicsTree)
-      }
-    }
-  }
 
   debugKinematicsGeometry(_scene: THREE.Scene): void {
     const material = new THREE.MeshLambertMaterial({ color: 0xff0000 })
@@ -598,5 +554,40 @@ export class Robot {
         generation = newGeneration
       }
     }
+  }
+}
+
+// ── URDF Adapter ──
+
+import type { URDFRobot } from 'urdf-loader'
+
+/**
+ * Adapt a URDFRobot (from urdf-loader) to the RobotKinematics interface.
+ *
+ * Key convention: Robot internally stores joint values in degrees.
+ * COLLADA's setJointValue accepted degrees. URDF's setJointValue expects radians.
+ * This adapter converts degrees → radians on setJointValue, and
+ * reports limits in degrees for consistency with the rest of the codebase.
+ */
+export function robotKinematicsFromURDF(urdf: URDFRobot): RobotKinematics {
+  const joints: Record<string, RobotJoint> = {}
+
+  for (const [name, joint] of Object.entries(urdf.joints)) {
+    const isStatic = joint.jointType === 'fixed'
+    joints[name] = {
+      static: isStatic,
+      limits: {
+        min: joint.limit.lower * THREE.MathUtils.RAD2DEG,
+        max: joint.limit.upper * THREE.MathUtils.RAD2DEG,
+      },
+      axis: joint.axis.clone(),
+    }
+  }
+
+  return {
+    joints,
+    setJointValue(name: string, valueDeg: number): void {
+      urdf.setJointValue(name, valueDeg * THREE.MathUtils.DEG2RAD)
+    },
   }
 }
