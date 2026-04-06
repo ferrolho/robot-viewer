@@ -81,7 +81,7 @@ Create [`ferrolho/robot-viewer-models`](https://github.com/ferrolho/robot-viewer
 - [x] Stats.js positioned inside 3D viewport (not overlapping sidebars)
 - [ ] GLB conversion with material preservation (Blender headless or assimp) for smaller downloads and multi-LOD support
 - [ ] LOD switching UI (auto: low on mobile, medium on desktop)
-- [ ] Sidebar search and category filtering for large catalog
+- [x] Sidebar search and category filtering for large catalog
 - [ ] Thumbnail generation for model list
 - [ ] Optional: service worker for offline model caching
 
