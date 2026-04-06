@@ -415,7 +415,7 @@ function showBrandGrid () {
     tile.addEventListener('click', () => showBrandRobots(brand))
 
     const img = document.createElement('img')
-    img.src = `/images/logos/${brandSlug}.png`
+    img.src = `${(import.meta as any).env.BASE_URL}images/logos/${brandSlug}.png`
     img.alt = brand
     img.onerror = () => {
       img.remove()
@@ -455,7 +455,7 @@ function showBrandRobots (brand: string) {
   back.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>`
 
   const backImg = document.createElement('img')
-  backImg.src = `/images/logos/${brandSlug}.png`
+  backImg.src = `${(import.meta as any).env.BASE_URL}images/logos/${brandSlug}.png`
   backImg.alt = brand
   backImg.onerror = () => backImg.remove()
   back.appendChild(backImg)
