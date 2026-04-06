@@ -35,6 +35,7 @@ export class Robot {
   private _dae: THREE.Object3D
   private _kinematics: RobotKinematics
   private _tipLinks: string[]
+  private _tipJointIndices: number[][] = []
   private _degreesOfFreedom: number
   _joints: string[]
   private _q: number[]
@@ -64,7 +65,26 @@ export class Robot {
 
     this._q = this.zeroConfiguration
 
+    this._tipJointIndices = this._computeTipJointIndices()
+
     this.printJointNames()
+  }
+
+  private _computeTipJointIndices(): number[][] {
+    const jointSet = new Set(this._joints)
+    return this._tipLinks.map(tipName => {
+      const ancestors = new Set<string>()
+      let obj: THREE.Object3D | null = this._dae.getObjectByName(tipName) ?? null
+      while (obj && obj !== this._dae) {
+        if (jointSet.has(obj.name)) ancestors.add(obj.name)
+        obj = obj.parent
+      }
+      const indices: number[] = []
+      for (let i = 0; i < this._joints.length; i++) {
+        if (ancestors.has(this._joints[i])) indices.push(i)
+      }
+      return indices
+    })
   }
 
   plotEllipsoid(A: any, name: string): void {
@@ -313,9 +333,70 @@ export class Robot {
     }
   }
 
+  /** Read a tip link's world matrix using chain-only update (no full scene traversal). */
+  private _fkineTip(tipIndex: number): THREE.Matrix4 {
+    const tipObj = this._dae.getObjectByName(this._tipLinks[tipIndex])!
+    tipObj.updateWorldMatrix(true, false)
+    return tipObj.matrixWorld
+  }
+
+  /** Numerical Jacobian for a single tip, perturbing only its relevant joints. */
+  private _jacobFast(tipIndex: number, jointIndices: number[], partial: Partial): number[][] {
+    const dq = 1e-6 / 2
+    const dqDeg = dq * THREE.MathUtils.RAD2DEG
+    const nCols = jointIndices.length
+    const nRows = partial === 'translational' ? 3 : (partial === 'rotational' ? 3 : 6)
+
+    // Pre-allocate column-major result
+    const cols: number[][] = new Array(nCols)
+
+    for (let ci = 0; ci < nCols; ci++) {
+      const ji = jointIndices[ci]
+      const name = this._joints[ji]
+      const orig = this._q[ji]
+
+      // +dq
+      this.setJointValue(name, orig + dqDeg)
+      const tpMat = this._fkineTip(tipIndex)
+      const tp = this.threejs2mathjsMatrix(tpMat)
+
+      // -dq
+      this.setJointValue(name, orig - dqDeg)
+      const t0Mat = this._fkineTip(tipIndex)
+      const t0 = this.threejs2mathjsMatrix(t0Mat)
+
+      // restore
+      this.setJointValue(name, orig)
+
+      const dtdq = math.divide(math.subtract(tp, t0), dq)
+
+      if (partial === 'translational') {
+        cols[ci] = math.flatten(math.subset(dtdq, math.index(math.range(0, 3), 3)) as any).toArray() as number[]
+      } else if (partial === 'rotational') {
+        const drdq = math.subset(dtdq, math.index(math.range(0, 3), math.range(0, 3)))
+        const r0 = math.subset(t0, math.index(math.range(0, 3), math.range(0, 3)))
+        cols[ci] = math_.vex(math.multiply(drdq, math.transpose(r0 as any))) as number[]
+      } else {
+        const v = math.flatten(math.subset(dtdq, math.index(math.range(0, 3), 3)) as any).toArray() as number[]
+        const drdq = math.subset(dtdq, math.index(math.range(0, 3), math.range(0, 3)))
+        const r0 = math.subset(t0, math.index(math.range(0, 3), math.range(0, 3)))
+        const w = math_.vex(math.multiply(drdq, math.transpose(r0 as any))) as number[]
+        cols[ci] = v.concat(w)
+      }
+    }
+
+    // Build nRows × nCols matrix
+    const rows: number[][] = []
+    for (let r = 0; r < nRows; r++) {
+      const row: number[] = new Array(nCols)
+      for (let c = 0; c < nCols; c++) row[c] = cols[c][r]
+      rows.push(row)
+    }
+    return rows
+  }
+
   moveTipsToPoses(goals: THREE.Object3D[], solverType: IkSolverType = IkSolverEnum.PSEUDO_INVERSE): void {
     if (solverType !== IkSolverEnum.PSEUDO_INVERSE) {
-      // Fallback: solve for first tip only
       this.moveTipToPose(goals[0], solverType, 0)
       return
     }
@@ -323,59 +404,52 @@ export class Robot {
     const maxIterations = 50
     const tolerance = 1e-3
     const alpha = 0.2
-
     const partial: Partial = _quadrupeds.indexOf(this.id) > -1 ? 'translational' : ''
-    const errorDim = partial === 'translational' ? 3 : 6
 
-    let q = this.configuration
-    let iteration = 0
     const start = Date.now()
+    let totalIterations = 0
 
-    while (iteration < maxIterations) {
-      // Stack errors and Jacobians for all targets
-      let stackedError: number[] = []
-      const jacobianRows: any[] = []
+    // Solve each tip independently against only its relevant joints
+    for (let ti = 0; ti < goals.length; ti++) {
+      const jointIndices = this._tipJointIndices[ti]
+      if (jointIndices.length === 0) continue
 
-      for (let i = 0; i < goals.length; i++) {
-        const Tf = this.threejs2mathjsMatrix(goals[i].matrixWorld)
-        const error = math_.tr2delta(this.fkine(q, i), Tf, partial)
-        const errorArr = Array.isArray(error) ? error : error.toArray ? error.toArray() : error
-        stackedError = stackedError.concat(errorArr)
+      const Tf = this.threejs2mathjsMatrix(goals[ti].matrixWorld)
+      const nj = jointIndices.length
 
-        const J = this.jacob(q, partial, i)
-        // J is errorDim x nJoints — extract rows
-        for (let r = 0; r < errorDim; r++) {
-          const row: number[] = []
-          for (let c = 0; c < this._joints.length; c++) {
-            row.push(math.subset(J, math.index(r, c)))
-          }
-          jacobianRows.push(row)
+      for (let iteration = 0; iteration < maxIterations; iteration++) {
+        const T0 = this.threejs2mathjsMatrix(this._fkineTip(ti))
+        const error = math_.tr2delta(T0, Tf, partial)
+
+        if ((math.norm(error) as number) <= tolerance) break
+
+        const J = this._jacobFast(ti, jointIndices, partial)
+        const Jm = math.matrix(J)
+        const Jt = math.transpose(Jm)
+        const dim = partial === '' ? 6 : 3
+        const C = math.multiply(math.identity(dim) as any, 1e-3)
+        const pinv = math.multiply(Jt, math.inv(math.add(math.multiply(Jm, Jt), C) as any))
+
+        const dq = math.multiply(alpha, math.multiply(pinv, error))
+        const dqArr: number[] = (dq as any).toArray ? (dq as any).toArray() : dq
+
+        for (let k = 0; k < nj; k++) {
+          const ji = jointIndices[k]
+          this.setJointValue(this._joints[ji], this._q[ji] + dqArr[k] * THREE.MathUtils.RAD2DEG)
         }
+
+        totalIterations++
       }
-
-      if ((math.norm(stackedError) as number) <= tolerance) { break }
-
-      const nRows = goals.length * errorDim
-      const Js = math.matrix(jacobianRows)
-      const Jst = math.transpose(Js)
-      const C = math.multiply(math.identity(nRows) as any, 1e-3)
-      const W = math.identity(q.length) as any
-      const Winv = math.inv(W)
-      const pinv = math.multiply(Winv, math.multiply(Jst, math.inv(math.add(math.multiply(Js, math.multiply(Winv, Jst)), C) as any)))
-
-      const dq = math.multiply(alpha, math.multiply(pinv, stackedError))
-      q = (math.add(q, math.multiply(dq, THREE.MathUtils.RAD2DEG)) as any).toArray() as number[]
-
-      iteration++
     }
 
-    const delta = Date.now() - start
-    this.configuration = q
+    // Sync _dae scene graph once at the end
+    this._dae.updateMatrixWorld()
 
     if (this.showVelocityEllipsoid) this.updateVelocityEllipsoid()
     if (this.showForceEllipsoid) this.updateForceEllipsoid()
 
-    console.log(`Multi-target IK: ${iteration} iterations (${delta} ms).`)
+    const delta = Date.now() - start
+    console.log(`Multi-target IK: ${totalIterations} iterations (${delta} ms).`)
   }
 
   moveTipToPoseWithPseudoInverse(goal: THREE.Object3D, tipIndex = 0): void {
