@@ -417,17 +417,52 @@ function animate (time: number) {
 // ── Model list ──
 
 const modelsListContainer = document.getElementById('models-list')!
+const searchInput = document.getElementById('model-search') as HTMLInputElement
+const categoryChipsContainer = document.getElementById('category-chips')!
 let brandMap = new Map<string, ManifestModel[]>()
+let allModels: ManifestModel[] = []
+let activeCategory: string | null = null
+
+function getFilteredModels (): ManifestModel[] {
+  const query = searchInput.value.trim().toLowerCase()
+  return allModels.filter(m => {
+    if (activeCategory && m.category !== activeCategory) return false
+    if (query && !m.name.toLowerCase().includes(query) && !m.brand.toLowerCase().includes(query) && !m.id.toLowerCase().includes(query)) return false
+    return true
+  })
+}
+
+function buildBrandMap (models: ManifestModel[]): Map<string, ManifestModel[]> {
+  const map = new Map<string, ManifestModel[]>()
+  for (const model of models) {
+    const list = map.get(model.brand) ?? []
+    list.push(model)
+    map.set(model.brand, list)
+  }
+  return map
+}
+
+function isFiltering (): boolean {
+  return activeCategory !== null || searchInput.value.trim() !== ''
+}
 
 function showBrandGrid () {
-  const sortedBrands = [...brandMap.keys()].sort()
+  const filtered = getFilteredModels()
+  const currentBrandMap = buildBrandMap(filtered)
+  const sortedBrands = [...currentBrandMap.keys()].sort()
+
+  // If filtering, show flat list instead of brand grid
+  if (isFiltering()) {
+    showFlatResults(filtered)
+    return
+  }
 
   const grid = document.createElement('div')
   grid.className = 'brand-grid models-view'
 
   for (const brand of sortedBrands) {
     const brandSlug = brand.replace(/\s+/g, '-').toLowerCase()
-    const count = brandMap.get(brand)!.length
+    const count = currentBrandMap.get(brand)!.length
 
     const tile = document.createElement('button')
     tile.className = 'brand-tile'
@@ -459,6 +494,36 @@ function showBrandGrid () {
 
   modelsListContainer.innerHTML = ''
   modelsListContainer.appendChild(grid)
+}
+
+function showFlatResults (models: ManifestModel[]) {
+  const view = document.createElement('div')
+  view.className = 'models-view'
+
+  const countLabel = document.createElement('div')
+  countLabel.className = 'filter-count'
+  countLabel.textContent = `${models.length} result${models.length !== 1 ? 's' : ''}`
+  view.appendChild(countLabel)
+
+  const ul = document.createElement('ul')
+  ul.className = 'model-list'
+  for (const model of models) {
+    const li = document.createElement('li')
+    li.id = model.id
+    const a = document.createElement('a')
+    a.href = '#!'
+    a.innerHTML = `<span class="result-name">${model.name}</span><span class="result-brand">${model.brand}</span>`
+    a.addEventListener('click', () => {
+      loadModel(model.id)
+      hideSidebar()
+    })
+    li.appendChild(a)
+    ul.appendChild(li)
+  }
+  view.appendChild(ul)
+
+  modelsListContainer.innerHTML = ''
+  modelsListContainer.appendChild(view)
 }
 
 function showBrandRobots (brand: string) {
@@ -509,16 +574,51 @@ function showBrandRobots (brand: string) {
   modelsListContainer.appendChild(view)
 }
 
+const CATEGORY_LABELS: Record<string, string> = {
+  arm: 'Arm',
+  dual_arm: 'Dual Arm',
+  hand: 'Hand',
+  quadruped: 'Quadruped',
+  biped: 'Biped',
+  humanoid: 'Humanoid',
+  mobile: 'Mobile',
+  wheeled: 'Wheeled',
+  drone: 'Drone',
+}
+
+function setupCategoryChips () {
+  const categories = [...new Set(allModels.map(m => m.category))].sort()
+  categoryChipsContainer.innerHTML = ''
+  for (const cat of categories) {
+    const chip = document.createElement('button')
+    chip.className = 'category-chip'
+    chip.textContent = CATEGORY_LABELS[cat] ?? cat
+    chip.addEventListener('click', () => {
+      activeCategory = activeCategory === cat ? null : cat
+      updateChipStates()
+      showBrandGrid()
+    })
+    chip.dataset.category = cat
+    categoryChipsContainer.appendChild(chip)
+  }
+}
+
+function updateChipStates () {
+  categoryChipsContainer.querySelectorAll('.category-chip').forEach(el => {
+    const chip = el as HTMLElement
+    chip.classList.toggle('active', chip.dataset.category === activeCategory)
+  })
+}
+
+searchInput.addEventListener('input', () => showBrandGrid())
+
 async function setupModelsList () {
   const manifest = await modelLoader.fetchManifest()
 
-  brandMap = new Map<string, ManifestModel[]>()
-  for (const model of manifest.models) {
-    const list = brandMap.get(model.brand) ?? []
-    list.push(model)
-    brandMap.set(model.brand, list)
-  }
+  allModels = manifest.models
+  brandMap = buildBrandMap(allModels)
 
+  setupCategoryChips()
   showBrandGrid()
 }
 
