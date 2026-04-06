@@ -1,8 +1,5 @@
-import { IkSolverEnum, type IkSolverType } from './IkSolver.ts'
 import * as math_ from './math_.ts'
 import { type Partial } from './math_.ts'
-
-import Kinematics from 'kinematics'
 import { math } from './math_.ts'
 import * as THREE from 'three'
 
@@ -17,19 +14,12 @@ export interface RobotKinematics {
   setJointValue(name: string, value: number): void
 }
 
-interface GAIndividual {
-  fitness: number | undefined
-  q: number[]
-}
-
 const _quadrupeds = ['anybotics_anymal_c', 'iit_hyq']
 
 export class Robot {
   id = ''
   showVelocityEllipsoid = false
   showForceEllipsoid = false
-  robotKin: Kinematics | null = null
-  robotKinInitialized = false
 
   private _scene: THREE.Scene
   private _dae: THREE.Object3D
@@ -39,11 +29,9 @@ export class Robot {
   private _degreesOfFreedom: number
   _joints: string[]
   private _q: number[]
-  private _kinematicsGeometry: number[][]
   private _motionKeypoints: number[][] = []
-  private _verbose = false
 
-  constructor(scene: THREE.Scene, sceneRoot: THREE.Object3D, kinematics: RobotKinematics, tipLinks: string[], kinematicsGeometry?: number[][]) {
+  constructor(scene: THREE.Scene, sceneRoot: THREE.Object3D, kinematics: RobotKinematics, tipLinks: string[]) {
     this._scene = scene
     this._dae = sceneRoot
     this._kinematics = kinematics
@@ -61,10 +49,7 @@ export class Robot {
       }
     }
 
-    this._kinematicsGeometry = kinematicsGeometry ?? []
-
     this._q = this.zeroConfiguration
-
     this._tipJointIndices = this._computeTipJointIndices()
 
     this.printJointNames()
@@ -129,7 +114,7 @@ export class Robot {
   }
 
   updateAccelerationEllipsoid(): void {
-    const J = this.jacob(this.configuration)
+    const J = this.geometricJacobian()
     const Jt = math.transpose(J)
 
     const M = this.computeInertia()
@@ -142,7 +127,7 @@ export class Robot {
   }
 
   updateForceEllipsoid(): void {
-    const J = this.jacob(this.configuration, 'translational')
+    const J = this.geometricJacobian(0, 'translational')
     const Jt = math.transpose(J)
     const A = math.inv(math.multiply(J, Jt) as any)
 
@@ -150,7 +135,7 @@ export class Robot {
   }
 
   updateVelocityEllipsoid(): void {
-    const J = this.jacob(this.configuration, 'translational')
+    const J = this.geometricJacobian(0, 'translational')
     const Jt = math.transpose(J)
     const A = math.multiply(J, Jt)
 
@@ -172,30 +157,6 @@ export class Robot {
 
   saveMotionKeypoint(): void {
     this._motionKeypoints.push(this.configuration)
-  }
-
-
-  debugKinematicsGeometry(_scene: THREE.Scene): void {
-    const material = new THREE.MeshLambertMaterial({ color: 0xff0000 })
-    const sphereGeometry = new THREE.SphereGeometry(0.01)
-
-    const points: THREE.Vector3[] = [new THREE.Vector3()]
-
-    for (const point of this._kinematicsGeometry) {
-      const newPoint = new THREE.Vector3(point[0], point[1], point[2])
-      newPoint.add(points[points.length - 1])
-      points.push(newPoint)
-    }
-
-    for (const point of points) {
-      const sphere = new THREE.Mesh(sphereGeometry, material)
-      sphere.position.set(point.x, point.y, point.z)
-      this._scene.add(sphere)
-    }
-
-    const linegeometry = new THREE.BufferGeometry().setFromPoints(points)
-    const line = new THREE.Line(linegeometry, material)
-    this._scene.add(line)
   }
 
   printJointNames(): void {
@@ -238,6 +199,13 @@ export class Robot {
     this._dae.updateMatrixWorld()
 
     return T
+  }
+
+  /** Read a tip link's world matrix using chain-only update (no full scene traversal). */
+  private _fkineTip(tipIndex: number): THREE.Matrix4 {
+    const tipObj = this._dae.getObjectByName(this._tipLinks[tipIndex])!
+    tipObj.updateWorldMatrix(true, false)
+    return tipObj.matrixWorld
   }
 
   updateShadowsState(castShadows: boolean): void {
@@ -300,107 +268,82 @@ export class Robot {
     }
   }
 
-  calculateFitness(goal: THREE.Object3D): number {
-    const position = new THREE.Vector3()
-    const quaternion = new THREE.Quaternion()
-    const scale = new THREE.Vector3()
+  // ── Jacobian ──
 
-    this.getLinkPose(this.tipLinks[0]).decompose(position, quaternion, scale)
-
-    const euler = new THREE.Euler()
-    euler.setFromQuaternion(quaternion)
-
-    const positionDistance = position.distanceToSquared(goal.position)
-    const goalRot = new THREE.Vector3(goal.rotation.x, goal.rotation.y, goal.rotation.z)
-    const eulerVec = new THREE.Vector3(euler.x, euler.y, euler.z)
-    const orientationDistance = goalRot.distanceToSquared(eulerVec)
-
-    return 1 / (positionDistance + orientationDistance)
-  }
-
-  moveTipToPose(goal: THREE.Object3D, solverType: IkSolverType = IkSolverEnum.IK, tipIndex = 0): void {
-    switch (solverType) {
-      case IkSolverEnum.IK:
-        this.moveTipToPoseWithIK(goal)
-        break
-      case IkSolverEnum.GENETIC_ALGORITHM:
-        console.log('Using GENETIC_ALGORITHM')
-        this.moveTipToPoseWithGeneticAlgorithm(goal)
-        break
-      case IkSolverEnum.PSEUDO_INVERSE:
-        this.moveTipToPoseWithPseudoInverse(goal, tipIndex)
-        break
+  /**
+   * Analytical geometric Jacobian for a single tip link.
+   *
+   * For each revolute joint i in the kinematic chain to the tip:
+   *   J_linear[i]  = z_i × (p_ee − p_i)
+   *   J_angular[i] = z_i
+   *
+   * where z_i is the joint axis in world frame and p_i, p_ee are world positions.
+   * This is O(n) cross products after one chain-only FK pass — no finite differences.
+   */
+  geometricJacobian(tipIndex = 0, partial: Partial = '', jointIndices?: number[]): number[][] {
+    const indices = jointIndices ?? this._tipJointIndices[tipIndex]
+    if (indices.length === 0 && !jointIndices) {
+      // Fallback: use all joints (e.g. for serial manipulators with a single tip)
+      const all: number[] = []
+      for (let i = 0; i < this._joints.length; i++) all.push(i)
+      return this.geometricJacobian(tipIndex, partial, all)
     }
-  }
 
-  /** Read a tip link's world matrix using chain-only update (no full scene traversal). */
-  private _fkineTip(tipIndex: number): THREE.Matrix4 {
+    const nCols = indices.length
     const tipObj = this._dae.getObjectByName(this._tipLinks[tipIndex])!
     tipObj.updateWorldMatrix(true, false)
-    return tipObj.matrixWorld
-  }
 
-  /** Numerical Jacobian for a single tip, perturbing only its relevant joints. */
-  private _jacobFast(tipIndex: number, jointIndices: number[], partial: Partial): number[][] {
-    const dq = 1e-6 / 2
-    const dqDeg = dq * THREE.MathUtils.RAD2DEG
-    const nCols = jointIndices.length
-    const nRows = partial === 'translational' ? 3 : (partial === 'rotational' ? 3 : 6)
+    const pEe = new THREE.Vector3().setFromMatrixPosition(tipObj.matrixWorld)
 
-    // Pre-allocate column-major result
     const cols: number[][] = new Array(nCols)
+    const _z = new THREE.Vector3()
+    const _p = new THREE.Vector3()
+    const _d = new THREE.Vector3()
+    const _rot = new THREE.Matrix3()
 
     for (let ci = 0; ci < nCols; ci++) {
-      const ji = jointIndices[ci]
-      const name = this._joints[ji]
-      const orig = this._q[ji]
+      const ji = indices[ci]
+      const jointName = this._joints[ji]
+      const jointObj = this._dae.getObjectByName(jointName)!
+      // Joint axis is defined in the joint's local frame — transform to world
+      const localAxis = this._kinematics.joints[jointName].axis
+      _rot.setFromMatrix4(jointObj.matrixWorld)
+      _z.copy(localAxis).applyMatrix3(_rot).normalize()
+      _p.setFromMatrixPosition(jointObj.matrixWorld)
 
-      // +dq
-      this.setJointValue(name, orig + dqDeg)
-      const tpMat = this._fkineTip(tipIndex)
-      const tp = this.threejs2mathjsMatrix(tpMat)
-
-      // -dq
-      this.setJointValue(name, orig - dqDeg)
-      const t0Mat = this._fkineTip(tipIndex)
-      const t0 = this.threejs2mathjsMatrix(t0Mat)
-
-      // restore
-      this.setJointValue(name, orig)
-
-      const dtdq = math.divide(math.subtract(tp, t0), dq)
+      // z_i × (p_ee − p_i)
+      _d.subVectors(pEe, _p)
+      const dx = _z.y * _d.z - _z.z * _d.y
+      const dy = _z.z * _d.x - _z.x * _d.z
+      const dz = _z.x * _d.y - _z.y * _d.x
 
       if (partial === 'translational') {
-        cols[ci] = math.flatten(math.subset(dtdq, math.index(math.range(0, 3), 3)) as any).toArray() as number[]
+        cols[ci] = [dx, dy, dz]
       } else if (partial === 'rotational') {
-        const drdq = math.subset(dtdq, math.index(math.range(0, 3), math.range(0, 3)))
-        const r0 = math.subset(t0, math.index(math.range(0, 3), math.range(0, 3)))
-        cols[ci] = math_.vex(math.multiply(drdq, math.transpose(r0 as any))) as number[]
+        cols[ci] = [_z.x, _z.y, _z.z]
       } else {
-        const v = math.flatten(math.subset(dtdq, math.index(math.range(0, 3), 3)) as any).toArray() as number[]
-        const drdq = math.subset(dtdq, math.index(math.range(0, 3), math.range(0, 3)))
-        const r0 = math.subset(t0, math.index(math.range(0, 3), math.range(0, 3)))
-        const w = math_.vex(math.multiply(drdq, math.transpose(r0 as any))) as number[]
-        cols[ci] = v.concat(w)
+        cols[ci] = [dx, dy, dz, _z.x, _z.y, _z.z]
       }
     }
 
-    // Build nRows × nCols matrix
-    const rows: number[][] = []
+    // Transpose from column-major to row-major (nRows × nCols)
+    const nRows = partial === '' ? 6 : 3
+    const rows: number[][] = new Array(nRows)
     for (let r = 0; r < nRows; r++) {
-      const row: number[] = new Array(nCols)
+      const row = new Array(nCols)
       for (let c = 0; c < nCols; c++) row[c] = cols[c][r]
-      rows.push(row)
+      rows[r] = row
     }
     return rows
   }
 
-  moveTipsToPoses(goals: THREE.Object3D[], solverType: IkSolverType = IkSolverEnum.PSEUDO_INVERSE): void {
-    if (solverType !== IkSolverEnum.PSEUDO_INVERSE) {
-      this.moveTipToPose(goals[0], solverType, 0)
-      return
-    }
+  // ── IK Solvers ──
 
+  moveTipToPose(goal: THREE.Object3D, tipIndex = 0): void {
+    this.moveTipToPoseWithPseudoInverse(goal, tipIndex)
+  }
+
+  moveTipsToPoses(goals: THREE.Object3D[]): void {
     const maxIterations = 50
     const tolerance = 1e-3
     const alpha = 0.2
@@ -423,7 +366,7 @@ export class Robot {
 
         if ((math.norm(error) as number) <= tolerance) break
 
-        const J = this._jacobFast(ti, jointIndices, partial)
+        const J = this.geometricJacobian(ti, partial, jointIndices)
         const Jm = math.matrix(J)
         const Jt = math.transpose(Jm)
         const dim = partial === '' ? 6 : 3
@@ -460,15 +403,16 @@ export class Robot {
     const Tf = this.threejs2mathjsMatrix(goal.matrixWorld)
     let errorPrev: any = math.ones(6)
 
-    let q = this.configuration
-
     const partial: Partial = _quadrupeds.indexOf(this.id) > -1 ? 'translational' : ''
+    const jointIndices = this._tipJointIndices[tipIndex]
+    const nj = jointIndices.length
     let iteration = 0
 
     const start = Date.now()
 
     while (iteration < maxIterations) {
-      const error = math_.tr2delta(this.fkine(q, tipIndex), Tf, partial)
+      const T0 = this.threejs2mathjsMatrix(this._fkineTip(tipIndex))
+      const error = math_.tr2delta(T0, Tf, partial)
 
       if ((math.norm(error) as number) <= tolerance) { break }
 
@@ -476,223 +420,33 @@ export class Robot {
         console.log(`Solution diverging at step ${iteration}, try reducing alpha`)
       }
 
-      const dq = math.multiply(alpha, math.multiply(this.pseudoInverse(q, undefined, partial, tipIndex), error))
+      const J = this.geometricJacobian(tipIndex, partial, jointIndices)
+      const Jm = math.matrix(J)
+      const Jt = math.transpose(Jm)
+      const dim = partial === '' ? 6 : 3
+      const C = math.multiply(math.identity(dim) as any, 1e-3)
+      const pinv = math.multiply(Jt, math.inv(math.add(math.multiply(Jm, Jt), C) as any))
 
-      q = (math.add(q, math.multiply(dq, THREE.MathUtils.RAD2DEG)) as any).toArray() as number[]
+      const dq = math.multiply(alpha, math.multiply(pinv, error))
+      const dqArr: number[] = (dq as any).toArray ? (dq as any).toArray() : dq
+
+      for (let k = 0; k < nj; k++) {
+        const ji = jointIndices[k]
+        this.setJointValue(this._joints[ji], this._q[ji] + dqArr[k] * THREE.MathUtils.RAD2DEG)
+      }
 
       errorPrev = error
-
       iteration++
     }
 
     const delta = Date.now() - start
 
-    this.configuration = q
+    this._dae.updateMatrixWorld()
 
     if (this.showVelocityEllipsoid) this.updateVelocityEllipsoid()
     if (this.showForceEllipsoid) this.updateForceEllipsoid()
 
     console.log(`Solved with ${iteration} iterations (${delta} ms).`)
-  }
-
-  pseudoInverse(q: number[], c = 1e-3, partial: Partial = '', tipIndex = 0): any {
-    const C = math.multiply(math.identity(partial === '' ? 6 : 3) as any, c)
-
-    const W = math.identity(q.length) as any
-    const Winv = math.inv(W)
-
-    const J = this.jacob(q, partial, tipIndex)
-    const Jt = math.transpose(J)
-
-    return math.multiply(Winv, math.multiply(Jt, math.inv(math.add(math.multiply(J, math.multiply(Winv, Jt)), C) as any)))
-  }
-
-  jacob(q: number[], partial: Partial = '', tipIndex = 0): any {
-    const dq = 1e-6 / 2
-
-    const J: any[] = []
-
-    for (let i = 0; i < this._joints.length; i++) {
-      const q_less = q.slice()
-      q_less[i] -= dq * THREE.MathUtils.RAD2DEG
-
-      const q_more = q.slice()
-      q_more[i] += dq * THREE.MathUtils.RAD2DEG
-
-      const t0 = this.fkine(q_less, tipIndex)
-      const tp = this.fkine(q_more, tipIndex)
-
-      const dtdq = math.divide(math.subtract(tp, t0), dq)
-      const drdq = math.subset(dtdq, math.index(math.range(0, 3), math.range(0, 3)))
-      const r0 = math.subset(t0, math.index(math.range(0, 3), math.range(0, 3)))
-
-      const v = math.flatten(math.subset(dtdq, math.index(math.range(0, 3), 3)) as any).toArray()
-      const w = math_.vex(math.multiply(drdq, math.transpose(r0 as any)))
-
-      if (partial === 'translational') {
-        J.push(v)
-      } else if (partial === 'rotational') {
-        J.push(w)
-      } else {
-        J.push(math.concat(v as number[], w as number[], 0))
-      }
-    }
-
-    return math.transpose(J)
-  }
-
-  initializeRobotKin(): void {
-    this.robotKinInitialized = true
-    this.robotKin = new Kinematics(this._kinematicsGeometry)
-  }
-
-  moveTipToPoseWithIK(goal: THREE.Object3D): void {
-    if (!this.robotKinInitialized) { this.initializeRobotKin() }
-
-    const result = this.robotKin!.inverse(
-      goal.position.x, goal.position.y, -goal.position.z,
-      goal.rotation.x, goal.rotation.y, -goal.rotation.z)
-
-    if (!result.some((x: number) => Number.isNaN(x))) {
-      this.configuration = result.map((x: number) => -x * THREE.MathUtils.RAD2DEG)
-    }
-  }
-
-  moveTipToPoseWithGeneticAlgorithm(goal: THREE.Object3D, verbose = false): void {
-    const generationSize = 8
-    const elitesPerGen = 1
-    const randsPerGen = 2
-
-    let generation: GAIndividual[] = []
-
-    {
-      const fitness = this.calculateFitness(goal)
-      generation.push({ fitness, q: this.configuration })
-    }
-
-    {
-      const noisyQ: number[] = []
-      for (const jointValue of this.configuration) {
-        noisyQ.push(jointValue + THREE.MathUtils.randFloat(-5, 5))
-      }
-      this.configuration = noisyQ
-      const fitness = this.calculateFitness(goal)
-      generation.push({ fitness, q: this.configuration })
-    }
-
-    while (generation.length < generationSize) {
-      const randomQ = this.randomConfiguration
-      this.configuration = randomQ
-      const fitness = this.calculateFitness(goal)
-      generation.push({ fitness, q: randomQ })
-    }
-
-    if (verbose) console.log(generation)
-
-    let iteration = 0
-    let done = false
-    while (!done) {
-      if (verbose) console.log(`Iteration ${iteration}`)
-      iteration++
-
-      generation.sort((a, b) => (b.fitness ?? 0) - (a.fitness ?? 0))
-
-      const best = generation[0]
-      this.configuration = best.q
-      if (verbose) console.log(`Best fitness: ${best.fitness}`)
-
-      if ((best.fitness ?? 0) >= 1 / Math.pow(1e-3, 2)) {
-        if (verbose) console.log('SOLUTION FOUND !')
-        done = true
-      } else if (iteration > 100) {
-        if (verbose) console.log('Iterations limit reached.')
-        done = true
-      } else {
-        const newGeneration: GAIndividual[] = []
-
-        for (let i = 0; i < elitesPerGen; i++) {
-          newGeneration.push(generation[i])
-        }
-
-        const opt: GAIndividual = { fitness: generation[0].fitness, q: generation[0].q.slice() }
-        const maxOptIterations = 25
-        const wiggleAmount = 2 * THREE.MathUtils.DEG2RAD
-
-        for (let i = 0; i < maxOptIterations; i++) {
-          const initialFitness = opt.fitness ?? 0
-          const gains: number[] = []
-
-          for (let j = 0; j < this.degreesOfFreedom; j++) {
-            const currentQ = opt.q.slice(0)
-            currentQ[j] += wiggleAmount
-            this.configuration = currentQ
-            const fitness = this.calculateFitness(goal)
-            gains.push(fitness - initialFitness)
-          }
-
-          let jointToWiggle = -1
-          let greatestAbsGain = 0
-          for (let j = 0; j < gains.length; j++) {
-            if (Math.abs(gains[j]) > greatestAbsGain) {
-              greatestAbsGain = Math.abs(gains[j])
-              jointToWiggle = j
-            }
-          }
-
-          if (jointToWiggle > -1) {
-            opt.q[jointToWiggle] += (gains[jointToWiggle] > 0 ? 1 : -1) * wiggleAmount
-            this.configuration = opt.q
-            opt.fitness = this.calculateFitness(goal)
-          }
-        }
-
-        let rouletteSize = 0
-        for (const individual of generation) {
-          rouletteSize += individual.fitness ?? 0
-        }
-        if (verbose) console.log(rouletteSize)
-
-        const selectIndividualWithRoulette = (): number => {
-          let randomRouletteSpin = THREE.MathUtils.randFloat(0, rouletteSize)
-          let selectedIndividualId = -1
-          for (let i = 0; i < generation.length; i++) {
-            const rouletteSliceSize = generation[i].fitness ?? 0
-            if (randomRouletteSpin < rouletteSliceSize) {
-              selectedIndividualId = i
-              break
-            } else {
-              randomRouletteSpin -= rouletteSliceSize
-            }
-          }
-          return selectedIndividualId
-        }
-
-        while (newGeneration.length < generationSize - randsPerGen) {
-          const father = generation[selectIndividualWithRoulette()]
-          const mother = generation[selectIndividualWithRoulette()]
-          const parentsFitness = (father.fitness ?? 0) + (mother.fitness ?? 0)
-
-          const child: GAIndividual = { fitness: undefined, q: [] }
-          for (let gene = 0; gene < father.q.length; gene++) {
-            child.q.push(((father.fitness ?? 0) * father.q[gene] + (mother.fitness ?? 0) * mother.q[gene]) / parentsFitness)
-          }
-
-          this.configuration = child.q
-          child.fitness = this.calculateFitness(goal)
-          newGeneration.push(child)
-        }
-
-        for (let i = 0; i < randsPerGen; i++) {
-          const randomQ = this.randomConfiguration
-          this.configuration = randomQ
-          const fitness = this.calculateFitness(goal)
-          newGeneration.push({ fitness, q: randomQ })
-        }
-
-        if (verbose) console.log(newGeneration)
-        generation = newGeneration
-      }
-    }
   }
 }
 

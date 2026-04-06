@@ -1,4 +1,4 @@
-import { IkSolverEnum, type IkSolverType } from './IkSolver.ts'
+import { IkSolverEnum } from './IkSolver.ts'
 import { Robot, robotKinematicsFromURDF } from './Robot.ts'
 import { ModelLoader, type ManifestModel } from './ModelLoader.ts'
 
@@ -94,7 +94,7 @@ let robot: Robot
 let rawPoints: THREE.Vector3[][] = [[], [], [], []]
 let showVelocityEllipsoid = false
 let showForceEllipsoid = false
-let ikSolver: IkSolverType = IkSolverEnum.OFF
+let ikSolver = IkSolverEnum.OFF as typeof IkSolverEnum[keyof typeof IkSolverEnum]
 let ikGoals: THREE.Mesh[] = []
 let ikGoalControls: InstanceType<typeof TransformControls>[] = []
 let ikGoalControlHelpers: THREE.Object3D[] = []
@@ -731,9 +731,9 @@ function setupIkGoals () {
     control.addEventListener('objectChange', function () {
       if (ikSolver !== IkSolverEnum.OFF) {
         if (robot.tipLinks.length > 1) {
-          robot.moveTipsToPoses(ikGoals, ikSolver)
+          robot.moveTipsToPoses(ikGoals)
         } else {
-          robot.moveTipToPose(goal, ikSolver, tipIndex)
+          robot.moveTipToPose(goal, tipIndex)
         }
       }
     })

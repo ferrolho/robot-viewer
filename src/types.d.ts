@@ -43,14 +43,6 @@ declare module 'file-saver' {
   export function saveAs(blob: Blob, filename: string): void
 }
 
-declare module 'kinematics' {
-  export default class Kinematics {
-    constructor(geometry: number[][])
-    inverse(x: number, y: number, z: number, rx: number, ry: number, rz: number): number[]
-  }
-}
-
-
 declare module 'stats.js' {
   export default class Stats {
     dom: HTMLDivElement
