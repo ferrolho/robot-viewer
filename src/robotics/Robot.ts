@@ -7,6 +7,7 @@ export interface RobotJoint {
   static: boolean
   limits: { min: number; max: number }
   axis: THREE.Vector3
+  mimics?: string  // name of the parent joint this joint mimics
 }
 
 export interface RobotKinematics {
@@ -54,14 +55,22 @@ export class Robot {
     this.printJointNames()
   }
 
-  /** For each tip link, find all ancestor joint indices in its kinematic chain. */
+  /** For each tip link, find all ancestor joint indices in its kinematic chain.
+   *  If an ancestor is a mimic joint, include its parent (mimicked) joint instead. */
   private _computeTipJointIndices(): number[][] {
     const jointSet = new Set(this._joints)
+    const allJoints = this._kinematics.joints
     return this._tipLinks.map(tipName => {
       const ancestors = new Set<string>()
       let obj: THREE.Object3D | null = this._root.getObjectByName(tipName) ?? null
       while (obj && obj !== this._root) {
-        if (jointSet.has(obj.name)) ancestors.add(obj.name)
+        const name = obj.name
+        if (jointSet.has(name)) {
+          ancestors.add(name)
+        } else if (allJoints[name]?.mimics) {
+          // Mimic joint — include the parent joint it mimics
+          ancestors.add(allJoints[name].mimics!)
+        }
         obj = obj.parent
       }
       const indices: number[] = []

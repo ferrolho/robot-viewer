@@ -17,9 +17,11 @@ export function robotKinematicsFromURDF(urdf: URDFRobot): RobotKinematics {
     // Mimic joints are driven automatically by urdf-loader when their
     // parent joint is set, so treat them as static to keep them out of
     // the controllable DOF list and random/zero configurations.
-    const isMimic = 'mimicJoint' in joint && (joint as any).mimicJoint != null
-    if (isMimic) joint.ignoreLimits = true
-    const isStatic = joint.jointType === 'fixed' || isMimic
+    const mimicParent = ('mimicJoint' in joint && (joint as any).mimicJoint != null)
+      ? (joint as any).mimicJoint as string
+      : undefined
+    if (mimicParent) joint.ignoreLimits = true
+    const isStatic = joint.jointType === 'fixed' || !!mimicParent
     joints[name] = {
       static: isStatic,
       limits: {
@@ -27,6 +29,7 @@ export function robotKinematicsFromURDF(urdf: URDFRobot): RobotKinematics {
         max: joint.limit.upper * THREE.MathUtils.RAD2DEG,
       },
       axis: joint.axis.clone(),
+      mimics: mimicParent,
     }
   }
 
