@@ -48,6 +48,7 @@ Create [`ferrolho/robot-viewer-models`](https://github.com/ferrolho/robot-viewer
 - [x] Generate `manifest.json` with model metadata (id, brand, name, tipLinks, dof, etc.)
 - [x] Validate each model (URDF parses, meshes exist, DOF matches)
 - [x] Dist branch served via `raw.githubusercontent.com` (switched from jsDelivr due to stale branch-cache issues)
+  - **Note:** jsDelivr (`cdn.jsdelivr.net/gh/{user}/{repo}@{ref}/{path}`) is a zero-setup CDN that mirrors any public GitHub repo, but it caches branch-name → commit-SHA resolution aggressively. `@dist` kept resolving to a stale commit even after purging. It works reliably with **tags** or **commit SHAs** — if we want CDN speed back, tag releases in `robot-viewer-models` (e.g. `@v1`) and reference the tag instead of `@dist`.
 - [x] Initial set: 12 robots from robot_descriptions
 - [x] Xacro rendering via ROS Noetic Docker container for ABB and KUKA industrial robots
 - [x] Expanded to 81 robots from 35+ brands (ABB IRB series, KUKA KR series, Unitree, Boston Dynamics, etc.)
