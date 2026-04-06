@@ -54,43 +54,19 @@ export class Robot {
     this.printJointNames()
   }
 
-  /**
-   * For each tip link, find the joint indices in its kinematic chain.
-   * When there are multiple tips, joints shared between tips are excluded
-   * so that per-tip IK solves don't fight over the same joints.
-   */
+  /** For each tip link, find all ancestor joint indices in its kinematic chain. */
   private _computeTipJointIndices(): number[][] {
     const jointSet = new Set(this._joints)
-
-    // First pass: collect all ancestor joints for each tip
-    const allAncestors = this._tipLinks.map(tipName => {
+    return this._tipLinks.map(tipName => {
       const ancestors = new Set<string>()
       let obj: THREE.Object3D | null = this._root.getObjectByName(tipName) ?? null
       while (obj && obj !== this._root) {
         if (jointSet.has(obj.name)) ancestors.add(obj.name)
         obj = obj.parent
       }
-      return ancestors
-    })
-
-    // Count how many tips each joint appears in
-    const jointRefCount = new Map<string, number>()
-    for (const ancestors of allAncestors) {
-      for (const name of ancestors) {
-        jointRefCount.set(name, (jointRefCount.get(name) ?? 0) + 1)
-      }
-    }
-
-    // For multi-tip robots, only keep joints exclusive to each tip
-    const multiTip = this._tipLinks.length > 1
-    return allAncestors.map(ancestors => {
       const indices: number[] = []
       for (let i = 0; i < this._joints.length; i++) {
-        if (ancestors.has(this._joints[i])) {
-          if (!multiTip || jointRefCount.get(this._joints[i])! === 1) {
-            indices.push(i)
-          }
-        }
+        if (ancestors.has(this._joints[i])) indices.push(i)
       }
       return indices
     })
@@ -461,18 +437,114 @@ export class Robot {
     console.log(`Solved with ${iterations} iterations (${delta} ms).`)
   }
 
+  /**
+   * Whole-body IK: solve all tips simultaneously with a stacked Jacobian.
+   *
+   * Shared joints (e.g. torso on a humanoid) appear in multiple tips' Jacobians,
+   * so the solver naturally balances all tips through those joints rather than
+   * letting one tip override another.
+   */
   moveTipsToPoses(goals: THREE.Object3D[]): void {
     const partial: Partial = this.category === 'quadruped' ? 'translational' : ''
+    const dimPerTip = partial === '' ? 6 : 3
+
+    // Collect all unique joint indices across all tips (sorted)
+    const allJointSet = new Set<number>()
+    for (const indices of this._tipJointIndices) {
+      for (const ji of indices) allJointSet.add(ji)
+    }
+    const allJoints = [...allJointSet].sort((a, b) => a - b)
+    const nj = allJoints.length
+    const totalDim = goals.length * dimPerTip
+
+    // Map from global joint index to column in the stacked Jacobian
+    const jointToCol = new Map<number, number>()
+    for (let c = 0; c < nj; c++) jointToCol.set(allJoints[c], c)
+
+    // Precompute goal transforms
+    const Tfs = goals.map(g => this.threejs2mathjsMatrix(g.matrixWorld))
+
+    // Precompute joint midpoints for null-space bias
+    const qMid = new Array(nj)
+    for (let c = 0; c < nj; c++) {
+      const joint = this._kinematics.joints[this._joints[allJoints[c]]]
+      qMid[c] = (joint.limits.min + joint.limits.max) / 2
+    }
+
+    const maxIterations = 50
+    const tolerance = 1e-3
+    const alpha = 0.2
+    const lambdaMax = 0.04
+    const manipThreshold = 0.005
+    const nullSpaceGain = 0.5
 
     const start = Date.now()
-    let totalIterations = 0
+    let iteration = 0
 
-    for (let ti = 0; ti < goals.length; ti++) {
-      const jointIndices = this._tipJointIndices[ti]
-      if (jointIndices.length === 0) continue
+    for (; iteration < maxIterations; iteration++) {
+      // Build stacked error and Jacobian
+      const stackedError: number[] = new Array(totalDim)
+      const stackedJ: number[][] = new Array(totalDim)
+      for (let r = 0; r < totalDim; r++) stackedJ[r] = new Array(nj).fill(0)
 
-      const Tf = this.threejs2mathjsMatrix(goals[ti].matrixWorld)
-      totalIterations += this._solveIk(ti, Tf, jointIndices, partial)
+      let totalError = 0
+
+      for (let ti = 0; ti < goals.length; ti++) {
+        const T0 = this.threejs2mathjsMatrix(this._fkineTip(ti))
+        const error = robotMath.tr2delta(T0, Tfs[ti], partial)
+        const errorArr: number[] = Array.isArray(error) ? error : error.toArray ? error.toArray() : error
+
+        const rowOffset = ti * dimPerTip
+        for (let r = 0; r < dimPerTip; r++) {
+          stackedError[rowOffset + r] = errorArr[r]
+          totalError += errorArr[r] * errorArr[r]
+        }
+
+        // Per-tip Jacobian — place columns into the correct stacked positions
+        const tipJoints = this._tipJointIndices[ti]
+        const J = this.geometricJacobian(ti, partial, tipJoints)
+        for (let r = 0; r < dimPerTip; r++) {
+          for (let c = 0; c < tipJoints.length; c++) {
+            stackedJ[rowOffset + r][jointToCol.get(tipJoints[c])!] = J[r][c]
+          }
+        }
+      }
+
+      if (Math.sqrt(totalError) <= tolerance) break
+
+      const Jm = math.matrix(stackedJ)
+      const Jt = math.transpose(Jm)
+      const JJt = math.multiply(Jm, Jt)
+
+      // Adaptive damping
+      const det = math.det(JJt) as number
+      const w = Math.sqrt(Math.max(det, 0))
+      const lambda = w < manipThreshold
+        ? lambdaMax * (1 - (w / manipThreshold) ** 2)
+        : 0
+      const C = math.multiply(math.identity(totalDim) as any, Math.max(lambda, 1e-4))
+
+      const pinv = math.multiply(Jt, math.inv(math.add(JJt, C) as any))
+
+      let dq = math.multiply(alpha, math.multiply(pinv, stackedError))
+
+      // Null-space regularization: pull toward joint midpoints
+      if (nj > totalDim) {
+        const I = math.identity(nj) as any
+        const nullProj = math.subtract(I, math.multiply(pinv, Jm))
+        const qDiff: number[] = new Array(nj)
+        for (let c = 0; c < nj; c++) {
+          qDiff[c] = (qMid[c] - this._q[allJoints[c]]) * THREE.MathUtils.DEG2RAD
+        }
+        dq = math.add(dq, math.multiply(nullSpaceGain, math.multiply(nullProj, qDiff)))
+      }
+
+      const dqArr: number[] = (dq as any).toArray ? (dq as any).toArray() : dq
+
+      for (let c = 0; c < nj; c++) {
+        const ji = allJoints[c]
+        this.setJointValue(this._joints[ji], this._q[ji] + dqArr[c] * THREE.MathUtils.RAD2DEG)
+      }
     }
 
     this._root.updateMatrixWorld()
@@ -481,6 +553,6 @@ export class Robot {
     if (this.showForceEllipsoid) this.updateForceEllipsoid()
 
     const delta = Date.now() - start
-    console.log(`Multi-target IK: ${totalIterations} iterations (${delta} ms).`)
+    console.log(`Whole-body IK: ${iteration} iterations (${delta} ms).`)
   }
 }
