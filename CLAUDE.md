@@ -40,6 +40,30 @@ Three.js (3D rendering), urdf-loader (URDF parsing), mathjs (linear algebra), ki
 - Three.js uses **Y-up**; URDF/ROS uses **Z-up**. Loaded URDF robots are rotated -90° around X to convert.
 - `Robot.ts` stores joint values in **degrees** internally. The URDF adapter converts degrees ↔ radians when calling `urdf-loader`'s `setJointValue` (which expects radians).
 
+## Design Language
+
+Industrial control panel aesthetic — functional, precise, no decorative excess.
+
+**Theme:** Dark-first with light mode. CSS custom properties in `:root` / `[data-theme]`. Key tokens:
+- Backgrounds: `--bg-dark` → `--bg-panel` → `--bg-surface` → `--bg-hover` (darkest to lightest)
+- Accent: `--accent` (teal green `#22d3a7`), used sparingly for active states and interactive highlights
+- Text: `--text` (primary), `--text-muted`, `--text-dim` (least prominent)
+- Borders: `--border`, `--border-light`
+
+**Typography:** `DM Sans` (body), `JetBrains Mono` (data values, kbd). No other fonts. Sizes: 10px labels, 12-13px body, 14-15px headings. Use `letter-spacing` and `text-transform: uppercase` for section labels.
+
+**Layout:** 280px sidebar, grid-based. Compact spacing (6-16px). Sections separated by `border-bottom: 1px solid var(--border)`.
+
+**Components:**
+- Toggle rows: label + custom toggle switch (no native checkboxes)
+- Buttons: solid accent (`--accent`) or outline (`--border-light` border)
+- Model browser: two-level — brand tile grid (2 columns, logo + name + count) → robot list with back button
+- Brand tiles: `var(--bg-surface)` background, `var(--border)` border, accent border on hover, logo with fallback to two-letter initials
+
+**Interactions:** Subtle and fast — 0.15s backgrounds, 0.2s transforms. No bounce or spring animations. `scale(0.97)` on button active. Hover states change background and text color, never add shadows or glow.
+
+**Icons:** Inline SVG, 16px, `stroke="currentColor" stroke-width="2"`. No icon library.
+
 ## Known Limitations
 
 - Pseudo Inverse is the recommended IK solver; Genetic Algorithm is slow
