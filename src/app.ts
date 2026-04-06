@@ -35,7 +35,7 @@ function checkbox(id: string): HTMLInputElement {
 
 const stats = new Stats()
 stats.dom.id = 'statsjs'
-document.body.appendChild(stats.dom)
+$('canvas-container').appendChild(stats.dom)
 
 // ── Renderer (sized by container via ResizeObserver) ──
 
