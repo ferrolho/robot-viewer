@@ -684,8 +684,11 @@ function pollGamepad () {
 
 // ── Start ──
 
-function main () {
-  loadModel('universal_robot_ur5')
+async function main () {
+  const manifest = await modelLoader.fetchManifest()
+  const models = manifest.models
+  const randomId = models[Math.floor(Math.random() * models.length)].id
+  loadModel(randomId)
 
   ikGoal = addSphereAtXYZ(0.4, 0.5, 0)
   ikGoal.name = 'ikGoal'
