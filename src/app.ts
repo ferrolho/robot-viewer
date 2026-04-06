@@ -673,6 +673,17 @@ async function loadModel (modelId: string) {
     updateShadowsState()
     setupIkGoals()
 
+    // If IK is active, position goals at the new robot's end-effectors
+    if (ikSolver !== IkSolverEnum.OFF) {
+      for (let i = 0; i < ikGoals.length; i++) {
+        const pose = robot.getLinkPose(robot.tipLinks[i])
+        ikGoals[i].position.setFromMatrixPosition(pose)
+        ikGoals[i].quaternion.setFromRotationMatrix(pose)
+        ikGoalControls[i].setMode('translate')
+        ikGoalControls[i].setSpace('local')
+      }
+    }
+
     $('hud-brand').textContent = model.brand || '--'
     $('hud-model').textContent = model.name || '--'
     $('hud-reach').textContent = model.reach ? `${model.reach} m` : '--'
