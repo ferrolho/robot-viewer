@@ -206,13 +206,13 @@ export class Robot {
       T.elements.slice(12, 16)])
   }
 
-  fkine(q: number[]): any {
+  fkine(q: number[], tipIndex = 0): any {
     const q_backup = this.configuration
 
     this.configuration = q
     this._dae.updateMatrixWorld()
 
-    const T = this.threejs2mathjsMatrix(this._dae.getObjectByName(this.tipLinks[0])!.matrixWorld)
+    const T = this.threejs2mathjsMatrix(this._dae.getObjectByName(this.tipLinks[tipIndex])!.matrixWorld)
 
     this.configuration = q_backup
     this._dae.updateMatrixWorld()
@@ -298,7 +298,7 @@ export class Robot {
     return 1 / (positionDistance + orientationDistance)
   }
 
-  moveTipToPose(goal: THREE.Object3D, solverType: IkSolverType = IkSolverEnum.IK): void {
+  moveTipToPose(goal: THREE.Object3D, solverType: IkSolverType = IkSolverEnum.IK, tipIndex = 0): void {
     switch (solverType) {
       case IkSolverEnum.IK:
         this.moveTipToPoseWithIK(goal)
@@ -308,12 +308,77 @@ export class Robot {
         this.moveTipToPoseWithGeneticAlgorithm(goal)
         break
       case IkSolverEnum.PSEUDO_INVERSE:
-        this.moveTipToPoseWithPseudoInverse(goal)
+        this.moveTipToPoseWithPseudoInverse(goal, tipIndex)
         break
     }
   }
 
-  moveTipToPoseWithPseudoInverse(goal: THREE.Object3D): void {
+  moveTipsToPoses(goals: THREE.Object3D[], solverType: IkSolverType = IkSolverEnum.PSEUDO_INVERSE): void {
+    if (solverType !== IkSolverEnum.PSEUDO_INVERSE) {
+      // Fallback: solve for first tip only
+      this.moveTipToPose(goals[0], solverType, 0)
+      return
+    }
+
+    const maxIterations = 50
+    const tolerance = 1e-3
+    const alpha = 0.2
+
+    const partial: Partial = _quadrupeds.indexOf(this.id) > -1 ? 'translational' : ''
+    const errorDim = partial === 'translational' ? 3 : 6
+
+    let q = this.configuration
+    let iteration = 0
+    const start = Date.now()
+
+    while (iteration < maxIterations) {
+      // Stack errors and Jacobians for all targets
+      let stackedError: number[] = []
+      const jacobianRows: any[] = []
+
+      for (let i = 0; i < goals.length; i++) {
+        const Tf = this.threejs2mathjsMatrix(goals[i].matrixWorld)
+        const error = math_.tr2delta(this.fkine(q, i), Tf, partial)
+        const errorArr = Array.isArray(error) ? error : error.toArray ? error.toArray() : error
+        stackedError = stackedError.concat(errorArr)
+
+        const J = this.jacob(q, partial, i)
+        // J is errorDim x nJoints — extract rows
+        for (let r = 0; r < errorDim; r++) {
+          const row: number[] = []
+          for (let c = 0; c < this._joints.length; c++) {
+            row.push(math.subset(J, math.index(r, c)))
+          }
+          jacobianRows.push(row)
+        }
+      }
+
+      if ((math.norm(stackedError) as number) <= tolerance) { break }
+
+      const nRows = goals.length * errorDim
+      const Js = math.matrix(jacobianRows)
+      const Jst = math.transpose(Js)
+      const C = math.multiply(math.identity(nRows) as any, 1e-3)
+      const W = math.identity(q.length) as any
+      const Winv = math.inv(W)
+      const pinv = math.multiply(Winv, math.multiply(Jst, math.inv(math.add(math.multiply(Js, math.multiply(Winv, Jst)), C) as any)))
+
+      const dq = math.multiply(alpha, math.multiply(pinv, stackedError))
+      q = (math.add(q, math.multiply(dq, THREE.MathUtils.RAD2DEG)) as any).toArray() as number[]
+
+      iteration++
+    }
+
+    const delta = Date.now() - start
+    this.configuration = q
+
+    if (this.showVelocityEllipsoid) this.updateVelocityEllipsoid()
+    if (this.showForceEllipsoid) this.updateForceEllipsoid()
+
+    console.log(`Multi-target IK: ${iteration} iterations (${delta} ms).`)
+  }
+
+  moveTipToPoseWithPseudoInverse(goal: THREE.Object3D, tipIndex = 0): void {
     const maxIterations = 50
     const tolerance = 1e-3
     const alpha = 0.2
@@ -329,7 +394,7 @@ export class Robot {
     const start = Date.now()
 
     while (iteration < maxIterations) {
-      const error = math_.tr2delta(this.fkine(q), Tf, partial)
+      const error = math_.tr2delta(this.fkine(q, tipIndex), Tf, partial)
 
       if ((math.norm(error) as number) <= tolerance) { break }
 
@@ -337,7 +402,7 @@ export class Robot {
         console.log(`Solution diverging at step ${iteration}, try reducing alpha`)
       }
 
-      const dq = math.multiply(alpha, math.multiply(this.pseudoInverse(q, undefined, partial), error))
+      const dq = math.multiply(alpha, math.multiply(this.pseudoInverse(q, undefined, partial, tipIndex), error))
 
       q = (math.add(q, math.multiply(dq, THREE.MathUtils.RAD2DEG)) as any).toArray() as number[]
 
@@ -356,19 +421,19 @@ export class Robot {
     console.log(`Solved with ${iteration} iterations (${delta} ms).`)
   }
 
-  pseudoInverse(q: number[], c = 1e-3, partial: Partial = ''): any {
+  pseudoInverse(q: number[], c = 1e-3, partial: Partial = '', tipIndex = 0): any {
     const C = math.multiply(math.identity(partial === '' ? 6 : 3) as any, c)
 
     const W = math.identity(q.length) as any
     const Winv = math.inv(W)
 
-    const J = this.jacob(q, partial)
+    const J = this.jacob(q, partial, tipIndex)
     const Jt = math.transpose(J)
 
     return math.multiply(Winv, math.multiply(Jt, math.inv(math.add(math.multiply(J, math.multiply(Winv, Jt)), C) as any)))
   }
 
-  jacob(q: number[], partial: Partial = ''): any {
+  jacob(q: number[], partial: Partial = '', tipIndex = 0): any {
     const dq = 1e-6 / 2
 
     const J: any[] = []
@@ -380,8 +445,8 @@ export class Robot {
       const q_more = q.slice()
       q_more[i] += dq * THREE.MathUtils.RAD2DEG
 
-      const t0 = this.fkine(q_less)
-      const tp = this.fkine(q_more)
+      const t0 = this.fkine(q_less, tipIndex)
+      const tp = this.fkine(q_more, tipIndex)
 
       const dtdq = math.divide(math.subtract(tp, t0), dq)
       const drdq = math.subset(dtdq, math.index(math.range(0, 3), math.range(0, 3)))

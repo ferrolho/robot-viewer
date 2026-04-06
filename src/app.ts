@@ -95,9 +95,9 @@ let rawPoints: THREE.Vector3[][] = [[], [], [], []]
 let showVelocityEllipsoid = false
 let showForceEllipsoid = false
 let ikSolver: IkSolverType = IkSolverEnum.OFF
-let ikGoal: THREE.Mesh
-let ikGoalControl: InstanceType<typeof TransformControls>
-let ikGoalControlHelper: THREE.Object3D
+let ikGoals: THREE.Mesh[] = []
+let ikGoalControls: InstanceType<typeof TransformControls>[] = []
+let ikGoalControlHelpers: THREE.Object3D[] = []
 
 // ── Theme ──
 
@@ -295,11 +295,14 @@ const pseudoInverseSwitch = checkbox('pseudo-inverse-switch')
 pseudoInverseSwitch.addEventListener('change', () => {
   ikSolver = pseudoInverseSwitch.checked ? IkSolverEnum.PSEUDO_INVERSE : IkSolverEnum.OFF
   if (ikSolver !== IkSolverEnum.OFF && robot) {
-    const pose = robot.getLinkPose(robot.tipLinks[0])
-    ikGoal.position.setFromMatrixPosition(pose)
-    ikGoal.quaternion.setFromRotationMatrix(pose)
-    ikGoalControl.setMode('translate')
-    ikGoalControl.setSpace('local')
+    setupIkGoals()
+    for (let i = 0; i < ikGoals.length; i++) {
+      const pose = robot.getLinkPose(robot.tipLinks[i])
+      ikGoals[i].position.setFromMatrixPosition(pose)
+      ikGoals[i].quaternion.setFromRotationMatrix(pose)
+      ikGoalControls[i].setMode('translate')
+      ikGoalControls[i].setSpace('local')
+    }
   }
 })
 
@@ -375,7 +378,7 @@ function _addSphereAtPose (pose: THREE.Matrix4) {
   console.log(`Added sphere at (${sphere.position.x}, ${sphere.position.y}, ${sphere.position.z})`)
 }
 
-function addSphereAtXYZ (x: number, y: number, z: number) {
+function _addSphereAtXYZ (x: number, y: number, z: number) {
   const sphere = new THREE.Mesh(sphereGeometry, sphereMaterialBlue)
   sphere.position.set(x, y, z)
   console.log(`Added sphere at (${x}, ${y}, ${z})`)
@@ -389,16 +392,20 @@ function animate (time: number) {
   requestAnimationFrame(animate)
 
   if (ikSolver === IkSolverEnum.OFF) {
-    if (scene.getObjectByName('ikGoal')) { scene.remove(ikGoal) }
-    if (scene.getObjectByName('ikGoalControl')) {
-      ikGoalControl.detach()
-      scene.remove(ikGoalControlHelper)
+    for (let i = 0; i < ikGoals.length; i++) {
+      if (scene.getObjectByName(`ikGoal-${i}`)) { scene.remove(ikGoals[i]) }
+      if (scene.getObjectByName(`ikGoalControl-${i}`)) {
+        ikGoalControls[i].detach()
+        scene.remove(ikGoalControlHelpers[i])
+      }
     }
   } else {
-    if (!scene.getObjectByName('ikGoal')) { scene.add(ikGoal) }
-    if (!scene.getObjectByName('ikGoalControl')) {
-      ikGoalControl.attach(ikGoal)
-      scene.add(ikGoalControlHelper)
+    for (let i = 0; i < ikGoals.length; i++) {
+      if (!scene.getObjectByName(`ikGoal-${i}`)) { scene.add(ikGoals[i]) }
+      if (!scene.getObjectByName(`ikGoalControl-${i}`)) {
+        ikGoalControls[i].attach(ikGoals[i])
+        scene.add(ikGoalControlHelpers[i])
+      }
     }
   }
 
@@ -552,6 +559,7 @@ async function loadModel (modelId: string) {
     robot.id = modelId
 
     updateShadowsState()
+    setupIkGoals()
 
     $('hud-brand').textContent = model.brand || '--'
     $('hud-model').textContent = model.name || '--'
@@ -593,14 +601,13 @@ window.addEventListener('keydown', function (event) {
       break
     }
     case 'q':
-      ikGoalControl.setSpace(ikGoalControl.space === 'local' ? 'world' : 'local')
+      for (const ctrl of ikGoalControls) ctrl.setSpace(ctrl.space === 'local' ? 'world' : 'local')
       break
     case 'r':
-      ikGoalControl.setMode('rotate')
-      ikGoalControl.setSpace('local')
+      for (const ctrl of ikGoalControls) { ctrl.setMode('rotate'); ctrl.setSpace('local') }
       break
     case 't':
-      ikGoalControl.setMode('translate')
+      for (const ctrl of ikGoalControls) ctrl.setMode('translate')
       break
     case 'x':
       doConvexHullStuff()
@@ -646,9 +653,11 @@ function moveFromTo (q_s: number[], q_t: number[], duration = 10, easing: (t: nu
   tween.onUpdate(function (obj) {
     for (const joint of robot._joints) { robot.setJointValue(joint, obj[joint]) }
     if (ikSolver !== IkSolverEnum.OFF) {
-      const pose = robot.getLinkPose(robot.tipLinks[0])
-      ikGoal.position.setFromMatrixPosition(pose)
-      ikGoal.quaternion.setFromRotationMatrix(pose)
+      for (let i = 0; i < ikGoals.length; i++) {
+        const pose = robot.getLinkPose(robot.tipLinks[i])
+        ikGoals[i].position.setFromMatrixPosition(pose)
+        ikGoals[i].quaternion.setFromRotationMatrix(pose)
+      }
     }
     if (robot.showVelocityEllipsoid) robot.updateVelocityEllipsoid()
     if (robot.showForceEllipsoid) robot.updateForceEllipsoid()
@@ -688,27 +697,60 @@ function pollGamepad () {
 
 // ── Start ──
 
+function cleanupIkGoals () {
+  for (let i = 0; i < ikGoals.length; i++) {
+    ikGoalControls[i].detach()
+    scene.remove(ikGoals[i])
+    scene.remove(ikGoalControlHelpers[i])
+    ikGoalControls[i].dispose()
+  }
+  ikGoals = []
+  ikGoalControls = []
+  ikGoalControlHelpers = []
+}
+
+function setupIkGoals () {
+  cleanupIkGoals()
+
+  const colors = [0xff0000, 0x00ff00, 0x0000ff, 0xffff00]
+
+  for (let i = 0; i < robot.tipLinks.length; i++) {
+    const material = new THREE.MeshLambertMaterial({
+      color: colors[i % colors.length],
+      transparent: true,
+      opacity: 0.8,
+    })
+    const goal = new THREE.Mesh(new THREE.SphereGeometry(0.01), material)
+    goal.name = `ikGoal-${i}`
+
+    const control = new TransformControls(camera, renderer.domElement)
+    const helper = control.getHelper()
+    helper.name = `ikGoalControl-${i}`
+
+    const tipIndex = i
+    control.addEventListener('objectChange', function () {
+      if (ikSolver !== IkSolverEnum.OFF) {
+        if (robot.tipLinks.length > 1) {
+          robot.moveTipsToPoses(ikGoals, ikSolver)
+        } else {
+          robot.moveTipToPose(goal, ikSolver, tipIndex)
+        }
+      }
+    })
+    control.addEventListener('mouseDown', () => { orbitControls.enabled = false })
+    control.addEventListener('mouseUp', () => { orbitControls.enabled = true })
+
+    ikGoals.push(goal)
+    ikGoalControls.push(control)
+    ikGoalControlHelpers.push(helper)
+  }
+}
+
 async function main () {
   const manifest = await modelLoader.fetchManifest()
   const models = manifest.models
   const randomId = models[Math.floor(Math.random() * models.length)].id
-  loadModel(randomId)
-
-  ikGoal = addSphereAtXYZ(0.4, 0.5, 0)
-  ikGoal.name = 'ikGoal'
-
-  ikGoalControl = new TransformControls(camera, renderer.domElement)
-  ikGoalControlHelper = ikGoalControl.getHelper()
-  ikGoalControlHelper.name = 'ikGoalControl'
-  ikGoalControl.addEventListener('objectChange', function () {
-    if (ikSolver !== IkSolverEnum.OFF) { robot.moveTipToPose(ikGoal, ikSolver) }
-  })
-  ikGoalControl.addEventListener('mouseDown', function () {
-    orbitControls.enabled = false
-  })
-  ikGoalControl.addEventListener('mouseUp', function () {
-    orbitControls.enabled = true
-  })
+  await loadModel(randomId)
 }
 
 main()
