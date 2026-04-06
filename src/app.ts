@@ -124,30 +124,35 @@ $('theme-toggle').addEventListener('click', () => {
   applyTheme(getTheme() === 'dark' ? 'light' : 'dark')
 })
 
-// ── Sidebar ──
+// ── Sidebars ──
 
-const sidebar = $('sidebar')
+const sidebarLeft = $('sidebar-left')
 const menuToggle = $('menu-toggle')
 const sidebarOverlay = $('sidebar-overlay')
-const sidebarCollapse = $('sidebar-collapse')
+const sidebarLeftCollapse = $('sidebar-left-collapse')
+const sidebarRightCollapse = $('sidebar-right-collapse')
 
 menuToggle.addEventListener('click', () => {
-  if (document.body.classList.contains('sidebar-collapsed')) {
-    document.body.classList.remove('sidebar-collapsed')
+  if (document.body.classList.contains('sidebar-left-collapsed')) {
+    document.body.classList.remove('sidebar-left-collapsed')
   } else {
-    sidebar.classList.toggle('open')
+    sidebarLeft.classList.toggle('open')
     sidebarOverlay.classList.toggle('visible')
   }
 })
 
 sidebarOverlay.addEventListener('click', hideSidebar)
 
-sidebarCollapse.addEventListener('click', () => {
-  document.body.classList.toggle('sidebar-collapsed')
+sidebarLeftCollapse.addEventListener('click', () => {
+  document.body.classList.toggle('sidebar-left-collapsed')
+})
+
+sidebarRightCollapse.addEventListener('click', () => {
+  document.body.classList.toggle('sidebar-right-collapsed')
 })
 
 function hideSidebar() {
-  sidebar.classList.remove('open')
+  sidebarLeft.classList.remove('open')
   sidebarOverlay.classList.remove('visible')
 }
 

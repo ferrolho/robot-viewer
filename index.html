@@ -10,7 +10,7 @@
 	<body>
 
 		<div id="app">
-			<aside id="sidebar">
+			<aside id="sidebar-left">
 				<div class="sidebar-header">
 					<div class="logo">
 						<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="18" r="3"/><path d="M12 15V9"/><circle cx="12" cy="6" r="3"/><path d="M6 6h3M15 6h3"/></svg>
@@ -21,10 +21,65 @@
 							<svg class="icon-sun" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
 							<svg class="icon-moon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
 						</button>
-						<button id="sidebar-collapse" class="icon-btn" aria-label="Collapse sidebar">
+						<button id="sidebar-left-collapse" class="icon-btn" aria-label="Collapse sidebar">
 							<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 17l-5-5 5-5M18 17l-5-5 5-5"/></svg>
 						</button>
 					</div>
+				</div>
+
+				<div class="sidebar-scroll">
+					<section class="panel-section panel-section--models">
+						<h6 class="section-label">Models</h6>
+						<div id="models-list"></div>
+					</section>
+
+					<div class="sidebar-footer">
+						<button id="shortcuts-btn" class="icon-btn" aria-label="Keyboard shortcuts">
+							<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M6 8h.01M10 8h.01M14 8h.01M18 8h.01M8 12h.01M12 12h.01M16 12h.01M8 16h8"/></svg>
+							<span>Shortcuts</span>
+							<kbd>?</kbd>
+						</button>
+					</div>
+				</div>
+			</aside>
+
+			<main id="viewport">
+				<button id="menu-toggle" aria-label="Toggle menu">
+					<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h18M3 6h18M3 18h18"/></svg>
+				</button>
+
+				<div id="canvas-container"></div>
+
+				<div id="hud">
+					<div class="hud-item">
+						<span class="hud-label">Model</span>
+						<span class="hud-value" id="hud-model">--</span>
+					</div>
+					<div class="hud-item">
+						<span class="hud-label">Brand</span>
+						<span class="hud-value" id="hud-brand">--</span>
+					</div>
+					<div class="hud-item">
+						<span class="hud-label">Reach</span>
+						<span class="hud-value" id="hud-reach">--</span>
+					</div>
+					<div class="hud-item">
+						<span class="hud-label">Payload</span>
+						<span class="hud-value" id="hud-payload">--</span>
+					</div>
+					<div class="hud-item">
+						<span class="hud-label">DOF</span>
+						<span class="hud-value" id="hud-dof">--</span>
+					</div>
+				</div>
+	</main>
+
+			<aside id="sidebar-right">
+				<div class="sidebar-header">
+					<span class="sidebar-header-title">Settings</span>
+					<button id="sidebar-right-collapse" class="icon-btn" aria-label="Collapse settings">
+						<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 17l5-5-5-5M6 17l5-5-5-5"/></svg>
+					</button>
 				</div>
 
 				<div class="sidebar-scroll">
@@ -91,52 +146,8 @@
 							<span class="toggle-track"><span class="toggle-thumb"></span></span>
 						</label>
 					</section>
-
-					<section class="panel-section panel-section--models">
-						<h6 class="section-label">Models</h6>
-						<div id="models-list"></div>
-					</section>
-
-					<div class="sidebar-footer">
-						<button id="shortcuts-btn" class="icon-btn" aria-label="Keyboard shortcuts">
-							<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M6 8h.01M10 8h.01M14 8h.01M18 8h.01M8 12h.01M12 12h.01M16 12h.01M8 16h8"/></svg>
-							<span>Shortcuts</span>
-							<kbd>?</kbd>
-						</button>
-					</div>
 				</div>
 			</aside>
-
-			<main id="viewport">
-				<button id="menu-toggle" aria-label="Toggle menu">
-					<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h18M3 6h18M3 18h18"/></svg>
-				</button>
-
-				<div id="canvas-container"></div>
-
-				<div id="hud">
-					<div class="hud-item">
-						<span class="hud-label">Model</span>
-						<span class="hud-value" id="hud-model">--</span>
-					</div>
-					<div class="hud-item">
-						<span class="hud-label">Brand</span>
-						<span class="hud-value" id="hud-brand">--</span>
-					</div>
-					<div class="hud-item">
-						<span class="hud-label">Reach</span>
-						<span class="hud-value" id="hud-reach">--</span>
-					</div>
-					<div class="hud-item">
-						<span class="hud-label">Payload</span>
-						<span class="hud-value" id="hud-payload">--</span>
-					</div>
-					<div class="hud-item">
-						<span class="hud-label">DOF</span>
-						<span class="hud-value" id="hud-dof">--</span>
-					</div>
-				</div>
-			</main>
 		</div>
 
 		<div id="sidebar-overlay"></div>

@@ -28,7 +28,8 @@
   --font-body:     'DM Sans', system-ui, sans-serif;
   --font-mono:     'JetBrains Mono', ui-monospace, monospace;
 
-  --sidebar-w:     280px;
+  --sidebar-left-w:  360px;
+  --sidebar-right-w: 240px;
   --radius:        6px;
   --radius-sm:     4px;
 }
@@ -78,7 +79,7 @@ html, body {
 
 #app {
   display: grid;
-  grid-template-columns: var(--sidebar-w) 1fr;
+  grid-template-columns: var(--sidebar-left-w) 1fr var(--sidebar-right-w);
   height: 100vh;
 }
 
@@ -103,16 +104,24 @@ html, body {
   display: block;
 }
 
-/* ── Sidebar ── */
+/* ── Sidebars ── */
 
-#sidebar {
+#sidebar-left,
+#sidebar-right {
   display: flex;
   flex-direction: column;
   background: var(--bg-panel);
-  border-right: 1px solid var(--border);
   height: 100vh;
   overflow: hidden;
   z-index: 20;
+}
+
+#sidebar-left {
+  border-right: 1px solid var(--border);
+}
+
+#sidebar-right {
+  border-left: 1px solid var(--border);
 }
 
 .sidebar-header {
@@ -205,20 +214,40 @@ html, body {
 
 /* ── Sidebar collapse (desktop) ── */
 
-#sidebar-collapse {
+#sidebar-left-collapse,
+#sidebar-right-collapse {
   transition: transform 0.2s;
 }
 
-body.sidebar-collapsed #app {
-  grid-template-columns: 1fr;
+body.sidebar-left-collapsed #app {
+  grid-template-columns: 1fr var(--sidebar-right-w);
 }
 
-body.sidebar-collapsed #sidebar {
+body.sidebar-left-collapsed #sidebar-left {
   display: none;
 }
 
-body.sidebar-collapsed #menu-toggle {
+body.sidebar-left-collapsed #menu-toggle {
   display: flex;
+}
+
+body.sidebar-right-collapsed #app {
+  grid-template-columns: var(--sidebar-left-w) 1fr;
+}
+
+body.sidebar-right-collapsed #sidebar-right {
+  display: none;
+}
+
+body.sidebar-left-collapsed.sidebar-right-collapsed #app {
+  grid-template-columns: 1fr;
+}
+
+.sidebar-header-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-muted);
+  letter-spacing: 0.02em;
 }
 
 /* ── Panel Sections ── */
@@ -389,7 +418,7 @@ body.sidebar-collapsed #menu-toggle {
 
 .brand-grid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(3, 1fr);
   gap: 6px;
 }
 
@@ -633,21 +662,24 @@ body.sidebar-collapsed #menu-toggle {
     display: flex;
   }
 
-  #sidebar {
+  #sidebar-left {
     position: fixed;
     top: 0;
     left: 0;
-    width: var(--sidebar-w);
+    width: var(--sidebar-left-w);
     transform: translateX(-100%);
     transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   }
 
-  #sidebar.open {
+  #sidebar-left.open {
     transform: translateX(0);
   }
 
+  #sidebar-right {
+    display: none;
+  }
 
-  #sidebar-collapse {
+  #sidebar-left-collapse {
     display: none;
   }
 }
