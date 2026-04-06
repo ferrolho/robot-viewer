@@ -76,3 +76,9 @@ Create [`ferrolho/robot-viewer-models`](https://github.com/ferrolho/robot-viewer
 - [ ] Sidebar search and category filtering for large catalog
 - [ ] Thumbnail generation for model list
 - [ ] Optional: service worker for offline model caching
+
+### Known Issues
+- [ ] Closed-chain linkages (e.g. Robotiq parallel grippers) are not enforced — mimic joints move independently instead of closing the kinematic chain
+- [ ] IK goal is only created for the first tipLink — robots with multiple end-effectors (hands, feet) only have one IK target
+- [ ] Many brands are missing logo icons in the sidebar (only original 11 brands have logos in `public/images/logos/`)
+- [ ] ABB and KUKA only have 1 robot each in robot-descriptions (YuMi and iiwa); the original ABB IRB series and KUKA KR series have no upstream URDFs available
