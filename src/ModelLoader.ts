@@ -64,7 +64,7 @@ export class ModelLoader {
     // Our rewritten URDFs use relative paths (no package:// prefix)
     urdfLoader.packages = ''
 
-    // Use the default mesh loader — it handles STL and DAE natively
+    // Use the default mesh loader — it handles STL and GLB natively
     return urdfLoader.loadAsync(urdfUrl) as Promise<URDFRobot>
   }
 }

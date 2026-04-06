@@ -21,7 +21,7 @@ export class Robot {
   showForceEllipsoid = false
 
   private _scene: THREE.Scene
-  private _dae: THREE.Object3D
+  private _root: THREE.Object3D
   private _kinematics: RobotKinematics
   private _tipLinks: string[]
   private _tipJointIndices: number[][] = []
@@ -32,7 +32,7 @@ export class Robot {
 
   constructor(scene: THREE.Scene, sceneRoot: THREE.Object3D, kinematics: RobotKinematics, tipLinks: string[]) {
     this._scene = scene
-    this._dae = sceneRoot
+    this._root = sceneRoot
     this._kinematics = kinematics
     this._tipLinks = tipLinks
 
@@ -58,8 +58,8 @@ export class Robot {
     const jointSet = new Set(this._joints)
     return this._tipLinks.map(tipName => {
       const ancestors = new Set<string>()
-      let obj: THREE.Object3D | null = this._dae.getObjectByName(tipName) ?? null
-      while (obj && obj !== this._dae) {
+      let obj: THREE.Object3D | null = this._root.getObjectByName(tipName) ?? null
+      while (obj && obj !== this._root) {
         if (jointSet.has(obj.name)) ancestors.add(obj.name)
         obj = obj.parent
       }
@@ -173,8 +173,8 @@ export class Robot {
   get tipLinks(): string[] { return this._tipLinks }
 
   getLinkPose(linkName: string): THREE.Matrix4 {
-    this._dae.updateMatrixWorld()
-    return this._dae.getObjectByName(linkName)!.matrixWorld
+    this._root.updateMatrixWorld()
+    return this._root.getObjectByName(linkName)!.matrixWorld
   }
 
   threejs2mathjsMatrix(T: THREE.Matrix4): any {
@@ -190,25 +190,25 @@ export class Robot {
     const q_backup = this.configuration
 
     this.configuration = q
-    this._dae.updateMatrixWorld()
+    this._root.updateMatrixWorld()
 
-    const T = this.threejs2mathjsMatrix(this._dae.getObjectByName(this.tipLinks[tipIndex])!.matrixWorld)
+    const T = this.threejs2mathjsMatrix(this._root.getObjectByName(this.tipLinks[tipIndex])!.matrixWorld)
 
     this.configuration = q_backup
-    this._dae.updateMatrixWorld()
+    this._root.updateMatrixWorld()
 
     return T
   }
 
   /** Read a tip link's world matrix using chain-only update (no full scene traversal). */
   private _fkineTip(tipIndex: number): THREE.Matrix4 {
-    const tipObj = this._dae.getObjectByName(this._tipLinks[tipIndex])!
+    const tipObj = this._root.getObjectByName(this._tipLinks[tipIndex])!
     tipObj.updateWorldMatrix(true, false)
     return tipObj.matrixWorld
   }
 
   updateShadowsState(castShadows: boolean): void {
-    this._dae.traverse(function (child) {
+    this._root.traverse(function (child) {
       if (child instanceof THREE.Mesh) {
         child.castShadow = castShadows
         child.receiveShadow = castShadows
@@ -289,7 +289,7 @@ export class Robot {
     }
 
     const nCols = indices.length
-    const tipObj = this._dae.getObjectByName(this._tipLinks[tipIndex])!
+    const tipObj = this._root.getObjectByName(this._tipLinks[tipIndex])!
     tipObj.updateWorldMatrix(true, false)
 
     const pEe = new THREE.Vector3().setFromMatrixPosition(tipObj.matrixWorld)
@@ -303,7 +303,7 @@ export class Robot {
     for (let ci = 0; ci < nCols; ci++) {
       const ji = indices[ci]
       const jointName = this._joints[ji]
-      const jointObj = this._dae.getObjectByName(jointName)!
+      const jointObj = this._root.getObjectByName(jointName)!
       // Joint axis is defined in the joint's local frame — transform to world
       const localAxis = this._kinematics.joints[jointName].axis
       _rot.setFromMatrix4(jointObj.matrixWorld)
@@ -428,7 +428,7 @@ export class Robot {
     const iterations = this._solveIk(tipIndex, Tf, jointIndices, partial)
     const delta = Date.now() - start
 
-    this._dae.updateMatrixWorld()
+    this._root.updateMatrixWorld()
 
     if (this.showVelocityEllipsoid) this.updateVelocityEllipsoid()
     if (this.showForceEllipsoid) this.updateForceEllipsoid()
@@ -450,7 +450,7 @@ export class Robot {
       totalIterations += this._solveIk(ti, Tf, jointIndices, partial)
     }
 
-    this._dae.updateMatrixWorld()
+    this._root.updateMatrixWorld()
 
     if (this.showVelocityEllipsoid) this.updateVelocityEllipsoid()
     if (this.showForceEllipsoid) this.updateForceEllipsoid()

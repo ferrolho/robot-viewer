@@ -6,9 +6,9 @@ import * as THREE from 'three'
  * Adapt a URDFRobot (from urdf-loader) to the RobotKinematics interface.
  *
  * Key convention: Robot internally stores joint values in degrees.
- * COLLADA's setJointValue accepted degrees. URDF's setJointValue expects radians.
- * This adapter converts degrees → radians on setJointValue, and
- * reports limits in degrees for consistency with the rest of the codebase.
+ * urdf-loader's setJointValue expects radians, so this adapter converts
+ * degrees → radians on setJointValue and reports limits in degrees for
+ * consistency with the rest of the codebase.
  */
 export function robotKinematicsFromURDF(urdf: URDFRobot): RobotKinematics {
   const joints: Record<string, RobotJoint> = {}

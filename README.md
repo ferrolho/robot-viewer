@@ -44,4 +44,4 @@
 
 - Clearpath's `Dual Arm Husky` has a broken kinematics tree, and as such will not move;
 
-- Some models have broken materials, and all models only work with flat shading. This is not an issue with Three.js, but with ROS `collada_urdf urdf_to_collada` command line utility (cf. https://github.com/ros/collada_urdf/issues/18).
+- Some models have broken materials or only work with flat shading.
