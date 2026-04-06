@@ -328,12 +328,12 @@ function updateShadowsState () {
 }
 
 // Lights
-const ambientLight = new THREE.AmbientLight(0xcccccc, 0.6)
+const ambientLight = new THREE.AmbientLight(0xffffff, 1.0)
 scene.add(ambientLight)
 
-const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8)
+const directionalLight = new THREE.DirectionalLight(0xffffff, 1.5)
 directionalLight.castShadow = true
-directionalLight.position.set(20, 20, 0)
+directionalLight.position.set(5, 10, 7)
 const shadowCameraSize = 2
 directionalLight.shadow.camera.far = 50
 directionalLight.shadow.camera.bottom = -shadowCameraSize
@@ -341,6 +341,10 @@ directionalLight.shadow.camera.left = -shadowCameraSize
 directionalLight.shadow.camera.right = shadowCameraSize
 directionalLight.shadow.camera.top = shadowCameraSize
 scene.add(directionalLight)
+
+const fillLight = new THREE.DirectionalLight(0xffffff, 0.5)
+fillLight.position.set(-5, 5, -5)
+scene.add(fillLight)
 
 // Shadow plane
 const planeGeometry = new THREE.PlaneGeometry(10, 10)
