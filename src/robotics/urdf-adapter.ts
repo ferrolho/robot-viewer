@@ -18,6 +18,7 @@ export function robotKinematicsFromURDF(urdf: URDFRobot): RobotKinematics {
     // parent joint is set, so treat them as static to keep them out of
     // the controllable DOF list and random/zero configurations.
     const isMimic = 'mimicJoint' in joint && (joint as any).mimicJoint != null
+    if (isMimic) joint.ignoreLimits = true
     const isStatic = joint.jointType === 'fixed' || isMimic
     joints[name] = {
       static: isStatic,
