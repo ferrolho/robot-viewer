@@ -74,8 +74,10 @@ Create [`ferrolho/robot-viewer-models`](https://github.com/ferrolho/robot-viewer
 ### Phase 10: Expand and Enhance
 - [x] Expand catalog: 81 robots from 35+ brands
 - [x] Add ABB IRB series (10 models) and KUKA KR series (4 models) via xacro rendering in Docker
-- [x] Dual-sidebar layout: robot gallery on left (360px, 3-column brand grid), settings on right (240px)
+- [x] Dual-sidebar layout: robot gallery on left (360px, 3-column brand grid), settings on right (240px), both collapsible with re-expand buttons
 - [x] Add brand logo icons for all 41 brands (GitHub org avatars)
+- [x] Load a random robot on page load
+- [x] Stats.js positioned inside 3D viewport (not overlapping sidebars)
 - [ ] GLB conversion with material preservation (Blender headless or assimp) for smaller downloads and multi-LOD support
 - [ ] LOD switching UI (auto: low on mobile, medium on desktop)
 - [ ] Sidebar search and category filtering for large catalog
