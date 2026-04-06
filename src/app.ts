@@ -328,10 +328,10 @@ function updateShadowsState () {
 }
 
 // Lights
-const ambientLight = new THREE.AmbientLight(0xffffff, 1.0)
+const ambientLight = new THREE.AmbientLight(0xffffff, 2.0)
 scene.add(ambientLight)
 
-const directionalLight = new THREE.DirectionalLight(0xffffff, 1.5)
+const directionalLight = new THREE.DirectionalLight(0xffffff, 2.5)
 directionalLight.castShadow = true
 directionalLight.position.set(5, 10, 7)
 const shadowCameraSize = 2
@@ -342,7 +342,7 @@ directionalLight.shadow.camera.right = shadowCameraSize
 directionalLight.shadow.camera.top = shadowCameraSize
 scene.add(directionalLight)
 
-const fillLight = new THREE.DirectionalLight(0xffffff, 0.5)
+const fillLight = new THREE.DirectionalLight(0xffffff, 1.0)
 fillLight.position.set(-5, 5, -5)
 scene.add(fillLight)
 
