@@ -1,12 +1,11 @@
 import { IkSolverEnum, type IkSolverType } from './IkSolver.ts'
-import { Robot, type ColladaResult } from './Robot.ts'
+import { Robot, robotKinematicsFromURDF } from './Robot.ts'
+import { ModelLoader, type ManifestModel } from './ModelLoader.ts'
 
 import WebGL from 'three/addons/capabilities/WebGL.js'
 if (!WebGL.isWebGL2Available()) document.body.appendChild(WebGL.getWebGL2ErrorMessage())
 
 import FileSaver from 'file-saver'
-import JSZip from 'jszip'
-import JSZipUtils from 'jszip-utils'
 import * as THREE from 'three'
 import { Tween, Easing, Group } from '@tweenjs/tween.js'
 const tweenGroup = new Group()
@@ -16,13 +15,11 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 import { TransformControls } from 'three/addons/controls/TransformControls.js'
 import { STLExporter } from 'three/addons/exporters/STLExporter.js'
 import { ConvexGeometry } from 'three/addons/geometries/ConvexGeometry.js'
-import { ColladaLoader } from 'three/addons/loaders/ColladaLoader.js'
 import { LineSegments2 } from 'three/addons/lines/LineSegments2.js'
 import { LineSegmentsGeometry } from 'three/addons/lines/LineSegmentsGeometry.js'
 import { LineMaterial } from 'three/addons/lines/LineMaterial.js'
 
-import colladaRobotsList from './ColladaRobotsList.ts'
-import type { RobotModel } from './ColladaRobotsList.ts'
+const modelLoader = new ModelLoader()
 
 // ── DOM helpers ──
 
@@ -400,58 +397,68 @@ function animate (time: number) {
 
 // ── Model list ──
 
-setupModelsList(colladaRobotsList)
-function setupModelsList (models: RobotModel[]) {
+const modelsListContainer = document.getElementById('models-list')!
+
+async function setupModelsList () {
+  const manifest = await modelLoader.fetchManifest()
+  const models = manifest.models
+
+  // Group by brand
+  const byBrand = new Map<string, ManifestModel[]>()
   for (const model of models) {
-    const brandSlug = model.brand.replace(/\s+/g, '-').toLowerCase()
-    const container = document.querySelector(`#${brandSlug}-models`)!
-    const li = document.createElement('li')
-    li.id = model.id
-    const a = document.createElement('a')
-    a.href = '#!'
-    a.textContent = model.name
-    a.addEventListener('click', () => {
-      loadModelZae(model.id)
-      hideSidebar()
-    })
-    li.appendChild(a)
-    container.appendChild(li)
+    const list = byBrand.get(model.brand) ?? []
+    list.push(model)
+    byBrand.set(model.brand, list)
+  }
+
+  // Sort brands alphabetically
+  const sortedBrands = [...byBrand.keys()].sort()
+
+  modelsListContainer.innerHTML = ''
+  for (const brand of sortedBrands) {
+    const brandSlug = brand.replace(/\s+/g, '-').toLowerCase()
+    const details = document.createElement('details')
+    const summary = document.createElement('summary')
+
+    // Try to load brand logo, fall back to text-only
+    const img = document.createElement('img')
+    img.src = `/images/logos/${brandSlug}.png`
+    img.alt = brand
+    img.onerror = () => img.remove()
+    summary.appendChild(img)
+
+    const span = document.createElement('span')
+    span.textContent = brand
+    summary.appendChild(span)
+    details.appendChild(summary)
+
+    const ul = document.createElement('ul')
+    ul.className = 'model-list'
+    for (const model of byBrand.get(brand)!) {
+      const li = document.createElement('li')
+      li.id = model.id
+      const a = document.createElement('a')
+      a.href = '#!'
+      a.textContent = model.name
+      a.addEventListener('click', () => {
+        loadModel(model.id)
+        hideSidebar()
+      })
+      li.appendChild(a)
+      ul.appendChild(li)
+    }
+    details.appendChild(ul)
+    modelsListContainer.appendChild(details)
   }
 }
+
+setupModelsList()
 
 // ── Model loading ──
 
-const loader = new ColladaLoader()
-const modelsInScene: THREE.Group[] = []
+const modelsInScene: THREE.Object3D[] = []
 
-async function addCollada (modelId: string, collada: ColladaResult) {
-  const dae = collada.scene
-
-  dae.traverse(function (child) {
-    if (child instanceof THREE.Mesh) {
-      ;(child.material as THREE.MeshStandardMaterial).flatShading = true
-    }
-  })
-
-  dae.scale.x = dae.scale.y = dae.scale.z = 1.0
-  dae.updateMatrix()
-
-  while (modelsInScene.length) {
-    scene.remove(modelsInScene.pop()!)
-  }
-
-  scene.add(dae)
-  modelsInScene.push(dae)
-
-  const tipLinks = colladaRobotsList.find(e => e.id === modelId)!.tipLinks
-
-  robot = new Robot(scene, dae, collada, tipLinks)
-  robot.id = modelId
-
-  updateShadowsState()
-}
-
-function loadModelZae (modelId: string) {
+async function loadModel (modelId: string, lod = 'medium') {
   console.log(`Loading ${modelId}...`)
 
   document.querySelectorAll('#models-list li').forEach(el => el.classList.remove('active'))
@@ -460,24 +467,43 @@ function loadModelZae (modelId: string) {
 
   loaderModal.showModal()
 
-  JSZipUtils.getBinaryContent(`${(import.meta as any).env.BASE_URL}collada-robots-collection/${modelId}.zae`, function (err: Error | null, data: ArrayBuffer) {
-    if (err) throw err
-    JSZip.loadAsync(data).then(function (zip) {
-      zip.file(`${modelId}.dae`)!.async('string').then(function (content: string) {
-        addCollada(modelId, loader.parse(content, '') as unknown as ColladaResult).then(function () {
-          loaderModal.close()
+  try {
+    const urdfRobot = await modelLoader.loadRobot(modelId, lod)
 
-          const model = colladaRobotsList.find(e => e.id === modelId)!
-
-          $('hud-brand').textContent = model.brand ? model.brand : '--'
-          $('hud-model').textContent = model.name ? model.name : '--'
-          $('hud-reach').textContent = model.reach ? `${model.reach} m` : '--'
-          $('hud-payload').textContent = model.payload ? `${model.payload} kg` : '--'
-          $('hud-dof').textContent = model.dof ? String(model.dof) : '--'
-        })
-      })
+    urdfRobot.traverse(function (child) {
+      if (child instanceof THREE.Mesh) {
+        ;(child.material as THREE.MeshStandardMaterial).flatShading = true
+      }
     })
-  })
+
+    urdfRobot.scale.set(1.0, 1.0, 1.0)
+    urdfRobot.updateMatrix()
+
+    while (modelsInScene.length) {
+      scene.remove(modelsInScene.pop()!)
+    }
+
+    scene.add(urdfRobot)
+    modelsInScene.push(urdfRobot)
+
+    const model = modelLoader.getModel(modelId)!
+    const kinematics = robotKinematicsFromURDF(urdfRobot)
+
+    robot = new Robot(scene, urdfRobot, kinematics, model.tipLinks)
+    robot.id = modelId
+
+    updateShadowsState()
+
+    $('hud-brand').textContent = model.brand || '--'
+    $('hud-model').textContent = model.name || '--'
+    $('hud-reach').textContent = model.reach ? `${model.reach} m` : '--'
+    $('hud-payload').textContent = model.payload ? `${model.payload} kg` : '--'
+    $('hud-dof').textContent = model.dof ? String(model.dof) : '--'
+  } catch (err) {
+    console.error('Failed to load model:', err)
+  } finally {
+    loaderModal.close()
+  }
 }
 
 // ── Keyboard shortcuts ──
@@ -604,7 +630,7 @@ function pollGamepad () {
 // ── Start ──
 
 function main () {
-  loadModelZae('abb_irb120_3_58')
+  loadModel('universal_robot_ur5')
 
   ikGoal = addSphereAtXYZ(0.4, 0.5, 0)
   ikGoal.name = 'ikGoal'
