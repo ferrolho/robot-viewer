@@ -54,18 +54,43 @@ export class Robot {
     this.printJointNames()
   }
 
+  /**
+   * For each tip link, find the joint indices in its kinematic chain.
+   * When there are multiple tips, joints shared between tips are excluded
+   * so that per-tip IK solves don't fight over the same joints.
+   */
   private _computeTipJointIndices(): number[][] {
     const jointSet = new Set(this._joints)
-    return this._tipLinks.map(tipName => {
+
+    // First pass: collect all ancestor joints for each tip
+    const allAncestors = this._tipLinks.map(tipName => {
       const ancestors = new Set<string>()
       let obj: THREE.Object3D | null = this._root.getObjectByName(tipName) ?? null
       while (obj && obj !== this._root) {
         if (jointSet.has(obj.name)) ancestors.add(obj.name)
         obj = obj.parent
       }
+      return ancestors
+    })
+
+    // Count how many tips each joint appears in
+    const jointRefCount = new Map<string, number>()
+    for (const ancestors of allAncestors) {
+      for (const name of ancestors) {
+        jointRefCount.set(name, (jointRefCount.get(name) ?? 0) + 1)
+      }
+    }
+
+    // For multi-tip robots, only keep joints exclusive to each tip
+    const multiTip = this._tipLinks.length > 1
+    return allAncestors.map(ancestors => {
       const indices: number[] = []
       for (let i = 0; i < this._joints.length; i++) {
-        if (ancestors.has(this._joints[i])) indices.push(i)
+        if (ancestors.has(this._joints[i])) {
+          if (!multiTip || jointRefCount.get(this._joints[i])! === 1) {
+            indices.push(i)
+          }
+        }
       }
       return indices
     })
