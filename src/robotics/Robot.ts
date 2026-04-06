@@ -26,6 +26,8 @@ export class Robot {
   private _kinematics: RobotKinematics
   private _tipLinks: string[]
   private _tipJointIndices: number[][] = []
+  /** Joints that are connected to a tip only via mimic chain (need numerical Jacobian). */
+  private _mimicResolvedJoints: Set<number>[] = []
   private _degreesOfFreedom: number
   _joints: string[]
   private _q: number[]
@@ -60,23 +62,32 @@ export class Robot {
   private _computeTipJointIndices(): number[][] {
     const jointSet = new Set(this._joints)
     const allJoints = this._kinematics.joints
+    this._mimicResolvedJoints = []
     return this._tipLinks.map(tipName => {
-      const ancestors = new Set<string>()
+      const directAncestors = new Set<string>()
+      const mimicResolved = new Set<string>()
       let obj: THREE.Object3D | null = this._root.getObjectByName(tipName) ?? null
       while (obj && obj !== this._root) {
         const name = obj.name
         if (jointSet.has(name)) {
-          ancestors.add(name)
+          directAncestors.add(name)
         } else if (allJoints[name]?.mimics) {
-          // Mimic joint — include the parent joint it mimics
-          ancestors.add(allJoints[name].mimics!)
+          mimicResolved.add(allJoints[name].mimics!)
         }
         obj = obj.parent
       }
+      const allAncestors = new Set([...directAncestors, ...mimicResolved])
       const indices: number[] = []
+      const mimicIndices = new Set<number>()
       for (let i = 0; i < this._joints.length; i++) {
-        if (ancestors.has(this._joints[i])) indices.push(i)
+        if (allAncestors.has(this._joints[i])) {
+          indices.push(i)
+          if (mimicResolved.has(this._joints[i]) && !directAncestors.has(this._joints[i])) {
+            mimicIndices.add(i)
+          }
+        }
       }
+      this._mimicResolvedJoints.push(mimicIndices)
       return indices
     })
   }
@@ -299,6 +310,7 @@ export class Robot {
     }
 
     const nCols = indices.length
+    const mimicSet = this._mimicResolvedJoints[tipIndex] ?? new Set<number>()
     const tipObj = this._root.getObjectByName(this._tipLinks[tipIndex])!
     tipObj.updateWorldMatrix(true, false)
 
@@ -313,6 +325,14 @@ export class Robot {
     for (let ci = 0; ci < nCols; ci++) {
       const ji = indices[ci]
       const jointName = this._joints[ji]
+
+      // Mimic-resolved joints: the joint is not a physical ancestor of the tip,
+      // so the geometric formula doesn't apply. Use numerical differentiation.
+      if (mimicSet.has(ji)) {
+        cols[ci] = this._numericalJacobianColumn(tipIndex, ji, partial)
+        continue
+      }
+
       const jointObj = this._root.getObjectByName(jointName)!
       // Joint axis is defined in the joint's local frame — transform to world
       const localAxis = this._kinematics.joints[jointName].axis
@@ -344,6 +364,32 @@ export class Robot {
       rows[r] = row
     }
     return rows
+  }
+
+  /** Compute one Jacobian column by finite-difference perturbation (for mimic-resolved joints). */
+  private _numericalJacobianColumn(tipIndex: number, jointIdx: number, partial: Partial): number[] {
+    const eps = 0.5 // degrees
+    const jointName = this._joints[jointIdx]
+    const origVal = this._q[jointIdx]
+    const tipObj = this._root.getObjectByName(this._tipLinks[tipIndex])!
+
+    // Forward perturbation
+    this.setJointValue(jointName, origVal + eps)
+    this._root.updateMatrixWorld(true)
+    const T1 = this.threejs2mathjsMatrix(tipObj.matrixWorld)
+
+    // Backward perturbation
+    this.setJointValue(jointName, origVal - eps)
+    this._root.updateMatrixWorld(true)
+    const T0 = this.threejs2mathjsMatrix(tipObj.matrixWorld)
+
+    // Restore original value
+    this.setJointValue(jointName, origVal)
+    this._root.updateMatrixWorld(true)
+
+    const delta = robotMath.tr2delta(T0, T1, partial)
+    const scale = 1 / (2 * eps * THREE.MathUtils.DEG2RAD)
+    return (delta as number[]).map(v => v * scale)
   }
 
   // ── IK Solver ──
