@@ -551,39 +551,6 @@ export class Robot {
     if (this.showForceEllipsoid) this.updateForceEllipsoid()
 
     const delta = Date.now() - start
-
-    // ── Diagnostics ──
-    const perTipErrors: string[] = []
-    let anyBad = false
-    for (let ti = 0; ti < goals.length; ti++) {
-      const T0 = this.threejs2mathjsMatrix(this._fkineTip(ti))
-      const err = robotMath.tr2delta(T0, Tfs[ti], partial)
-      const errArr: number[] = Array.isArray(err) ? err : err.toArray ? err.toArray() : err
-      const posErr = Math.sqrt(errArr[0] ** 2 + errArr[1] ** 2 + errArr[2] ** 2)
-      const rotErr = dimPerTip > 3 ? Math.sqrt(errArr[3] ** 2 + errArr[4] ** 2 + errArr[5] ** 2) : 0
-      const converged = posErr < tolerance && rotErr < tolerance
-      if (!converged) anyBad = true
-      perTipErrors.push(
-        `  tip${ti} (${this._tipLinks[ti]}): pos=${posErr.toFixed(4)} rot=${rotErr.toFixed(4)}${converged ? '' : ' ⚠'}`
-      )
-    }
-
-    // Joints at limits
-    const atLimit: string[] = []
-    for (const ji of allJoints) {
-      const name = this._joints[ji]
-      const joint = this._kinematics.joints[name]
-      const val = this._q[ji]
-      const margin = 0.5 // degrees
-      if (val <= joint.limits.min + margin) atLimit.push(`${name}(min)`)
-      else if (val >= joint.limits.max - margin) atLimit.push(`${name}(max)`)
-    }
-
-    console.log(
-      `Whole-body IK: ${iteration} iters, ${delta} ms` +
-      (anyBad ? ' — DID NOT CONVERGE' : '') +
-      `\n${perTipErrors.join('\n')}` +
-      (atLimit.length ? `\n  joints at limit: ${atLimit.join(', ')}` : '')
-    )
+    console.log(`Whole-body IK: ${iteration} iters (${delta} ms).`)
   }
 }
