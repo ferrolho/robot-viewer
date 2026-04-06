@@ -67,10 +67,11 @@ Create [`ferrolho/robot-viewer-models`](https://github.com/ferrolho/robot-viewer
 - [x] Remove dead dependencies (`jszip`, `jszip-utils`)
 - [x] Delete `src/ColladaRobotsList.ts`
 - [x] Update `CLAUDE.md`
-- [ ] Archive `ferrolho/collada-robots-collection` on GitHub (read-only, not deleted)
+- [x] Archive `ferrolho/collada-robots-collection` on GitHub (read-only, not deleted)
 
 ### Phase 10: Expand and Enhance
-- [ ] Expand to all 179+ robots from robot-descriptions that pass validation
+- [x] Expand catalog: 67 robots from 30+ brands (from 12 initial)
+- [ ] GLB conversion with material preservation (Blender headless or assimp) for smaller downloads and multi-LOD support
 - [ ] LOD switching UI (auto: low on mobile, medium on desktop)
 - [ ] Sidebar search and category filtering for large catalog
 - [ ] Thumbnail generation for model list
