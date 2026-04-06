@@ -38,3 +38,39 @@
 - [ ] Split `app.ts` into modules: scene setup, UI handlers, model loader, animation loop
 - [ ] Enable `noImplicitAny` in tsconfig once mathjs types are tightened
 - [ ] Add Playwright E2E tests for critical flows (load model, IK drag, reachability)
+
+### Phase 7: URDF Migration — Model Processing Pipeline (new repo)
+Create `ferrolho/robot-viewer-models` (name TBD) with a Python pipeline that:
+- [ ] Scaffold repo (scripts/, robots.yaml, pyproject.toml, CI workflow)
+- [ ] Pull URDF descriptions from upstream via `robot_descriptions` Python package
+- [ ] Decimate meshes to two LODs (low ~5k tris, medium ~25k tris) with `trimesh`
+- [ ] Convert meshes to Draco-compressed GLB via `gltf-transform`
+- [ ] Rewrite URDF mesh paths to relative GLB references
+- [ ] Generate `manifest.json` with model metadata (id, brand, name, tipLinks, dof, etc.)
+- [ ] Validate each model (URDF parses, meshes exist, DOF matches)
+- [ ] CI workflow: tag push → process models → commit to `dist` branch → jsDelivr serves via `cdn.jsdelivr.net/gh/...`
+- [ ] Initial set: UR3/5/10, KUKA iiwa/KR series, Panda, ANYmal, TALOS, TIAGo, Valkyrie, iCub, HyQ
+
+### Phase 8: URDF Migration — Viewer (feature branch on robot-viewer)
+- [ ] Add `urdf-loader` dependency, remove `jszip`/`jszip-utils`
+- [ ] New `src/ModelLoader.ts` — fetch manifest from CDN, load URDF+GLB via `URDFLoader`+`GLTFLoader`
+- [ ] Refactor `src/Robot.ts` — replace COLLADA interfaces with loader-agnostic `RobotKinematics` interface; adapter converts URDF joints (radians) to internal convention (degrees)
+- [ ] Replace `computeKinematicsGeometry` — extract link offsets from URDF joint origins; return null for non-6-DOF (analytical IK gracefully unavailable, pseudo-inverse fallback)
+- [ ] Rewrite `src/app.ts` model loading — replace `loadModelZae` with URDF fetch; generate sidebar dynamically from manifest
+- [ ] Update `index.html` — replace hardcoded brand `<details>` with single `<div id="models-list">`
+- [ ] Update `src/types.d.ts` — add URDF/GLTF declarations, remove COLLADA/JSZip
+
+### Phase 9: URDF Migration — Cleanup
+- [ ] Remove `collada-robots-collection` submodule
+- [ ] Update `.github/workflows/deploy.yml` — remove submodule checkout and asset copy (deploy drops from ~84 MB to <1 MB)
+- [ ] Remove dead dependencies (`jszip`, `jszip-utils`)
+- [ ] Delete `src/ColladaRobotsList.ts`
+- [ ] Update `CLAUDE.md` and `README.md`
+- [ ] Archive `ferrolho/collada-robots-collection` on GitHub (read-only, not deleted)
+
+### Phase 10: Expand and Enhance
+- [ ] Expand to all 179+ robots from robot-descriptions that pass validation
+- [ ] LOD switching UI (auto: low on mobile, medium on desktop)
+- [ ] Sidebar search and category filtering for large catalog
+- [ ] Thumbnail generation for model list
+- [ ] Optional: service worker for offline model caching
