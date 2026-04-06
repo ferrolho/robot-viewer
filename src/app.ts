@@ -1,5 +1,4 @@
-import { IkSolverEnum } from './IkSolver.ts'
-import { Robot, robotKinematicsFromURDF } from './Robot.ts'
+import { IkSolverEnum, Robot, robotKinematicsFromURDF } from './robotics/index.ts'
 import { ModelLoader, type ManifestModel } from './ModelLoader.ts'
 
 import WebGL from 'three/addons/capabilities/WebGL.js'

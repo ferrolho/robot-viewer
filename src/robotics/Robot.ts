@@ -1,6 +1,6 @@
-import * as math_ from './math_.ts'
-import { type Partial } from './math_.ts'
-import { math } from './math_.ts'
+import * as robotMath from './math.ts'
+import { type Partial } from './math.ts'
+import { math } from './math.ts'
 import * as THREE from 'three'
 
 export interface RobotJoint {
@@ -107,7 +107,7 @@ export class Robot {
     const ellipsoid = lineSegments
     ellipsoid.name = name
 
-    const eff = math_.transl(this.fkine(this.configuration))
+    const eff = robotMath.transl(this.fkine(this.configuration))
     ellipsoid.position.set(eff.x, eff.y, eff.z)
 
     this._scene.add(ellipsoid)
@@ -241,7 +241,7 @@ export class Robot {
   }
 
   setJointValue(name: string, value: number): void {
-    value = math_.clamp(value, this._kinematics.joints[name].limits.min, this._kinematics.joints[name].limits.max)
+    value = robotMath.clamp(value, this._kinematics.joints[name].limits.min, this._kinematics.joints[name].limits.max)
 
     this._kinematics.setJointValue(name, value)
     this._q[this._joints.indexOf(name)] = value
@@ -362,7 +362,7 @@ export class Robot {
 
       for (let iteration = 0; iteration < maxIterations; iteration++) {
         const T0 = this.threejs2mathjsMatrix(this._fkineTip(ti))
-        const error = math_.tr2delta(T0, Tf, partial)
+        const error = robotMath.tr2delta(T0, Tf, partial)
 
         if ((math.norm(error) as number) <= tolerance) break
 
@@ -412,7 +412,7 @@ export class Robot {
 
     while (iteration < maxIterations) {
       const T0 = this.threejs2mathjsMatrix(this._fkineTip(tipIndex))
-      const error = math_.tr2delta(T0, Tf, partial)
+      const error = robotMath.tr2delta(T0, Tf, partial)
 
       if ((math.norm(error) as number) <= tolerance) { break }
 
@@ -447,40 +447,5 @@ export class Robot {
     if (this.showForceEllipsoid) this.updateForceEllipsoid()
 
     console.log(`Solved with ${iteration} iterations (${delta} ms).`)
-  }
-}
-
-// ── URDF Adapter ──
-
-import type { URDFRobot } from 'urdf-loader'
-
-/**
- * Adapt a URDFRobot (from urdf-loader) to the RobotKinematics interface.
- *
- * Key convention: Robot internally stores joint values in degrees.
- * COLLADA's setJointValue accepted degrees. URDF's setJointValue expects radians.
- * This adapter converts degrees → radians on setJointValue, and
- * reports limits in degrees for consistency with the rest of the codebase.
- */
-export function robotKinematicsFromURDF(urdf: URDFRobot): RobotKinematics {
-  const joints: Record<string, RobotJoint> = {}
-
-  for (const [name, joint] of Object.entries(urdf.joints)) {
-    const isStatic = joint.jointType === 'fixed'
-    joints[name] = {
-      static: isStatic,
-      limits: {
-        min: joint.limit.lower * THREE.MathUtils.RAD2DEG,
-        max: joint.limit.upper * THREE.MathUtils.RAD2DEG,
-      },
-      axis: joint.axis.clone(),
-    }
-  }
-
-  return {
-    joints,
-    setJointValue(name: string, valueDeg: number): void {
-      urdf.setJointValue(name, valueDeg * THREE.MathUtils.DEG2RAD)
-    },
   }
 }
