@@ -556,6 +556,7 @@ async function loadModel (modelId: string) {
 
     robot = new Robot(scene, urdfRobot, kinematics, model.tipLinks)
     robot.id = modelId
+    robot.category = model.category
 
     updateShadowsState()
     setupIkGoals()
