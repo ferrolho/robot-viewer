@@ -471,12 +471,16 @@ export class Robot {
       qMid[c] = (joint.limits.min + joint.limits.max) / 2
     }
 
-    const maxIterations = 50
+    const maxIterations = 100
     const tolerance = 1e-3
-    const alpha = 0.2
-    const lambdaMax = 0.04
-    const manipThreshold = 0.005
-    const nullSpaceGain = 0.5
+    const alpha = 0.5
+    const lambda = 1e-3
+    const nullSpaceGain = 0.1
+
+    // Fixed damping matrix — stacked systems are inherently stable, so adaptive
+    // det-based damping doesn't work (det of a 24×24 matrix is tiny even when
+    // the system is well-conditioned).
+    const C = math.multiply(math.identity(totalDim) as any, lambda)
 
     const start = Date.now()
     let iteration = 0
@@ -515,14 +519,6 @@ export class Robot {
       const Jm = math.matrix(stackedJ)
       const Jt = math.transpose(Jm)
       const JJt = math.multiply(Jm, Jt)
-
-      // Adaptive damping
-      const det = math.det(JJt) as number
-      const w = Math.sqrt(Math.max(det, 0))
-      const lambda = w < manipThreshold
-        ? lambdaMax * (1 - (w / manipThreshold) ** 2)
-        : 0
-      const C = math.multiply(math.identity(totalDim) as any, Math.max(lambda, 1e-4))
 
       const pinv = math.multiply(Jt, math.inv(math.add(JJt, C) as any))
 
