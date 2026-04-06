@@ -398,58 +398,109 @@ function animate (time: number) {
 // ── Model list ──
 
 const modelsListContainer = document.getElementById('models-list')!
+let brandMap = new Map<string, ManifestModel[]>()
 
-async function setupModelsList () {
-  const manifest = await modelLoader.fetchManifest()
-  const models = manifest.models
+function showBrandGrid () {
+  const sortedBrands = [...brandMap.keys()].sort()
 
-  // Group by brand
-  const byBrand = new Map<string, ManifestModel[]>()
-  for (const model of models) {
-    const list = byBrand.get(model.brand) ?? []
-    list.push(model)
-    byBrand.set(model.brand, list)
-  }
+  const grid = document.createElement('div')
+  grid.className = 'brand-grid models-view'
 
-  // Sort brands alphabetically
-  const sortedBrands = [...byBrand.keys()].sort()
-
-  modelsListContainer.innerHTML = ''
   for (const brand of sortedBrands) {
     const brandSlug = brand.replace(/\s+/g, '-').toLowerCase()
-    const details = document.createElement('details')
-    const summary = document.createElement('summary')
+    const count = brandMap.get(brand)!.length
 
-    // Try to load brand logo, fall back to text-only
+    const tile = document.createElement('button')
+    tile.className = 'brand-tile'
+    tile.addEventListener('click', () => showBrandRobots(brand))
+
     const img = document.createElement('img')
     img.src = `/images/logos/${brandSlug}.png`
     img.alt = brand
-    img.onerror = () => img.remove()
-    summary.appendChild(img)
-
-    const span = document.createElement('span')
-    span.textContent = brand
-    summary.appendChild(span)
-    details.appendChild(summary)
-
-    const ul = document.createElement('ul')
-    ul.className = 'model-list'
-    for (const model of byBrand.get(brand)!) {
-      const li = document.createElement('li')
-      li.id = model.id
-      const a = document.createElement('a')
-      a.href = '#!'
-      a.textContent = model.name
-      a.addEventListener('click', () => {
-        loadModel(model.id)
-        hideSidebar()
-      })
-      li.appendChild(a)
-      ul.appendChild(li)
+    img.onerror = () => {
+      img.remove()
+      const fallback = document.createElement('div')
+      fallback.className = 'brand-icon-fallback'
+      fallback.textContent = brand.slice(0, 2).toUpperCase()
+      tile.insertBefore(fallback, tile.firstChild)
     }
-    details.appendChild(ul)
-    modelsListContainer.appendChild(details)
+    tile.appendChild(img)
+
+    const name = document.createElement('span')
+    name.textContent = brand
+    tile.appendChild(name)
+
+    const countEl = document.createElement('span')
+    countEl.className = 'brand-count'
+    countEl.textContent = `${count} model${count !== 1 ? 's' : ''}`
+    tile.appendChild(countEl)
+
+    grid.appendChild(tile)
   }
+
+  modelsListContainer.innerHTML = ''
+  modelsListContainer.appendChild(grid)
+}
+
+function showBrandRobots (brand: string) {
+  const brandSlug = brand.replace(/\s+/g, '-').toLowerCase()
+  const models = brandMap.get(brand)!
+
+  const view = document.createElement('div')
+  view.className = 'models-view'
+
+  // Back button
+  const back = document.createElement('button')
+  back.className = 'brand-back'
+  back.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>`
+
+  const backImg = document.createElement('img')
+  backImg.src = `/images/logos/${brandSlug}.png`
+  backImg.alt = brand
+  backImg.onerror = () => backImg.remove()
+  back.appendChild(backImg)
+
+  const backName = document.createElement('span')
+  backName.className = 'brand-name'
+  backName.textContent = brand
+  back.appendChild(backName)
+
+  back.addEventListener('click', showBrandGrid)
+  view.appendChild(back)
+
+  // Robot list
+  const ul = document.createElement('ul')
+  ul.className = 'model-list'
+  for (const model of models) {
+    const li = document.createElement('li')
+    li.id = model.id
+    const a = document.createElement('a')
+    a.href = '#!'
+    a.textContent = model.name
+    a.addEventListener('click', () => {
+      loadModel(model.id)
+      hideSidebar()
+    })
+    li.appendChild(a)
+    ul.appendChild(li)
+  }
+  view.appendChild(ul)
+
+  modelsListContainer.innerHTML = ''
+  modelsListContainer.appendChild(view)
+}
+
+async function setupModelsList () {
+  const manifest = await modelLoader.fetchManifest()
+
+  brandMap = new Map<string, ManifestModel[]>()
+  for (const model of manifest.models) {
+    const list = brandMap.get(model.brand) ?? []
+    list.push(model)
+    brandMap.set(model.brand, list)
+  }
+
+  showBrandGrid()
 }
 
 setupModelsList()
