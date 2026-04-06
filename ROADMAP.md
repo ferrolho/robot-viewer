@@ -43,23 +43,25 @@
 Create [`ferrolho/robot-viewer-models`](https://github.com/ferrolho/robot-viewer-models) with a Python pipeline that:
 - [x] Scaffold repo (scripts/, robots.yaml, pyproject.toml, CI workflow)
 - [x] Pull URDF descriptions from upstream via `robot_descriptions` Python package
-- [x] Decimate meshes to two LODs (low ~5k tris, medium ~25k tris) with `trimesh`
-- [x] Convert meshes to GLB via `trimesh` (Draco compression optional via `gltf-transform`)
-- [x] Rewrite URDF mesh paths to relative GLB references
+- [x] Copy original meshes (STL, DAE, OBJ) with textures to preserve materials
+- [x] Rewrite URDF mesh paths to relative references
 - [x] Generate `manifest.json` with model metadata (id, brand, name, tipLinks, dof, etc.)
 - [x] Validate each model (URDF parses, meshes exist, DOF matches)
-- [x] CI workflow: tag push → process models → commit to `dist` branch → jsDelivr serves via `cdn.jsdelivr.net/gh/...`
-- [x] Initial set: UR3/5/10, KUKA iiwa, Panda, ANYmal C, TALOS, TIAGo, Valkyrie, iCub, HyQ, NEXTAGE (12 robots)
+- [x] Dist branch served via jsDelivr CDN (`cdn.jsdelivr.net/gh/...`)
+- [x] Initial set: 12 robots from robot_descriptions
+- [x] Xacro rendering via ROS Noetic Docker container for ABB and KUKA industrial robots
+- [x] Expanded to 81 robots from 35+ brands (ABB IRB series, KUKA KR series, Unitree, Boston Dynamics, etc.)
 
 ### Phase 8: URDF Migration — Viewer (feature branch on robot-viewer)
 - [x] Add `urdf-loader` dependency, remove `jszip`/`jszip-utils`
-- [x] New `src/ModelLoader.ts` — fetch manifest from CDN, load URDF+GLB via `URDFLoader`+`GLTFLoader`
+- [x] New `src/ModelLoader.ts` — fetch manifest from CDN, load URDF via `URDFLoader` with native STL/DAE mesh loading
 - [x] Refactor `src/Robot.ts` — replace COLLADA interfaces with loader-agnostic `RobotKinematics` interface; adapter converts URDF joints (radians) to internal convention (degrees)
 - [x] Remove `computeKinematicsGeometry` — analytical IK disabled for now; pseudo-inverse is the default
 - [x] Rewrite `src/app.ts` model loading — replace `loadModelZae` with URDF fetch; generate sidebar dynamically from manifest
 - [x] Update `index.html` — replace hardcoded brand `<details>` with single `<div id="models-list">`
 - [x] Update `src/types.d.ts` — add URDF/GLTF declarations, remove COLLADA/JSZip
 - [x] Fix Z-up (ROS) to Y-up (Three.js) coordinate conversion
+- [x] Two-level brand gallery sidebar (brand tile grid → robot list with back button)
 
 ### Phase 9: URDF Migration — Cleanup
 - [x] Remove `collada-robots-collection` submodule
@@ -70,15 +72,15 @@ Create [`ferrolho/robot-viewer-models`](https://github.com/ferrolho/robot-viewer
 - [x] Archive `ferrolho/collada-robots-collection` on GitHub (read-only, not deleted)
 
 ### Phase 10: Expand and Enhance
-- [x] Expand catalog: 67 robots from 30+ brands (from 12 initial)
+- [x] Expand catalog: 81 robots from 35+ brands
+- [x] Add ABB IRB series (10 models) and KUKA KR series (4 models) via xacro rendering in Docker
 - [ ] GLB conversion with material preservation (Blender headless or assimp) for smaller downloads and multi-LOD support
 - [ ] LOD switching UI (auto: low on mobile, medium on desktop)
 - [ ] Sidebar search and category filtering for large catalog
 - [ ] Thumbnail generation for model list
+- [ ] Brand logo icons for new brands (only original 11 brands have logos)
 - [ ] Optional: service worker for offline model caching
 
 ### Known Issues
 - [ ] Closed-chain linkages (e.g. Robotiq parallel grippers) are not enforced — mimic joints move independently instead of closing the kinematic chain
 - [ ] IK goal is only created for the first tipLink — robots with multiple end-effectors (hands, feet) only have one IK target
-- [ ] Many brands are missing logo icons in the sidebar (only original 11 brands have logos in `public/images/logos/`)
-- [ ] ABB and KUKA only have 1 robot each in robot-descriptions (YuMi and iiwa); the original ABB IRB series and KUKA KR series have no upstream URDFs available
