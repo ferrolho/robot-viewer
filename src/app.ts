@@ -554,9 +554,21 @@ async function loadModel (modelId: string) {
     const model = modelLoader.getModel(modelId)!
     const kinematics = robotKinematicsFromURDF(urdfRobot)
 
+    // Remove stale ellipsoids from previous robot
+    for (const name of ['velocity-ellipsoid', 'force-ellipsoid', 'acceleration-ellipsoid']) {
+      const obj = scene.getObjectByName(name)
+      if (obj) scene.remove(obj)
+    }
+
     robot = new Robot(scene, urdfRobot, kinematics, model.tipLinks)
     robot.id = modelId
     robot.category = model.category
+
+    // Sync ellipsoid state from UI toggles to new robot
+    robot.showVelocityEllipsoid = showVelocityEllipsoid
+    robot.showForceEllipsoid = showForceEllipsoid
+    if (showVelocityEllipsoid) robot.updateVelocityEllipsoid()
+    if (showForceEllipsoid) robot.updateForceEllipsoid()
 
     updateShadowsState()
     setupIkGoals()
