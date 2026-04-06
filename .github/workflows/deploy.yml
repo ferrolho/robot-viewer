@@ -18,8 +18,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with:
-          submodules: true
 
       - uses: actions/setup-node@v4
         with:
@@ -28,9 +26,6 @@ jobs:
 
       - run: npm install
       - run: npx vite build
-
-      - name: Copy runtime assets to dist
-        run: cp -r collada-robots-collection dist/
 
       - uses: actions/upload-pages-artifact@v3
         with:
