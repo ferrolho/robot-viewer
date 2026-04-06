@@ -476,7 +476,8 @@ async function loadModel (modelId: string, lod = 'medium') {
       }
     })
 
-    urdfRobot.scale.set(1.0, 1.0, 1.0)
+    // URDF uses Z-up (ROS convention), Three.js uses Y-up
+    urdfRobot.rotation.x = -Math.PI / 2
     urdfRobot.updateMatrix()
 
     while (modelsInScene.length) {
