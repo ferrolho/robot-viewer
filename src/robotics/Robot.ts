@@ -491,7 +491,7 @@ export class Robot {
       const stackedJ: number[][] = new Array(totalDim)
       for (let r = 0; r < totalDim; r++) stackedJ[r] = new Array(nj).fill(0)
 
-      let totalError = 0
+      let maxTipError = 0
 
       for (let ti = 0; ti < goals.length; ti++) {
         const T0 = this.threejs2mathjsMatrix(this._fkineTip(ti))
@@ -499,10 +499,12 @@ export class Robot {
         const errorArr: number[] = Array.isArray(error) ? error : error.toArray ? error.toArray() : error
 
         const rowOffset = ti * dimPerTip
+        let tipError = 0
         for (let r = 0; r < dimPerTip; r++) {
           stackedError[rowOffset + r] = errorArr[r]
-          totalError += errorArr[r] * errorArr[r]
+          tipError += errorArr[r] * errorArr[r]
         }
+        maxTipError = Math.max(maxTipError, Math.sqrt(tipError))
 
         // Per-tip Jacobian — place columns into the correct stacked positions
         const tipJoints = this._tipJointIndices[ti]
@@ -514,7 +516,7 @@ export class Robot {
         }
       }
 
-      if (Math.sqrt(totalError) <= tolerance) break
+      if (maxTipError <= tolerance) break
 
       const Jm = math.matrix(stackedJ)
       const Jt = math.transpose(Jm)
