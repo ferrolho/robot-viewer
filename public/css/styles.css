@@ -628,6 +628,7 @@ body.sidebar-left-collapsed.sidebar-right-collapsed #app {
 /* ── Stats.js ── */
 
 #statsjs {
+  position: absolute !important;
   left: auto !important;
   right: 0 !important;
   top: 0 !important;
