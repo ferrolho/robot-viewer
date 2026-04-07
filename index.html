@@ -3,7 +3,7 @@
 	<head>
 		<meta charset="UTF-8"/>
 		<meta name="viewport" content="width=device-width, initial-scale=1"/>
-		<title>Robot Viewer</title>
+		<title data-i18n="app.title">Robot Viewer</title>
 		<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 		<link href="/css/styles.css" rel="stylesheet" type="text/css">
 	</head>
@@ -14,14 +14,15 @@
 				<div class="sidebar-header">
 					<div class="logo">
 						<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="18" r="3"/><path d="M12 15V9"/><circle cx="12" cy="6" r="3"/><path d="M6 6h3M15 6h3"/></svg>
-						<span>Robot Viewer</span>
+						<span data-i18n="app.title">Robot Viewer</span>
 					</div>
 					<div class="sidebar-header-actions">
-						<button id="theme-toggle" class="icon-btn" aria-label="Toggle theme">
+						<button id="lang-toggle" class="icon-btn lang-btn" data-i18n-aria-label="aria.language" aria-label="Change language">EN</button>
+						<button id="theme-toggle" class="icon-btn" data-i18n-aria-label="aria.toggleTheme" aria-label="Toggle theme">
 							<svg class="icon-sun" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
 							<svg class="icon-moon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
 						</button>
-						<button id="sidebar-left-collapse" class="icon-btn" aria-label="Collapse sidebar">
+						<button id="sidebar-left-collapse" class="icon-btn" data-i18n-aria-label="aria.collapseSidebar" aria-label="Collapse sidebar">
 							<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 17l-5-5 5-5M18 17l-5-5 5-5"/></svg>
 						</button>
 					</div>
@@ -29,11 +30,11 @@
 
 				<div class="sidebar-scroll">
 					<section class="panel-section panel-section--models">
-						<h6 class="section-label">Models</h6>
+						<h6 class="section-label" data-i18n="models.label">Models</h6>
 						<div class="models-filter">
 							<div class="search-box">
 								<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
-								<input id="model-search" type="text" placeholder="Search robots..." autocomplete="off" spellcheck="false">
+								<input id="model-search" type="text" data-i18n-placeholder="models.search" placeholder="Search robots..." autocomplete="off" spellcheck="false">
 							</div>
 							<div id="category-chips" class="category-chips"></div>
 						</div>
@@ -44,11 +45,11 @@
 			</aside>
 
 			<main id="viewport">
-				<button id="menu-toggle" aria-label="Toggle menu">
+				<button id="menu-toggle" data-i18n-aria-label="aria.toggleMenu" aria-label="Toggle menu">
 					<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h18M3 6h18M3 18h18"/></svg>
 				</button>
 
-				<button id="settings-toggle" aria-label="Toggle settings">
+				<button id="settings-toggle" data-i18n-aria-label="aria.toggleSettings" aria-label="Toggle settings">
 					<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
 				</button>
 
@@ -56,23 +57,23 @@
 
 				<div id="hud">
 					<div class="hud-item">
-						<span class="hud-label">Model</span>
+						<span class="hud-label" data-i18n="hud.model">Model</span>
 						<span class="hud-value" id="hud-model">--</span>
 					</div>
 					<div class="hud-item">
-						<span class="hud-label">Brand</span>
+						<span class="hud-label" data-i18n="hud.brand">Brand</span>
 						<span class="hud-value" id="hud-brand">--</span>
 					</div>
 					<div class="hud-item">
-						<span class="hud-label">Reach</span>
+						<span class="hud-label" data-i18n="hud.reach">Reach</span>
 						<span class="hud-value" id="hud-reach">--</span>
 					</div>
 					<div class="hud-item">
-						<span class="hud-label">Payload</span>
+						<span class="hud-label" data-i18n="hud.payload">Payload</span>
 						<span class="hud-value" id="hud-payload">--</span>
 					</div>
 					<div class="hud-item">
-						<span class="hud-label">DOF</span>
+						<span class="hud-label" data-i18n="hud.dof">DOF</span>
 						<span class="hud-value" id="hud-dof">--</span>
 					</div>
 				</div>
@@ -80,81 +81,81 @@
 
 			<aside id="sidebar-right">
 				<div class="sidebar-header">
-					<span class="sidebar-header-title">Settings</span>
-					<button id="sidebar-right-collapse" class="icon-btn" aria-label="Collapse settings">
+					<span class="sidebar-header-title" data-i18n="settings.title">Settings</span>
+					<button id="sidebar-right-collapse" class="icon-btn" data-i18n-aria-label="aria.collapseSettings" aria-label="Collapse settings">
 						<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 17l5-5-5-5M6 17l5-5-5-5"/></svg>
 					</button>
 				</div>
 
 				<div class="sidebar-scroll">
 					<section class="panel-section">
-						<h6 class="section-label">Display</h6>
+						<h6 class="section-label" data-i18n="display.label">Display</h6>
 						<label class="toggle-row">
-							<span>Grid</span>
+							<span data-i18n="display.grid">Grid</span>
 							<input id="grid-switch" type="checkbox">
 							<span class="toggle-track"><span class="toggle-thumb"></span></span>
 						</label>
 						<label class="toggle-row">
-							<span>Axis</span>
+							<span data-i18n="display.axis">Axis</span>
 							<input id="axis-switch" type="checkbox">
 							<span class="toggle-track"><span class="toggle-thumb"></span></span>
 						</label>
 						<label class="toggle-row">
-							<span>Shadows</span>
+							<span data-i18n="display.shadows">Shadows</span>
 							<input id="shadows-switch" type="checkbox">
 							<span class="toggle-track"><span class="toggle-thumb"></span></span>
 						</label>
 						<label class="toggle-row">
-							<span>Performance</span>
+							<span data-i18n="display.performance">Performance</span>
 							<input id="stats-switch" type="checkbox">
 							<span class="toggle-track"><span class="toggle-thumb"></span></span>
 						</label>
 					</section>
 
 					<section class="panel-section">
-						<h6 class="section-label">Controls</h6>
+						<h6 class="section-label" data-i18n="controls.label">Controls</h6>
 						<div class="btn-group">
-							<button id="reset-button" class="btn">Home</button>
-							<button id="random-button" class="btn">Random</button>
+							<button id="reset-button" class="btn" data-i18n="controls.home">Home</button>
+							<button id="random-button" class="btn" data-i18n="controls.random">Random</button>
 						</div>
 						<div class="btn-group">
-							<button id="reachability-button" class="btn btn-outline">Reachability</button>
-							<button id="clear-clouds-button" class="btn btn-outline">Clear Points</button>
+							<button id="reachability-button" class="btn btn-outline" data-i18n="controls.reachability">Reachability</button>
+							<button id="clear-clouds-button" class="btn btn-outline" data-i18n="controls.clearPoints">Clear Points</button>
 						</div>
 					</section>
 
 					<section class="panel-section">
-						<h6 class="section-label">Solvers</h6>
+						<h6 class="section-label" data-i18n="solvers.label">Solvers</h6>
 						<label class="toggle-row">
-							<span>Inverse Kinematics</span>
+							<span data-i18n="solvers.ik">Inverse Kinematics</span>
 							<input id="pseudo-inverse-switch" type="checkbox">
 							<span class="toggle-track"><span class="toggle-thumb"></span></span>
 						</label>
 					</section>
 
 					<section class="panel-section">
-						<h6 class="section-label">Ellipsoids</h6>
+						<h6 class="section-label" data-i18n="ellipsoids.label">Ellipsoids</h6>
 						<label class="toggle-row">
-							<span>Velocity</span>
+							<span data-i18n="ellipsoids.velocity">Velocity</span>
 							<input id="velocity-ellipsoid-switch" type="checkbox">
 							<span class="toggle-track"><span class="toggle-thumb"></span></span>
 						</label>
 						<label class="toggle-row">
-							<span>Force</span>
+							<span data-i18n="ellipsoids.force">Force</span>
 							<input id="force-ellipsoid-switch" type="checkbox">
 							<span class="toggle-track"><span class="toggle-thumb"></span></span>
 						</label>
-						<label class="toggle-row disabled" title="Requires inertia computation (not yet implemented)">
-							<span>Acceleration</span>
+						<label class="toggle-row disabled" data-i18n-title="ellipsoids.acceleration.title" title="Requires inertia computation (not yet implemented)">
+							<span data-i18n="ellipsoids.acceleration">Acceleration</span>
 							<input id="accel-ellipsoid-switch" type="checkbox" disabled>
 							<span class="toggle-track"><span class="toggle-thumb"></span></span>
 						</label>
 					</section>
 
 					<div class="sidebar-footer">
-						<button id="shortcuts-btn" class="icon-btn" aria-label="Keyboard shortcuts">
+						<button id="shortcuts-btn" class="icon-btn" data-i18n-aria-label="aria.shortcuts" aria-label="Keyboard shortcuts">
 							<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M6 8h.01M10 8h.01M14 8h.01M18 8h.01M8 12h.01M12 12h.01M16 12h.01M8 16h8"/></svg>
-							<span>Shortcuts</span>
+							<span data-i18n="shortcuts.button">Shortcuts</span>
 							<kbd>?</kbd>
 						</button>
 					</div>
@@ -166,21 +167,21 @@
 
 		<dialog id="shortcuts-modal">
 			<div class="dialog-header">
-				<h4>Keyboard Shortcuts</h4>
-				<button id="shortcuts-close" class="icon-btn" aria-label="Close">
+				<h4 data-i18n="shortcuts.title">Keyboard Shortcuts</h4>
+				<button id="shortcuts-close" class="icon-btn" data-i18n-aria-label="aria.close" aria-label="Close">
 					<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
 				</button>
 			</div>
 			<table class="shortcuts-table">
 				<tbody>
-					<tr><td><kbd>?</kbd></td><td>Show this help</td></tr>
-					<tr><td><kbd>T</kbd></td><td>IK gizmo: translate mode</td></tr>
-					<tr><td><kbd>R</kbd></td><td>IK gizmo: rotate mode</td></tr>
-					<tr><td><kbd>Q</kbd></td><td>Toggle local / world frame</td></tr>
-					<tr><td><kbd>K</kbd></td><td>Record motion keypoint</td></tr>
-					<tr><td><kbd>P</kbd></td><td>Play recorded keypoints</td></tr>
-					<tr><td><kbd>C</kbd></td><td>Clear motion keypoints</td></tr>
-					<tr><td><kbd>X</kbd></td><td>Export convex hull as STL</td></tr>
+					<tr><td><kbd>?</kbd></td><td data-i18n="shortcuts.help">Show this help</td></tr>
+					<tr><td><kbd>T</kbd></td><td data-i18n="shortcuts.translate">IK gizmo: translate mode</td></tr>
+					<tr><td><kbd>R</kbd></td><td data-i18n="shortcuts.rotate">IK gizmo: rotate mode</td></tr>
+					<tr><td><kbd>Q</kbd></td><td data-i18n="shortcuts.frame">Toggle local / world frame</td></tr>
+					<tr><td><kbd>K</kbd></td><td data-i18n="shortcuts.record">Record motion keypoint</td></tr>
+					<tr><td><kbd>P</kbd></td><td data-i18n="shortcuts.play">Play recorded keypoints</td></tr>
+					<tr><td><kbd>C</kbd></td><td data-i18n="shortcuts.clear">Clear motion keypoints</td></tr>
+					<tr><td><kbd>X</kbd></td><td data-i18n="shortcuts.export">Export convex hull as STL</td></tr>
 				</tbody>
 			</table>
 		</dialog>
@@ -188,7 +189,7 @@
 		<dialog id="loader-modal">
 			<div class="loader-content">
 				<div class="loader-spinner"></div>
-				<p>Loading robot model...</p>
+				<p data-i18n="loader.message">Loading robot model...</p>
 			</div>
 		</dialog>
 

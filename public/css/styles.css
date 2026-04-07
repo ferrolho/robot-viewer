@@ -163,6 +163,16 @@ html, body {
   transform: rotate(30deg);
 }
 
+/* ── Language Toggle ── */
+
+.lang-btn {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.03em;
+  min-width: 28px;
+}
+
 /* Dark theme: show sun icon (to switch to light) */
 #theme-toggle .icon-moon { display: none; }
 #theme-toggle .icon-sun  { display: block; }

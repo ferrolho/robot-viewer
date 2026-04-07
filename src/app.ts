@@ -1,5 +1,6 @@
 import { IkSolverEnum, Robot, robotKinematicsFromURDF } from './robotics/index.ts'
 import { ModelLoader, type ManifestModel } from './ModelLoader.ts'
+import { getLocale, setLocale, t, applyTranslations, LOCALES } from './i18n.ts'
 
 import WebGL from 'three/addons/capabilities/WebGL.js'
 if (!WebGL.isWebGL2Available()) document.body.appendChild(WebGL.getWebGL2ErrorMessage())
@@ -121,6 +122,21 @@ applyTheme(getTheme())
 
 $('theme-toggle').addEventListener('click', () => {
   applyTheme(getTheme() === 'dark' ? 'light' : 'dark')
+})
+
+// ── Language ──
+
+const langToggle = $('lang-toggle')
+langToggle.textContent = LOCALES.find(l => l.code === getLocale())!.label
+applyTranslations()
+
+langToggle.addEventListener('click', () => {
+  const currentIdx = LOCALES.findIndex(l => l.code === getLocale())
+  const next = LOCALES[(currentIdx + 1) % LOCALES.length]
+  setLocale(next.code)
+  langToggle.textContent = next.label
+  setupCategoryChips()
+  showBrandGrid()
 })
 
 // ── Sidebars ──
@@ -486,7 +502,7 @@ function showBrandGrid () {
 
     const countEl = document.createElement('span')
     countEl.className = 'brand-count'
-    countEl.textContent = `${count} model${count !== 1 ? 's' : ''}`
+    countEl.textContent = count === 1 ? t('models.count.one') : t('models.count.other', { n: count })
     tile.appendChild(countEl)
 
     grid.appendChild(tile)
@@ -502,7 +518,7 @@ function showFlatResults (models: ManifestModel[]) {
 
   const countLabel = document.createElement('div')
   countLabel.className = 'filter-count'
-  countLabel.textContent = `${models.length} result${models.length !== 1 ? 's' : ''}`
+  countLabel.textContent = models.length === 1 ? t('results.count.one') : t('results.count.other', { n: models.length })
   view.appendChild(countLabel)
 
   const ul = document.createElement('ul')
@@ -574,17 +590,6 @@ function showBrandRobots (brand: string) {
   modelsListContainer.appendChild(view)
 }
 
-const CATEGORY_LABELS: Record<string, string> = {
-  arm: 'Arm',
-  dual_arm: 'Dual Arm',
-  hand: 'Hand',
-  quadruped: 'Quadruped',
-  biped: 'Biped',
-  humanoid: 'Humanoid',
-  mobile: 'Mobile',
-  wheeled: 'Wheeled',
-  drone: 'Drone',
-}
 
 function setupCategoryChips () {
   const categories = [...new Set(allModels.map(m => m.category))].sort()
@@ -592,7 +597,7 @@ function setupCategoryChips () {
   for (const cat of categories) {
     const chip = document.createElement('button')
     chip.className = 'category-chip'
-    chip.textContent = CATEGORY_LABELS[cat] ?? cat
+    chip.textContent = t('category.' + cat)
     chip.addEventListener('click', () => {
       activeCategory = activeCategory === cat ? null : cat
       updateChipStates()
