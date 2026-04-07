@@ -23,7 +23,7 @@ interface Manifest {
   models: ManifestModel[]
 }
 
-const DEFAULT_BASE_URL = 'https://raw.githubusercontent.com/ferrolho/robot-viewer-models/dist/'
+const DEFAULT_BASE_URL = 'https://raw.githubusercontent.com/ferrolho/robot-explorer-models/dist/'
 
 export class ModelLoader {
   private baseUrl: string
