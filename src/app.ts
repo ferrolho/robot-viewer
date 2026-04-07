@@ -127,17 +127,33 @@ $('theme-toggle').addEventListener('click', () => {
 // ── Language ──
 
 const langToggle = $('lang-toggle')
+const langMenu = $('lang-menu')
 langToggle.textContent = LOCALES.find(l => l.code === getLocale())!.label
 applyTranslations()
 
-langToggle.addEventListener('click', () => {
-  const currentIdx = LOCALES.findIndex(l => l.code === getLocale())
-  const next = LOCALES[(currentIdx + 1) % LOCALES.length]
-  setLocale(next.code)
-  langToggle.textContent = next.label
-  setupCategoryChips()
-  showBrandGrid()
+for (const locale of LOCALES) {
+  const item = document.createElement('button')
+  item.className = 'lang-menu-item'
+  item.textContent = locale.label
+  item.dataset.locale = locale.code
+  if (locale.code === getLocale()) item.classList.add('active')
+  item.addEventListener('click', () => {
+    setLocale(locale.code)
+    langToggle.textContent = locale.label
+    langMenu.querySelectorAll('.lang-menu-item').forEach(el => el.classList.toggle('active', (el as HTMLElement).dataset.locale === locale.code))
+    langMenu.classList.remove('open')
+    setupCategoryChips()
+    showBrandGrid()
+  })
+  langMenu.appendChild(item)
+}
+
+langToggle.addEventListener('click', (e) => {
+  e.stopPropagation()
+  langMenu.classList.toggle('open')
 })
+
+document.addEventListener('click', () => langMenu.classList.remove('open'))
 
 // ── Sidebars ──
 

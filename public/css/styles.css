@@ -163,7 +163,11 @@ html, body {
   transform: rotate(30deg);
 }
 
-/* ── Language Toggle ── */
+/* ── Language Picker ── */
+
+.lang-picker {
+  position: relative;
+}
 
 .lang-btn {
   font-family: var(--font-mono);
@@ -171,6 +175,48 @@ html, body {
   font-weight: 500;
   letter-spacing: 0.03em;
   min-width: 28px;
+}
+
+.lang-menu {
+  display: none;
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 4px;
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+  z-index: 30;
+  min-width: 56px;
+  overflow: hidden;
+}
+
+.lang-menu.open {
+  display: flex;
+  flex-direction: column;
+}
+
+.lang-menu-item {
+  padding: 6px 12px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-muted);
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.15s, color 0.15s;
+}
+
+.lang-menu-item:hover {
+  background: var(--bg-hover);
+  color: var(--text);
+}
+
+.lang-menu-item.active {
+  color: var(--accent);
 }
 
 /* Dark theme: show sun icon (to switch to light) */
