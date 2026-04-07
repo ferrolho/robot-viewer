@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Robot Viewer is an interactive 3D web application for visualizing and manipulating robot models with real-time forward/inverse kinematics. It loads URDF robot models (with GLB meshes) from a CDN and provides an interactive Three.js scene with IK solvers, joint control, and various visualization tools (ellipsoids, point clouds, reachability).
+Robot Explorer is an interactive 3D web application for visualizing and manipulating robot models with real-time forward/inverse kinematics. It loads URDF robot models (with GLB meshes) from a CDN and provides an interactive Three.js scene with IK solvers, joint control, and various visualization tools (ellipsoids, point clouds, reachability).
 
 ## Build & Development Commands
 

@@ -53,7 +53,7 @@ Create [`ferrolho/robot-viewer-models`](https://github.com/ferrolho/robot-viewer
 - [x] Xacro rendering via ROS Noetic Docker container for ABB and KUKA industrial robots
 - [x] Expanded to 81 robots from 35+ brands (ABB IRB series, KUKA KR series, Unitree, Boston Dynamics, etc.)
 
-### Phase 8: URDF Migration — Viewer (feature branch on robot-viewer)
+### Phase 8: URDF Migration — Viewer (feature branch on robot-explorer)
 - [x] Add `urdf-loader` dependency, remove `jszip`/`jszip-utils`
 - [x] New `src/ModelLoader.ts` — fetch manifest from CDN, load URDF via `URDFLoader` with native STL/DAE mesh loading
 - [x] Refactor `src/Robot.ts` — replace COLLADA interfaces with loader-agnostic `RobotKinematics` interface; adapter converts URDF joints (radians) to internal convention (degrees)

@@ -1,7 +1,7 @@
 import { defineConfig } from 'vite'
 
 export default defineConfig({
-  base: '/robot-viewer/',
+  base: '/robot-explorer/',
   build: {
     outDir: 'dist',
     sourcemap: true

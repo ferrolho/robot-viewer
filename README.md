@@ -1,16 +1,8 @@
-# Robot Viewer
+# Robot Explorer
 
 Interactive 3D web application for visualizing and manipulating robot models with real-time forward and inverse kinematics.
 
 Browse 81+ robots from 35+ brands, loaded as URDF models from a [dedicated model repository](https://github.com/ferrolho/robot-viewer-models). Features include IK solvers, velocity/force ellipsoid visualization, reachability point clouds, and motion keypoint recording.
-
-![Inverse Kinematics on a Franka Panda — dark theme](screenshots/ik-dark.png)
-
-![Velocity ellipsoid on an ABB IRB 1200 — light theme](screenshots/ellipsoid-light.png)
-
-![Multi-tip IK on NASA Valkyrie humanoid (60 DOF)](screenshots/valkyrie-multi-ik.png)
-
-![Chinese (Simplified) locale — light theme, Unitree Go2 quadruped](screenshots/chinese-light.png)
 
 ## Features
 
@@ -49,6 +41,17 @@ npm run typecheck  # TypeScript type checking
 
 Three.js, urdf-loader, mathjs, @tweenjs/tween.js, TypeScript, Vite.
 
-## Known Limitations
+## Screenshots
 
-- **Analytical IK** (via `kinematics` package) is disabled — requires extracting DH-like geometry from URDF joint origins (not yet implemented)
+**Inverse Kinematics** — Franka Panda with IK gizmo (dark theme)
+![Inverse Kinematics on a Franka Panda](screenshots/ik-dark.png)
+
+**Velocity Ellipsoid** — ABB IRB 1200 with manipulability ellipsoid (light theme)
+![Velocity ellipsoid on an ABB IRB 1200](screenshots/ellipsoid-light.png)
+
+**Multi-tip IK** — NASA Valkyrie humanoid with 60 DOF and per-limb IK targets
+![Multi-tip IK on NASA Valkyrie](screenshots/valkyrie-multi-ik.png)
+
+**Internationalization** — Chinese (Simplified) locale with Unitree Go2 quadruped (light theme)
+![Chinese locale with Unitree Go2](screenshots/chinese-light.png)
+

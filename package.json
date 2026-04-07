@@ -1,12 +1,12 @@
 {
-  "name": "robot-viewer",
+  "name": "robot-explorer",
   "version": "1.0.0",
-  "description": "An experimental online robot viewer",
+  "description": "Interactive 3D web application for visualizing and manipulating robot models",
   "author": "Henrique Ferrolho <henrique.ferrolho@gmail.com> (https://github.com/ferrolho)",
-  "homepage": "https://github.com/ferrolho/robot-viewer#readme",
+  "homepage": "https://github.com/ferrolho/robot-explorer#readme",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/ferrolho/robot-viewer.git"
+    "url": "git+https://github.com/ferrolho/robot-explorer.git"
   },
   "type": "module",
   "license": "ISC",
@@ -30,7 +30,7 @@
     "typecheck": "tsc"
   },
   "bugs": {
-    "url": "https://github.com/ferrolho/robot-viewer/issues"
+    "url": "https://github.com/ferrolho/robot-explorer/issues"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

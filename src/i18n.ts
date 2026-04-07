@@ -8,7 +8,7 @@ export const LOCALES: { code: Locale; label: string }[] = [
 
 const translations: Record<Locale, Record<string, string>> = {
   en: {
-    'app.title': 'Robot Viewer',
+    'app.title': 'Robot Explorer',
 
     'models.label': 'Models',
     'models.search': 'Search robots...',
@@ -79,7 +79,7 @@ const translations: Record<Locale, Record<string, string>> = {
     'aria.close': 'Close',
   },
   ja: {
-    'app.title': 'ロボットビューア',
+    'app.title': 'ロボットエクスプローラ',
 
     'models.label': 'モデル',
     'models.search': 'ロボットを検索...',
@@ -150,7 +150,7 @@ const translations: Record<Locale, Record<string, string>> = {
     'aria.close': '閉じる',
   },
   zh: {
-    'app.title': '机器人查看器',
+    'app.title': '机器人探索器',
 
     'models.label': '模型',
     'models.search': '搜索机器人...',
