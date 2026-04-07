@@ -25,9 +25,6 @@ export class Robot {
   private _root: THREE.Object3D
   private _kinematics: RobotKinematics
   private _tipLinks: string[]
-  /** Virtual frames at the actual tip of each tip link's geometry (e.g. fingertip, not joint). */
-  private _tipFrames: THREE.Object3D[] = []
-  private _tipFramesReady = false
   private _tipJointIndices: number[][] = []
   /** Joints that are connected to a tip only via mimic chain (need numerical Jacobian). */
   private _mimicResolvedJoints: Set<number>[] = []
@@ -56,7 +53,6 @@ export class Robot {
 
     this._q = this.zeroConfiguration
     this._tipJointIndices = this._computeTipJointIndices()
-    this._createTipFrames()
 
     this.printJointNames()
   }
@@ -94,81 +90,6 @@ export class Robot {
       this._mimicResolvedJoints.push(mimicIndices)
       return indices
     })
-  }
-
-  /** Create stub tip frames (at link origin). Offsets are computed lazily once meshes load. */
-  private _createTipFrames(): void {
-    this._tipFrames = []
-    for (const tipName of this._tipLinks) {
-      const tipLink = this._root.getObjectByName(tipName)
-      const tipFrame = new THREE.Object3D()
-      tipFrame.name = `${tipName}_tip`
-      if (tipLink) tipLink.add(tipFrame)
-      this._tipFrames.push(tipFrame)
-    }
-  }
-
-  /**
-   * Compute tip frame offsets from visual mesh bounding boxes.
-   * Only applied for hands where the tip link origin is at the finger joint,
-   * not the fingertip. For other robots the link origin is already the correct
-   * end-effector point.
-   * Called lazily because urdf-loader resolves before meshes finish loading.
-   */
-  private _updateTipFrameOffsets(): void {
-    if (this._tipFramesReady) return
-    if (this.category !== 'hand') { this._tipFramesReady = true; return }
-
-    this._root.updateMatrixWorld(true)
-    let allResolved = true
-
-    for (let i = 0; i < this._tipLinks.length; i++) {
-      const tipLink = this._root.getObjectByName(this._tipLinks[i])
-      if (!tipLink) { allResolved = false; continue }
-
-      // Skip if already positioned (non-zero offset)
-      const tipFrame = this._tipFrames[i]
-      if (tipFrame.position.lengthSq() > 0) continue
-
-      // Compute bounding box of visual meshes in the tip link's local frame
-      const invWorld = new THREE.Matrix4().copy(tipLink.matrixWorld).invert()
-      const box = new THREE.Box3()
-      const localPos = new THREE.Vector3()
-
-      tipLink.traverse(child => {
-        if (!(child instanceof THREE.Mesh)) return
-        const geom = child.geometry as THREE.BufferGeometry
-        const positions = geom.getAttribute('position') as THREE.BufferAttribute
-        if (!positions) return
-        const meshToLocal = new THREE.Matrix4().copy(invWorld).multiply(child.matrixWorld)
-        for (let i = 0; i < positions.count; i++) {
-          localPos.fromBufferAttribute(positions, i).applyMatrix4(meshToLocal)
-          box.expandByPoint(localPos)
-        }
-      })
-
-      if (box.isEmpty()) { allResolved = false; continue }
-
-      // Place the tip frame at the far end of the geometry along its longest axis,
-      // centered on the perpendicular axes.
-      const center = new THREE.Vector3()
-      const size = new THREE.Vector3()
-      box.getCenter(center)
-      box.getSize(size)
-
-      if (size.x >= size.y && size.x >= size.z) {
-        const farX = Math.abs(box.max.x) > Math.abs(box.min.x) ? box.max.x : box.min.x
-        tipFrame.position.set(farX, center.y, center.z)
-      } else if (size.y >= size.x && size.y >= size.z) {
-        const farY = Math.abs(box.max.y) > Math.abs(box.min.y) ? box.max.y : box.min.y
-        tipFrame.position.set(center.x, farY, center.z)
-      } else {
-        const farZ = Math.abs(box.max.z) > Math.abs(box.min.z) ? box.max.z : box.min.z
-        tipFrame.position.set(center.x, center.y, farZ)
-      }
-    }
-
-    this._tipFramesReady = allResolved
   }
 
   plotEllipsoid(A: any, name: string): void {
@@ -277,13 +198,6 @@ export class Robot {
     return this._root.getObjectByName(linkName)!.matrixWorld
   }
 
-  /** Get the world pose of a tip's geometric endpoint (e.g. fingertip). */
-  getTipPose(tipIndex: number): THREE.Matrix4 {
-    this._updateTipFrameOffsets()
-    this._root.updateMatrixWorld()
-    return this._tipFrames[tipIndex].matrixWorld
-  }
-
   threejs2mathjsMatrix(T: THREE.Matrix4): any {
     T = new THREE.Matrix4().copy(T).transpose()
     return math.matrix([
@@ -294,13 +208,12 @@ export class Robot {
   }
 
   fkine(q: number[], tipIndex = 0): any {
-    this._updateTipFrameOffsets()
     const q_backup = this.configuration
 
     this.configuration = q
     this._root.updateMatrixWorld()
 
-    const T = this.threejs2mathjsMatrix(this._tipFrames[tipIndex].matrixWorld)
+    const T = this.threejs2mathjsMatrix(this._root.getObjectByName(this.tipLinks[tipIndex])!.matrixWorld)
 
     this.configuration = q_backup
     this._root.updateMatrixWorld()
@@ -308,12 +221,11 @@ export class Robot {
     return T
   }
 
-  /** Read a tip's world matrix using chain-only update (no full scene traversal). */
+  /** Read a tip link's world matrix using chain-only update (no full scene traversal). */
   private _fkineTip(tipIndex: number): THREE.Matrix4 {
-    this._updateTipFrameOffsets()
-    const tipFrame = this._tipFrames[tipIndex]
-    tipFrame.updateWorldMatrix(true, false)
-    return tipFrame.matrixWorld
+    const tipObj = this._root.getObjectByName(this._tipLinks[tipIndex])!
+    tipObj.updateWorldMatrix(true, false)
+    return tipObj.matrixWorld
   }
 
   updateShadowsState(castShadows: boolean): void {
@@ -399,10 +311,10 @@ export class Robot {
 
     const nCols = indices.length
     const mimicSet = this._mimicResolvedJoints[tipIndex] ?? new Set<number>()
-    const tipFrame = this._tipFrames[tipIndex]
-    tipFrame.updateWorldMatrix(true, false)
+    const tipObj = this._root.getObjectByName(this._tipLinks[tipIndex])!
+    tipObj.updateWorldMatrix(true, false)
 
-    const pEe = new THREE.Vector3().setFromMatrixPosition(tipFrame.matrixWorld)
+    const pEe = new THREE.Vector3().setFromMatrixPosition(tipObj.matrixWorld)
 
     const cols: number[][] = new Array(nCols)
     const _z = new THREE.Vector3()
@@ -459,7 +371,7 @@ export class Robot {
     const eps = 0.5 // degrees
     const jointName = this._joints[jointIdx]
     const origVal = this._q[jointIdx]
-    const tipObj = this._tipFrames[tipIndex]
+    const tipObj = this._root.getObjectByName(this._tipLinks[tipIndex])!
 
     // Forward perturbation
     this.setJointValue(jointName, origVal + eps)
