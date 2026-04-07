@@ -193,6 +193,12 @@ export class Robot {
 
   get tipLinks(): string[] { return this._tipLinks }
 
+  /** Returns true if all joints of tip `a` are a subset of tip `b`'s joints. */
+  isTipSubsetOf(a: number, b: number): boolean {
+    const setB = new Set(this._tipJointIndices[b])
+    return this._tipJointIndices[a].every(j => setB.has(j))
+  }
+
   getLinkPose(linkName: string): THREE.Matrix4 {
     this._root.updateMatrixWorld()
     const obj = this._root.getObjectByName(linkName)

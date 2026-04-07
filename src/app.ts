@@ -867,8 +867,19 @@ function setupIkGoals () {
   cleanupIkGoals()
 
   const colors = [0xff0000, 0x00ff00, 0x0000ff, 0xffff00]
+  const n = robot.tipLinks.length
 
-  for (let i = 0; i < robot.tipLinks.length; i++) {
+  // Precompute which tips are fully coupled to each tip (e.g. mimic fingers
+  // on a 1-DOF gripper). coupledTips[i] lists tips whose joints are a subset
+  // of tip i's joints — these gizmos should track FK when tip i is dragged.
+  const coupledTips: number[][] = Array.from({ length: n }, () => [])
+  for (let i = 0; i < n; i++) {
+    for (let j = 0; j < n; j++) {
+      if (j !== i && robot.isTipSubsetOf(j, i)) coupledTips[i].push(j)
+    }
+  }
+
+  for (let i = 0; i < n; i++) {
     const material = new THREE.MeshLambertMaterial({
       color: colors[i % colors.length],
       transparent: true,
@@ -884,14 +895,13 @@ function setupIkGoals () {
     const tipIndex = i
     control.addEventListener('objectChange', function () {
       if (ikSolver !== IkSolverEnum.OFF) {
-        if (robot.tipLinks.length > 1) {
+        if (n > 1) {
           robot.moveTipsToPoses(ikGoals)
         } else {
           robot.moveTipToPose(goal, tipIndex)
         }
-        // Sync non-dragged gizmos to actual FK (e.g. mimic joints on grippers)
-        for (let j = 0; j < ikGoals.length; j++) {
-          if (j === tipIndex) continue
+        // Sync coupled gizmos to actual FK (e.g. mimic fingers on a 1-DOF gripper)
+        for (const j of coupledTips[tipIndex]) {
           const pose = robot.getLinkPose(robot.tipLinks[j])
           ikGoals[j].position.setFromMatrixPosition(pose)
           ikGoals[j].quaternion.setFromRotationMatrix(pose)
