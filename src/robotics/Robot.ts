@@ -110,10 +110,14 @@ export class Robot {
 
   /**
    * Compute tip frame offsets from visual mesh bounding boxes.
+   * Only applied for hands where the tip link origin is at the finger joint,
+   * not the fingertip. For other robots the link origin is already the correct
+   * end-effector point.
    * Called lazily because urdf-loader resolves before meshes finish loading.
    */
   private _updateTipFrameOffsets(): void {
     if (this._tipFramesReady) return
+    if (this.category !== 'hand') { this._tipFramesReady = true; return }
 
     this._root.updateMatrixWorld(true)
     let allResolved = true
