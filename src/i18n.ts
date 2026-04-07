@@ -1,8 +1,9 @@
-export type Locale = 'en' | 'ja'
+export type Locale = 'en' | 'ja' | 'zh'
 
 export const LOCALES: { code: Locale; label: string }[] = [
   { code: 'en', label: 'EN' },
   { code: 'ja', label: 'JA' },
+  { code: 'zh', label: '中文' },
 ]
 
 const translations: Record<Locale, Record<string, string>> = {
@@ -147,6 +148,77 @@ const translations: Record<Locale, Record<string, string>> = {
     'aria.collapseSettings': '設定を閉じる',
     'aria.shortcuts': 'キーボードショートカット',
     'aria.close': '閉じる',
+  },
+  zh: {
+    'app.title': '机器人查看器',
+
+    'models.label': '模型',
+    'models.search': '搜索机器人...',
+    'models.count.one': '1 个模型',
+    'models.count.other': '{n} 个模型',
+    'results.count.one': '1 个结果',
+    'results.count.other': '{n} 个结果',
+
+    'settings.title': '设置',
+
+    'display.label': '显示',
+    'display.grid': '网格',
+    'display.axis': '坐标轴',
+    'display.shadows': '阴影',
+    'display.performance': '性能',
+
+    'controls.label': '控制',
+    'controls.home': '初始位',
+    'controls.random': '随机',
+    'controls.reachability': '可达域',
+    'controls.clearPoints': '清除点',
+
+    'solvers.label': '求解器',
+    'solvers.ik': '逆运动学',
+
+    'ellipsoids.label': '椭球体',
+    'ellipsoids.velocity': '速度',
+    'ellipsoids.force': '力',
+    'ellipsoids.acceleration': '加速度',
+    'ellipsoids.acceleration.title': '需要惯性计算（尚未实现）',
+
+    'shortcuts.button': '快捷键',
+    'shortcuts.title': '键盘快捷键',
+    'shortcuts.help': '显示帮助',
+    'shortcuts.translate': 'IK控件：平移模式',
+    'shortcuts.rotate': 'IK控件：旋转模式',
+    'shortcuts.frame': '切换局部/世界坐标系',
+    'shortcuts.record': '记录运动关键点',
+    'shortcuts.play': '播放关键点',
+    'shortcuts.clear': '清除运动关键点',
+    'shortcuts.export': '导出凸包为STL',
+
+    'hud.model': '模型',
+    'hud.brand': '品牌',
+    'hud.reach': '臂展',
+    'hud.payload': '负载',
+    'hud.dof': '自由度',
+
+    'loader.message': '正在加载机器人模型...',
+
+    'category.arm': '机械臂',
+    'category.dual_arm': '双臂',
+    'category.hand': '灵巧手',
+    'category.quadruped': '四足',
+    'category.biped': '双足',
+    'category.humanoid': '人形',
+    'category.mobile': '移动',
+    'category.wheeled': '轮式',
+    'category.drone': '无人机',
+
+    'aria.language': '切换语言',
+    'aria.toggleTheme': '切换主题',
+    'aria.collapseSidebar': '收起侧栏',
+    'aria.toggleMenu': '切换菜单',
+    'aria.toggleSettings': '切换设置',
+    'aria.collapseSettings': '收起设置',
+    'aria.shortcuts': '键盘快捷键',
+    'aria.close': '关闭',
   },
 }
 
