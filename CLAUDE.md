@@ -23,7 +23,7 @@ Single-page app using TypeScript (no framework), bundled with Vite.
 - `src/Robot.ts` — Core robot class: FK/IK computation, Jacobian, joint control. Uses a loader-agnostic `RobotKinematics` interface with a URDF adapter (`robotKinematicsFromURDF`)
 - `src/ModelLoader.ts` — Fetches model manifest from CDN, loads URDF + GLB meshes via `urdf-loader` and Three.js `GLTFLoader`
 - `src/math_.ts` — Robotics math utilities (transform matrices, Jacobians)
-- `src/IkSolver.ts` — IK solver type enum (Pseudo Inverse, Genetic Algorithm)
+- `src/IkSolver.ts` — IK solver type enum (Pseudo Inverse)
 - `src/types.d.ts` — Type declarations for untyped dependencies
 - Three.js addons imported from `three/addons/...` (OrbitControls, TransformControls, GLTFLoader, STLExporter, ConvexGeometry)
 
@@ -66,5 +66,5 @@ Industrial control panel aesthetic — functional, precise, no decorative excess
 
 ## Known Limitations
 
-- Pseudo Inverse is the recommended IK solver; Genetic Algorithm is slow
+- Pseudo Inverse is the only IK solver currently available
 - Analytical IK (via `kinematics` package) is currently disabled — requires extracting DH-like geometry from URDF joint origins (not yet implemented)

@@ -51,5 +51,4 @@ Three.js, urdf-loader, mathjs, @tweenjs/tween.js, TypeScript, Vite.
 
 ## Known Limitations
 
-- **Genetic Algorithm** IK solver is slow and causes interface lag; Pseudo Inverse is the recommended solver
 - **Analytical IK** (via `kinematics` package) is disabled — requires extracting DH-like geometry from URDF joint origins (not yet implemented)
