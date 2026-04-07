@@ -4,19 +4,13 @@ Interactive 3D web application for visualizing and manipulating robot models wit
 
 Browse 81+ robots from 35+ brands, loaded as URDF models from a [dedicated model repository](https://github.com/ferrolho/robot-viewer-models). Features include IK solvers, velocity/force ellipsoid visualization, reachability point clouds, and motion keypoint recording.
 
-> **Note:** The screenshots below show an older version of the UI. The current interface features a dual-sidebar layout with a brand gallery, dark/light theme, and i18n support.
+![Inverse Kinematics on a Franka Panda — dark theme](screenshots/ik-dark.png)
 
-`Figure 1 - The application as is on startup.`
-![fig1](screenshots/gui.png)
+![Velocity ellipsoid on an ABB IRB 1200 — light theme](screenshots/ellipsoid-light.png)
 
-`Figure 2 - Axis, Grid, Shadows, and Stats options active.`
-![fig2](screenshots/axis-grid-shadows-stats.png)
+![Multi-tip IK on NASA Valkyrie humanoid (60 DOF)](screenshots/valkyrie-multi-ik.png)
 
-`Figure 3 - Using Inverse Kinematics to position the KUKA LBR iiwa robot.`
-![fig3](screenshots/ik.png)
-
-`Figure 4 - The reachability of the NASA Valkyrie humanoid robot with 44 degrees of freedom.`
-![fig4](screenshots/valkyrie.png)
+![Chinese (Simplified) locale — light theme, Unitree Go2 quadruped](screenshots/chinese-light.png)
 
 ## Features
 
