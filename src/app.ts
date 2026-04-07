@@ -297,7 +297,7 @@ $('reachability-button').addEventListener('click', () => {
 
     for (let j = 0; j < robot.tipLinks.length; j++) {
       const point = new THREE.Vector3()
-      point.setFromMatrixPosition(robot.getLinkPose(robot.tipLinks[j]))
+      point.setFromMatrixPosition(robot.getTipPose(j))
       rawPoints[j].push(point)
     }
   }
@@ -338,7 +338,7 @@ pseudoInverseSwitch.addEventListener('change', () => {
   if (ikSolver !== IkSolverEnum.OFF && robot) {
     setupIkGoals()
     for (let i = 0; i < ikGoals.length; i++) {
-      const pose = robot.getLinkPose(robot.tipLinks[i])
+      const pose = robot.getTipPose(i)
       ikGoals[i].position.setFromMatrixPosition(pose)
       ikGoals[i].quaternion.setFromRotationMatrix(pose)
       ikGoalControls[i].setMode('translate')
@@ -707,7 +707,7 @@ async function loadModel (modelId: string) {
     // If IK is active, position goals at the new robot's end-effectors
     if (ikSolver !== IkSolverEnum.OFF) {
       for (let i = 0; i < ikGoals.length; i++) {
-        const pose = robot.getLinkPose(robot.tipLinks[i])
+        const pose = robot.getTipPose(i)
         ikGoals[i].position.setFromMatrixPosition(pose)
         ikGoals[i].quaternion.setFromRotationMatrix(pose)
         ikGoalControls[i].setMode('translate')
@@ -808,7 +808,7 @@ function moveFromTo (q_s: number[], q_t: number[], duration = 10, easing: (t: nu
     for (const joint of robot._joints) { robot.setJointValue(joint, obj[joint]) }
     if (ikSolver !== IkSolverEnum.OFF) {
       for (let i = 0; i < ikGoals.length; i++) {
-        const pose = robot.getLinkPose(robot.tipLinks[i])
+        const pose = robot.getTipPose(i)
         ikGoals[i].position.setFromMatrixPosition(pose)
         ikGoals[i].quaternion.setFromRotationMatrix(pose)
       }
