@@ -889,6 +889,13 @@ function setupIkGoals () {
         } else {
           robot.moveTipToPose(goal, tipIndex)
         }
+        // Sync non-dragged gizmos to actual FK (e.g. mimic joints on grippers)
+        for (let j = 0; j < ikGoals.length; j++) {
+          if (j === tipIndex) continue
+          const pose = robot.getLinkPose(robot.tipLinks[j])
+          ikGoals[j].position.setFromMatrixPosition(pose)
+          ikGoals[j].quaternion.setFromRotationMatrix(pose)
+        }
       }
     })
     control.addEventListener('mouseDown', () => { orbitControls.enabled = false })
