@@ -195,7 +195,12 @@ export class Robot {
 
   getLinkPose(linkName: string): THREE.Matrix4 {
     this._root.updateMatrixWorld()
-    return this._root.getObjectByName(linkName)!.matrixWorld
+    const obj = this._root.getObjectByName(linkName)
+    if (!obj) {
+      console.warn(`Robot.getLinkPose: link "${linkName}" not found`)
+      return new THREE.Matrix4()
+    }
+    return obj.matrixWorld
   }
 
   threejs2mathjsMatrix(T: THREE.Matrix4): any {
