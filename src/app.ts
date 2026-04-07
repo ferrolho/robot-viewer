@@ -167,6 +167,7 @@ menuToggle.addEventListener('click', () => {
   if (document.body.classList.contains('sidebar-left-collapsed')) {
     document.body.classList.remove('sidebar-left-collapsed')
   } else {
+    sidebarRight.classList.remove('open')
     sidebarLeft.classList.toggle('open')
     sidebarOverlay.classList.toggle('visible')
   }
@@ -182,12 +183,21 @@ sidebarRightCollapse.addEventListener('click', () => {
   document.body.classList.toggle('sidebar-right-collapsed')
 })
 
+const sidebarRight = $('sidebar-right')
+
 $('settings-toggle').addEventListener('click', () => {
-  document.body.classList.remove('sidebar-right-collapsed')
+  if (window.innerWidth <= 768) {
+    sidebarLeft.classList.remove('open')
+    sidebarRight.classList.toggle('open')
+    sidebarOverlay.classList.toggle('visible')
+  } else {
+    document.body.classList.remove('sidebar-right-collapsed')
+  }
 })
 
 function hideSidebar() {
   sidebarLeft.classList.remove('open')
+  sidebarRight.classList.remove('open')
   sidebarOverlay.classList.remove('visible')
 }
 

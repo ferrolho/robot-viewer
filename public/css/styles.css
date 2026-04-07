@@ -832,7 +832,8 @@ body.sidebar-left-collapsed.sidebar-right-collapsed #app {
 }
 
 @media (max-width: 768px) {
-  #menu-toggle {
+  #menu-toggle,
+  #settings-toggle {
     display: flex;
   }
 
@@ -850,10 +851,20 @@ body.sidebar-left-collapsed.sidebar-right-collapsed #app {
   }
 
   #sidebar-right {
-    display: none;
+    position: fixed;
+    top: 0;
+    right: 0;
+    width: var(--sidebar-right-w);
+    transform: translateX(100%);
+    transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   }
 
-  #sidebar-left-collapse {
+  #sidebar-right.open {
+    transform: translateX(0);
+  }
+
+  #sidebar-left-collapse,
+  #sidebar-right-collapse {
     display: none;
   }
 }
