@@ -476,7 +476,7 @@ export class Robot {
   }
 
   moveTipToPose(goal: THREE.Object3D, tipIndex = 0): void {
-    const partial: Partial = this.category === 'quadruped' ? 'translational' : ''
+    const partial: Partial = this.category === 'quadruped' || this.category === 'hand' ? 'translational' : ''
     const jointIndices = this._tipJointIndices[tipIndex]
     const Tf = this.threejs2mathjsMatrix(goal.matrixWorld)
 
@@ -500,7 +500,7 @@ export class Robot {
    * letting one tip override another.
    */
   moveTipsToPoses(goals: THREE.Object3D[]): void {
-    const partial: Partial = this.category === 'quadruped' ? 'translational' : ''
+    const partial: Partial = this.category === 'quadruped' || this.category === 'hand' ? 'translational' : ''
     const dimPerTip = partial === '' ? 6 : 3
 
     // Collect all unique joint indices across all tips (sorted)
