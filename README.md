@@ -1,6 +1,10 @@
 # Robot Viewer
 
-> An experimental online robot viewer.
+Interactive 3D web application for visualizing and manipulating robot models with real-time forward and inverse kinematics.
+
+Browse 81+ robots from 35+ brands, loaded as URDF models from a [dedicated model repository](https://github.com/ferrolho/robot-viewer-models). Features include IK solvers, velocity/force ellipsoid visualization, reachability point clouds, and motion keypoint recording.
+
+> **Note:** The screenshots below show an older version of the UI. The current interface features a dual-sidebar layout with a brand gallery, dark/light theme, and i18n support.
 
 `Figure 1 - The application as is on startup.`
 ![fig1](screenshots/gui.png)
@@ -14,34 +18,44 @@
 `Figure 4 - The reachability of the NASA Valkyrie humanoid robot with 44 degrees of freedom.`
 ![fig4](screenshots/valkyrie.png)
 
-## Working features yet to be added to the GUI
+## Features
 
-#### Concerning robot motion:
+- **Robot catalog** — 81+ URDF models from 35+ brands, organized in a two-level brand gallery with search and category filtering
+- **Forward / Inverse Kinematics** — drag IK gizmos to pose end-effectors in real time (Pseudo Inverse solver); supports multi-tip robots
+- **Ellipsoid visualization** — velocity and force manipulability ellipsoids at the end-effector
+- **Reachability clouds** — sample random configurations to visualize the workspace
+- **Motion keypoints** — record, play back, and export convex hulls as STL
+- **Dark / Light theme** — persisted in localStorage
+- **Internationalization** — English, Japanese, and Chinese (Simplified), with a dropdown language picker
 
-- <kbd>H</kbd> - Moves the robot from its current configuration to the 'home' configuration;
-- <kbd>K</kbd> - Prints the robot's current configuration to the console;
-- <kbd>P</kbd> - Moves the robot from its current configuration to a random configuration.
+## Keyboard Shortcuts
 
-#### Concerning the 'target' widget / gizmo:
+| Key | Action |
+|-----|--------|
+| `?` | Show keyboard shortcuts dialog |
+| `T` | IK gizmo: translate mode |
+| `R` | IK gizmo: rotate mode |
+| `Q` | Toggle local / world frame |
+| `K` | Record motion keypoint |
+| `P` | Play recorded keypoints |
+| `C` | Clear motion keypoints |
+| `X` | Export convex hull as STL |
 
-- <kbd>R</kbd> - Switches to *orientation* mode;
-- <kbd>T</kbd> - Switches to *translation* mode.
+## Development
 
+```bash
+npm install
+npm run dev        # Vite dev server with HMR
+npm run build      # Production build → dist/
+npm run lint       # ESLint
+npm run typecheck  # TypeScript type checking
+```
 
-## Limitations
+## Tech Stack
 
-#### Inverse Kinematics
+Three.js, urdf-loader, mathjs, @tweenjs/tween.js, TypeScript, Vite.
 
-- The `IK` feature only works for robots with up to 6 degrees of freedom, and *orientation* is not properly implemented;
+## Known Limitations
 
-- The `Genetic Algorighm` feature is not optimal, slow, and causes the interface to lag;
-
-- The `Pseudo Inverse` is the best implemented `IK` solution in this viewer.
-
-    ![Pseudo Inverse](https://latex.codecogs.com/gif.latex?J%5E%7B%5C%23%7D%20%3D%20W%5E%7B-1%7D%20J%5E%5Ctop%20%28%20J%20W%5E%7B-1%7D%20J%5E%5Ctop%20&plus;%20C%20%29%5E%7B-1%7D)
-
-#### Robot Models
-
-- Clearpath's `Dual Arm Husky` has a broken kinematics tree, and as such will not move;
-
-- Some models have broken materials or only work with flat shading.
+- **Genetic Algorithm** IK solver is slow and causes interface lag; Pseudo Inverse is the recommended solver
+- **Analytical IK** (via `kinematics` package) is disabled — requires extracting DH-like geometry from URDF joint origins (not yet implemented)
