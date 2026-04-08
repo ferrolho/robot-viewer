@@ -486,8 +486,13 @@ export class Robot {
     return iteration
   }
 
+  /** Use translational-only IK when the tip's chain has fewer than 6 joints. */
+  private _tipPartial(tipIndex: number): Partial {
+    return this._tipJointIndices[tipIndex].length < 6 ? 'translational' : ''
+  }
+
   moveTipToPose(goal: THREE.Object3D, tipIndex = 0): void {
-    const partial: Partial = this.category === 'quadruped' || this.category === 'hand' ? 'translational' : ''
+    const partial = this._tipPartial(tipIndex)
     const jointIndices = this._tipJointIndices[tipIndex]
     const Tf = this.threejs2mathjsMatrix(goal.matrixWorld)
 
@@ -511,8 +516,9 @@ export class Robot {
    * letting one tip override another.
    */
   moveTipsToPoses(goals: THREE.Object3D[]): void {
-    const partial: Partial = this.category === 'quadruped' || this.category === 'hand' ? 'translational' : ''
-    const dimPerTip = partial === '' ? 6 : 3
+    // Per-tip partial mode: tips with < 6 joints use translational only
+    const tipPartials = goals.map((_, i) => this._tipPartial(i))
+    const tipDims = tipPartials.map(p => p === '' ? 6 : 3)
 
     // Collect all unique joint indices across all tips (sorted)
     const allJointSet = new Set<number>()
@@ -521,7 +527,7 @@ export class Robot {
     }
     const allJoints = [...allJointSet].sort((a, b) => a - b)
     const nj = allJoints.length
-    const totalDim = goals.length * dimPerTip
+    const totalDim = tipDims.reduce((a, b) => a + b, 0)
 
     // Map from global joint index to column in the stacked Jacobian
     const jointToCol = new Map<number, number>()
@@ -558,15 +564,17 @@ export class Robot {
       for (let r = 0; r < totalDim; r++) stackedJ[r] = new Array(nj).fill(0)
 
       let maxTipError = 0
+      let rowOffset = 0
 
       for (let ti = 0; ti < goals.length; ti++) {
+        const dim = tipDims[ti]
+        const p = tipPartials[ti]
         const T0 = this.threejs2mathjsMatrix(this._fkineTip(ti))
-        const error = robotMath.tr2delta(T0, Tfs[ti], partial)
+        const error = robotMath.tr2delta(T0, Tfs[ti], p)
         const errorArr: number[] = Array.isArray(error) ? error : error.toArray ? error.toArray() : error
 
-        const rowOffset = ti * dimPerTip
         let tipError = 0
-        for (let r = 0; r < dimPerTip; r++) {
+        for (let r = 0; r < dim; r++) {
           stackedError[rowOffset + r] = errorArr[r]
           tipError += errorArr[r] * errorArr[r]
         }
@@ -574,12 +582,13 @@ export class Robot {
 
         // Per-tip Jacobian — place columns into the correct stacked positions
         const tipJoints = this._tipJointIndices[ti]
-        const J = this.geometricJacobian(ti, partial, tipJoints)
-        for (let r = 0; r < dimPerTip; r++) {
+        const J = this.geometricJacobian(ti, p, tipJoints)
+        for (let r = 0; r < dim; r++) {
           for (let c = 0; c < tipJoints.length; c++) {
             stackedJ[rowOffset + r][jointToCol.get(tipJoints[c])!] = J[r][c]
           }
         }
+        rowOffset += dim
       }
 
       if (maxTipError <= tolerance) break
