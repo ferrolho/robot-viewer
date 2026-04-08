@@ -1,7 +1,10 @@
 #!/usr/bin/env node
 
 // Fetches every robot model from the CDN manifest, parses each URDF,
-// and reports mesh files that use unsupported formats or return 404.
+// and checks for common issues:
+//   - Mesh files using unsupported formats
+//   - tipLinks referencing links that don't exist in the URDF
+//   - (optional) Mesh URLs that return 404
 //
 // Usage:  node scripts/check-models.mjs [--check-exists]
 //
@@ -23,6 +26,14 @@ function extractMeshFilenames(urdfXml) {
   let m
   while ((m = re.exec(urdfXml)) !== null) filenames.push(m[1])
   return [...new Set(filenames)]
+}
+
+function extractLinkNames(urdfXml) {
+  const names = new Set()
+  const re = /<link\s[^>]*name\s*=\s*"([^"]+)"/g
+  let m
+  while ((m = re.exec(urdfXml)) !== null) names.add(m[1])
+  return names
 }
 
 function extOf(filename) {
@@ -48,7 +59,15 @@ async function main() {
     }
 
     const meshFiles = extractMeshFilenames(urdfXml)
+    const linkNames = extractLinkNames(urdfXml)
     const issues = []
+
+    // Check tipLinks exist in the URDF
+    for (const tip of model.tipLinks ?? []) {
+      if (!linkNames.has(tip)) {
+        issues.push(`tipLink not found in URDF: "${tip}"`)
+      }
+    }
 
     // Check for unsupported extensions
     for (const f of meshFiles) {
