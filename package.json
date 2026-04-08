@@ -27,7 +27,8 @@
     "build": "vite build",
     "preview": "vite preview",
     "lint": "eslint src/",
-    "typecheck": "tsc"
+    "typecheck": "tsc",
+    "check-models": "node scripts/check-models.mjs"
   },
   "bugs": {
     "url": "https://github.com/ferrolho/robot-explorer/issues"

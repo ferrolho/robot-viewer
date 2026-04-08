@@ -13,6 +13,7 @@ Robot Explorer is an interactive 3D web application for visualizing and manipula
 - **Preview:** `npm run preview` (serve production build locally)
 - **Lint:** `npm run lint` (ESLint)
 - **Type check:** `npm run typecheck` (TypeScript)
+- **Check models:** `npm run check-models` (verify all CDN robot models use supported mesh formats)
 
 ## Architecture
 
