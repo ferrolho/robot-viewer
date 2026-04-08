@@ -720,6 +720,10 @@ async function loadModel (modelId: string) {
     $('hud-reach').textContent = model.reach ? `${model.reach} m` : '--'
     $('hud-payload').textContent = model.payload ? `${model.payload} kg` : '--'
     $('hud-dof').textContent = model.dof ? String(model.dof) : '--'
+
+    const url = new URL(window.location.href)
+    url.searchParams.set('robot', modelId)
+    history.replaceState(null, '', url)
   } catch (err) {
     console.error('Failed to load model:', err)
   } finally {
@@ -920,8 +924,14 @@ function setupIkGoals () {
 async function main () {
   const manifest = await modelLoader.fetchManifest()
   const models = manifest.models
-  const randomId = models[Math.floor(Math.random() * models.length)].id
-  await loadModel(randomId)
+
+  const params = new URLSearchParams(window.location.search)
+  const requested = params.get('robot')
+  const modelId = (requested && models.some(m => m.id === requested))
+    ? requested
+    : models[Math.floor(Math.random() * models.length)].id
+
+  await loadModel(modelId)
 }
 
 main()
