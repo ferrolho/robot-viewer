@@ -104,11 +104,14 @@ let ikGoalControlHelpers: THREE.Object3D[] = []
 const gizmoToolbar = $('gizmo-toolbar')
 const gizmoTranslateBtn = $<HTMLButtonElement>('gizmo-translate')
 const gizmoRotateBtn = $<HTMLButtonElement>('gizmo-rotate')
+const gizmoSpaceBtn = $<HTMLButtonElement>('gizmo-space')
 
 function syncGizmoToolbar() {
   const mode = ikGoalControls[0]?.mode ?? 'translate'
+  const space = ikGoalControls[0]?.space ?? 'local'
   gizmoTranslateBtn.classList.toggle('active', mode === 'translate')
   gizmoRotateBtn.classList.toggle('active', mode === 'rotate')
+  gizmoSpaceBtn.classList.toggle('active', space === 'world')
 }
 
 function showGizmoToolbar(visible: boolean) {
@@ -122,6 +125,12 @@ gizmoTranslateBtn.addEventListener('click', () => {
 
 gizmoRotateBtn.addEventListener('click', () => {
   for (const ctrl of ikGoalControls) { ctrl.setMode('rotate'); ctrl.setSpace('local') }
+  syncGizmoToolbar()
+})
+
+gizmoSpaceBtn.addEventListener('click', () => {
+  const newSpace = (ikGoalControls[0]?.space === 'local') ? 'world' : 'local'
+  for (const ctrl of ikGoalControls) ctrl.setSpace(newSpace)
   syncGizmoToolbar()
 })
 
@@ -788,6 +797,7 @@ window.addEventListener('keydown', function (event) {
     }
     case 'q':
       for (const ctrl of ikGoalControls) ctrl.setSpace(ctrl.space === 'local' ? 'world' : 'local')
+      syncGizmoToolbar()
       break
     case 'r':
       for (const ctrl of ikGoalControls) { ctrl.setMode('rotate'); ctrl.setSpace('local') }

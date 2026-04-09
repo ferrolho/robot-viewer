@@ -78,6 +78,7 @@ const translations: Record<Locale, Record<string, string>> = {
     'aria.shortcuts': 'Keyboard shortcuts',
     'aria.gizmoTranslate': 'Translate mode',
     'aria.gizmoRotate': 'Rotate mode',
+    'aria.gizmoSpace': 'Toggle local / world frame',
     'aria.close': 'Close',
   },
   ja: {
@@ -151,6 +152,7 @@ const translations: Record<Locale, Record<string, string>> = {
     'aria.shortcuts': 'キーボードショートカット',
     'aria.gizmoTranslate': '移動モード',
     'aria.gizmoRotate': '回転モード',
+    'aria.gizmoSpace': 'ローカル / ワールド座標切替',
     'aria.close': '閉じる',
   },
   zh: {
@@ -224,6 +226,7 @@ const translations: Record<Locale, Record<string, string>> = {
     'aria.shortcuts': '键盘快捷键',
     'aria.gizmoTranslate': '平移模式',
     'aria.gizmoRotate': '旋转模式',
+    'aria.gizmoSpace': '切换局部/世界坐标系',
     'aria.close': '关闭',
   },
 }
