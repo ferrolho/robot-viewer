@@ -53,6 +53,9 @@ const translations: Record<Locale, Record<string, string>> = {
 
     'gizmo.local': 'Local',
     'gizmo.world': 'World',
+    'gizmo.tooltip.translate': 'Translate (T)',
+    'gizmo.tooltip.rotate': 'Rotate (R)',
+    'gizmo.tooltip.space': 'Local / World (Q)',
 
     'hud.model': 'Model',
     'hud.brand': 'Brand',
@@ -130,6 +133,9 @@ const translations: Record<Locale, Record<string, string>> = {
 
     'gizmo.local': 'ローカル',
     'gizmo.world': 'ワールド',
+    'gizmo.tooltip.translate': '移動 (T)',
+    'gizmo.tooltip.rotate': '回転 (R)',
+    'gizmo.tooltip.space': 'ローカル / ワールド (Q)',
 
     'hud.model': 'モデル',
     'hud.brand': 'ブランド',
@@ -207,6 +213,9 @@ const translations: Record<Locale, Record<string, string>> = {
 
     'gizmo.local': '局部',
     'gizmo.world': '世界',
+    'gizmo.tooltip.translate': '平移 (T)',
+    'gizmo.tooltip.rotate': '旋转 (R)',
+    'gizmo.tooltip.space': '局部 / 世界 (Q)',
 
     'hud.model': '模型',
     'hud.brand': '品牌',
