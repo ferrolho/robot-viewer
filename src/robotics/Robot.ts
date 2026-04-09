@@ -32,10 +32,13 @@ export class Robot {
   _joints: string[]
   private _q: number[]
   private _motionKeypoints: number[][] = []
+  /** Link map from urdf-loader — immune to name collisions from async mesh loads. */
+  private _linkMap: Record<string, THREE.Object3D>
 
   constructor(scene: THREE.Scene, sceneRoot: THREE.Object3D, kinematics: RobotKinematics, tipLinks: string[]) {
     this._scene = scene
     this._root = sceneRoot
+    this._linkMap = (sceneRoot as any).links ?? {}
     this._kinematics = kinematics
     this._tipLinks = tipLinks
 
@@ -66,7 +69,7 @@ export class Robot {
     return this._tipLinks.map(tipName => {
       const directAncestors = new Set<string>()
       const mimicResolved = new Set<string>()
-      let obj: THREE.Object3D | null = this._root.getObjectByName(tipName) ?? null
+      let obj: THREE.Object3D | null = this._getLink(tipName)
       while (obj && obj !== this._root) {
         const name = obj.name
         if (jointSet.has(name)) {
@@ -199,9 +202,14 @@ export class Robot {
     return this._tipJointIndices[a].every(j => setB.has(j))
   }
 
+  /** Resolve a link by name, preferring the urdf-loader link map over scene-graph search. */
+  private _getLink(name: string): THREE.Object3D | null {
+    return this._linkMap[name] ?? this._root.getObjectByName(name) ?? null
+  }
+
   getLinkPose(linkName: string): THREE.Matrix4 {
     this._root.updateMatrixWorld()
-    const obj = this._root.getObjectByName(linkName)
+    const obj = this._getLink(linkName)
     if (!obj) {
       console.warn(`Robot.getLinkPose: link "${linkName}" not found`)
       return new THREE.Matrix4()
@@ -224,7 +232,7 @@ export class Robot {
     this.configuration = q
     this._root.updateMatrixWorld()
 
-    const T = this.threejs2mathjsMatrix(this._root.getObjectByName(this.tipLinks[tipIndex])!.matrixWorld)
+    const T = this.threejs2mathjsMatrix(this._getLink(this.tipLinks[tipIndex])!.matrixWorld)
 
     this.configuration = q_backup
     this._root.updateMatrixWorld()
@@ -234,7 +242,7 @@ export class Robot {
 
   /** Read a tip link's world matrix using chain-only update (no full scene traversal). */
   private _fkineTip(tipIndex: number): THREE.Matrix4 {
-    const tipObj = this._root.getObjectByName(this._tipLinks[tipIndex])!
+    const tipObj = this._getLink(this._tipLinks[tipIndex])!
     tipObj.updateWorldMatrix(true, false)
     return tipObj.matrixWorld
   }
@@ -322,7 +330,7 @@ export class Robot {
 
     const nCols = indices.length
     const mimicSet = this._mimicResolvedJoints[tipIndex] ?? new Set<number>()
-    const tipObj = this._root.getObjectByName(this._tipLinks[tipIndex])!
+    const tipObj = this._getLink(this._tipLinks[tipIndex])!
     tipObj.updateWorldMatrix(true, false)
 
     const pEe = new THREE.Vector3().setFromMatrixPosition(tipObj.matrixWorld)
@@ -382,7 +390,7 @@ export class Robot {
     const eps = 0.5 // degrees
     const jointName = this._joints[jointIdx]
     const origVal = this._q[jointIdx]
-    const tipObj = this._root.getObjectByName(this._tipLinks[tipIndex])!
+    const tipObj = this._getLink(this._tipLinks[tipIndex])!
 
     // Forward perturbation
     this.setJointValue(jointName, origVal + eps)
