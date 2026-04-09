@@ -14,7 +14,7 @@
 - [x] Fix removed/renamed APIs (Geometry, Math, TransformControls)
 
 ### Phase 3: Dependency Cleanup
-- [x] Update mathjs to v15
+- [x] ~~Update mathjs to v15~~ → Removed mathjs entirely; replaced with hand-written `linalg.ts` for ~7x faster IK (see [ADR-001](docs/adr-001-replace-mathjs.md))
 - [x] Replace tween.js with @tweenjs/tween.js
 - [x] Bump file-saver, jszip, jszip-utils, stats.js, hammerjs
 - [x] Replace gamepad.js submodule with native Gamepad API
@@ -36,7 +36,7 @@
 
 ### Phase 6: Code Quality
 - [ ] Split `app.ts` into modules: scene setup, UI handlers, model loader, animation loop
-- [ ] Enable `noImplicitAny` in tsconfig once mathjs types are tightened
+- [ ] Enable `noImplicitAny` in tsconfig (mathjs is gone — main blocker was removed)
 - [ ] Add Playwright E2E tests for critical flows (load model, IK drag, reachability)
 
 ### Phase 7: URDF Migration — Model Processing Pipeline (new repo)
@@ -85,6 +85,17 @@ Create [`ferrolho/robot-explorer-models`](https://github.com/ferrolho/robot-expl
 - [x] i18n support with language picker dropdown (English, Japanese, Chinese)
 - [ ] Thumbnail generation for model list
 - [ ] Optional: service worker for offline model caching
+
+### Phase 11: Robustness and UX
+- [x] Support `?robot=<id>` URL param for shareable model links
+- [x] Add OBJ and GLB mesh loader support for URDF models
+- [x] Add `check-models` script to verify all CDN models use supported mesh formats
+- [x] Add tipLink validation to `check-models` script
+- [x] Auto-detect point contact tips based on kinematic chain length
+- [x] Mobile gizmo toolbar for IK mode switching (translate/rotate, local/world frame toggle, keyboard shortcut tooltips)
+- [x] Fix DAE mesh name collisions by using urdf-loader link map instead of `getObjectByName`
+- [x] Replace unstable eigendecomposition sqrtm with Denman-Beavers iteration
+- [x] Center of mass visualization using forked urdf-loader with inertial parsing
 
 ### Known Issues
 - [x] Closed-chain linkages (e.g. Robotiq parallel grippers) — mimic joints are now excluded from controllable DOFs and driven automatically by urdf-loader
