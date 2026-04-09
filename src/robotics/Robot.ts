@@ -21,6 +21,7 @@ export class Robot {
   category = ''
   showVelocityEllipsoid = false
   showForceEllipsoid = false
+  showAccelerationEllipsoid = false
   showCenterOfMass = false
 
   private _scene: THREE.Scene
@@ -162,21 +163,47 @@ export class Robot {
   }
 
   updateAccelerationEllipsoid(): void {
-    const Jm = la.fromRows(this.geometricJacobian())
-    const Jt = la.transpose(Jm)
-
     const M = this.computeInertia()
+
+    // Guard: if M is (near-)singular the model lacks inertial data
+    const n = M.rows
+    let mDiag = 0
+    for (let i = 0; i < n; i++) mDiag += Math.abs(M.data[i * n + i])
+    if (mDiag < 1e-10) {
+      const existing = this._scene.getObjectByName('acceleration-ellipsoid')
+      if (existing) this._scene.remove(existing)
+      return
+    }
+
+    // Full-DOF Jacobian (all n joints) so dimensions match the n×n inertia matrix.
+    // Columns for joints outside the tip's chain are zero, which correctly
+    // excludes their inertia from the end-effector acceleration ellipsoid.
+    const allJoints: number[] = []
+    for (let i = 0; i < n; i++) allJoints.push(i)
+    const Jm = la.fromRows(this.geometricJacobian(0, '', allJoints))
+    const Jt = la.transpose(Jm)
     const Minv = la.inv(M)
 
-    // J * Minv * Minv^T * J^T — but Minv is symmetric so Minv^T = Minv
+    // J * Minv² * J^T — Minv is symmetric so Minv^T = Minv
     const MinvJt = la.multiply(Minv, Jt)
     const full = la.multiply(Jm, la.multiply(Minv, MinvJt))
 
-    // Extract top-left 3x3 block
+    // Extract top-left 3×3 block (translational)
     const Mx = la.mat(3, 3)
     for (let i = 0; i < 3; i++)
       for (let j = 0; j < 3; j++)
         Mx.data[i * 3 + j] = full.data[i * full.cols + j]
+
+    // Normalize to match velocity ellipsoid scale so the shape (directional
+    // distribution of acceleration capability) is visually comparable.
+    const Jv = la.fromRows(this.geometricJacobian(0, 'translational'))
+    const JJt = la.multiply(Jv, la.transpose(Jv))
+    const velTrace = JJt.data[0] + JJt.data[4] + JJt.data[8]
+    const accTrace = Mx.data[0] + Mx.data[4] + Mx.data[8]
+    if (accTrace > 1e-20) {
+      const scale = velTrace / accTrace
+      for (let i = 0; i < 9; i++) Mx.data[i] *= scale
+    }
 
     this.plotEllipsoid(Mx, 'acceleration-ellipsoid')
   }
@@ -192,9 +219,155 @@ export class Robot {
     this.plotEllipsoid(la.multiply(Jm, la.transpose(Jm)), 'velocity-ellipsoid')
   }
 
+  /**
+   * Joint-space inertia matrix M(q) via the link-contribution method.
+   *
+   * For each link with URDF inertial data, computes the 6×n geometric Jacobian
+   * at its center of mass and accumulates:
+   *   M += Jv^T · m · Jv  +  Jw^T · I_world · Jw
+   *
+   * This is equivalent to CRBA but expressed in Cartesian coordinates, reusing
+   * the same geometric Jacobian formulation used elsewhere. Complexity is
+   * O(L · k²) where L = number of links and k = max chain depth, which is
+   * optimal for the serial/near-serial chains in this application.
+   */
   computeInertia(): la.Mat {
-    console.log('Robot.ts@computeInertia: THIS IS NOT YET FUNCTIONAL !')
-    return la.identity(6)
+    const n = this._degreesOfFreedom
+    const M = la.zeros(n, n)
+
+    this._root.updateMatrixWorld()
+
+    const _z = new THREE.Vector3()
+    const _p = new THREE.Vector3()
+    const _pCom = new THREE.Vector3()
+    const _d = new THREE.Vector3()
+    const _jointRot = new THREE.Matrix3()
+
+    for (const name in this._linkMap) {
+      const link = this._linkMap[name] as any
+      const inertial = link.inertial
+      if (!inertial || inertial.mass === 0) continue
+
+      const mass = inertial.mass
+
+      // COM in world frame
+      _pCom.set(inertial.origin.xyz[0], inertial.origin.xyz[1], inertial.origin.xyz[2])
+      link.localToWorld(_pCom)
+
+      // Inertia tensor rotated to world frame
+      const Iw = Robot._rotateInertiaToWorld(link.matrixWorld.elements, inertial)
+
+      // Find ancestor controllable joints (walk link → root)
+      const ancestors: number[] = []
+      let obj: THREE.Object3D | null = link
+      while (obj && obj !== this._root) {
+        const idx = this._joints.indexOf(obj.name)
+        if (idx >= 0) ancestors.push(idx)
+        obj = obj.parent
+      }
+      ancestors.reverse()
+      if (ancestors.length === 0) continue
+
+      // Per-ancestor Jacobian columns at this link's COM
+      const nAnc = ancestors.length
+      const jv = new Float64Array(nAnc * 3)
+      const jw = new Float64Array(nAnc * 3)
+
+      for (let a = 0; a < nAnc; a++) {
+        const ji = ancestors[a]
+        const jointName = this._joints[ji]
+        const jointObj = this._jointObjMap[jointName] ?? this._root.getObjectByName(jointName)!
+        _jointRot.setFromMatrix4(jointObj.matrixWorld)
+        _z.copy(this._kinematics.joints[jointName].axis).applyMatrix3(_jointRot).normalize()
+        _p.setFromMatrixPosition(jointObj.matrixWorld)
+
+        _d.subVectors(_pCom, _p)
+        const off = a * 3
+        jv[off]     = _z.y * _d.z - _z.z * _d.y
+        jv[off + 1] = _z.z * _d.x - _z.x * _d.z
+        jv[off + 2] = _z.x * _d.y - _z.y * _d.x
+        jw[off]     = _z.x
+        jw[off + 1] = _z.y
+        jw[off + 2] = _z.z
+      }
+
+      // Accumulate M[i,j] += m · Jv_a · Jv_b + Jw_a^T · Iw · Jw_b
+      for (let a = 0; a < nAnc; a++) {
+        const i = ancestors[a]
+        const oa = a * 3
+        for (let b = a; b < nAnc; b++) {
+          const j = ancestors[b]
+          const ob = b * 3
+
+          let val = mass * (jv[oa] * jv[ob] + jv[oa + 1] * jv[ob + 1] + jv[oa + 2] * jv[ob + 2])
+
+          for (let k = 0; k < 3; k++) {
+            const ik = k * 3
+            val += jw[oa + k] * (Iw[ik] * jw[ob] + Iw[ik + 1] * jw[ob + 1] + Iw[ik + 2] * jw[ob + 2])
+          }
+
+          M.data[i * n + j] += val
+          if (i !== j) M.data[j * n + i] += val
+        }
+      }
+    }
+
+    return M
+  }
+
+  /** Rotate a link's inertia tensor from the URDF inertial frame to world frame.
+   *  Returns a row-major 3×3 Float64Array: I_world = R_wi · I · R_wi^T */
+  private static _rotateInertiaToWorld(matrixWorldElements: ArrayLike<number>, inertial: any): Float64Array {
+    const { ixx, ixy, ixz, iyy, iyz, izz } = inertial.inertia
+    const rpy = inertial.origin.rpy
+    const wm = matrixWorldElements // column-major 4×4
+
+    // R_wl (world ← link) extracted as row-major 3×3
+    let R: Float64Array
+
+    if (rpy[0] === 0 && rpy[1] === 0 && rpy[2] === 0) {
+      // Common case: inertial frame aligned with link frame
+      R = new Float64Array([
+        wm[0], wm[4], wm[8],
+        wm[1], wm[5], wm[9],
+        wm[2], wm[6], wm[10],
+      ])
+    } else {
+      // R_li from RPY (URDF fixed-axis XYZ = R_z(yaw) · R_y(pitch) · R_x(roll))
+      const cr = Math.cos(rpy[0]), sr = Math.sin(rpy[0])
+      const cp = Math.cos(rpy[1]), sp = Math.sin(rpy[1])
+      const cy = Math.cos(rpy[2]), sy = Math.sin(rpy[2])
+      const Rli = [
+        cy * cp, cy * sp * sr - sy * cr, cy * sp * cr + sy * sr,
+        sy * cp, sy * sp * sr + cy * cr, sy * sp * cr - cy * sr,
+        -sp,     cp * sr,                cp * cr,
+      ]
+      // R_wi = R_wl · R_li
+      R = new Float64Array(9)
+      for (let i = 0; i < 3; i++)
+        for (let j = 0; j < 3; j++) {
+          let sum = 0
+          for (let k = 0; k < 3; k++) sum += wm[k * 4 + i] * Rli[k * 3 + j]
+          R[i * 3 + j] = sum
+        }
+    }
+
+    // I_world = R · I · R^T  (I is symmetric)
+    const I = [ixx, ixy, ixz, ixy, iyy, iyz, ixz, iyz, izz]
+    const RI = new Float64Array(9)
+    for (let i = 0; i < 3; i++)
+      for (let j = 0; j < 3; j++)
+        RI[i * 3 + j] = R[i * 3] * I[j] + R[i * 3 + 1] * I[3 + j] + R[i * 3 + 2] * I[6 + j]
+
+    const Iw = new Float64Array(9)
+    for (let i = 0; i < 3; i++)
+      for (let j = i; j < 3; j++) {
+        const val = RI[i * 3] * R[j * 3] + RI[i * 3 + 1] * R[j * 3 + 1] + RI[i * 3 + 2] * R[j * 3 + 2]
+        Iw[i * 3 + j] = val
+        Iw[j * 3 + i] = val
+      }
+
+    return Iw
   }
 
   /** Compute the robot's center of mass in world frame. */
@@ -581,6 +754,7 @@ export class Robot {
 
     if (this.showVelocityEllipsoid) this.updateVelocityEllipsoid()
     if (this.showForceEllipsoid) this.updateForceEllipsoid()
+    if (this.showAccelerationEllipsoid) this.updateAccelerationEllipsoid()
     if (this.showCenterOfMass) this.updateCenterOfMass()
 
     console.log(`Solved with ${iterations} iterations (${delta} ms).`)
@@ -705,6 +879,7 @@ export class Robot {
 
     if (this.showVelocityEllipsoid) this.updateVelocityEllipsoid()
     if (this.showForceEllipsoid) this.updateForceEllipsoid()
+    if (this.showAccelerationEllipsoid) this.updateAccelerationEllipsoid()
     if (this.showCenterOfMass) this.updateCenterOfMass()
 
     const delta = Date.now() - start

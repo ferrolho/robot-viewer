@@ -38,7 +38,6 @@ const translations: Record<Locale, Record<string, string>> = {
     'ellipsoids.velocity': 'Velocity',
     'ellipsoids.force': 'Force',
     'ellipsoids.acceleration': 'Acceleration',
-    'ellipsoids.acceleration.title': 'Requires inertia computation (not yet implemented)',
 
     'shortcuts.button': 'Shortcuts',
     'shortcuts.title': 'Keyboard Shortcuts',
@@ -118,7 +117,6 @@ const translations: Record<Locale, Record<string, string>> = {
     'ellipsoids.velocity': '速度',
     'ellipsoids.force': '力',
     'ellipsoids.acceleration': '加速度',
-    'ellipsoids.acceleration.title': '慣性計算が必要（未実装）',
 
     'shortcuts.button': 'ショートカット',
     'shortcuts.title': 'キーボードショートカット',
@@ -198,7 +196,6 @@ const translations: Record<Locale, Record<string, string>> = {
     'ellipsoids.velocity': '速度',
     'ellipsoids.force': '力',
     'ellipsoids.acceleration': '加速度',
-    'ellipsoids.acceleration.title': '需要惯性计算（尚未实现）',
 
     'shortcuts.button': '快捷键',
     'shortcuts.title': '键盘快捷键',

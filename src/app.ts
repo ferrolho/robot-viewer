@@ -95,6 +95,7 @@ let rawPoints: THREE.Vector3[][] = [[], [], [], []]
 let showCenterOfMass = false
 let showVelocityEllipsoid = false
 let showForceEllipsoid = false
+let showAccelerationEllipsoid = false
 let ikSolver = IkSolverEnum.OFF as typeof IkSolverEnum[keyof typeof IkSolverEnum]
 let ikGoals: THREE.Mesh[] = []
 let ikGoalControls: InstanceType<typeof TransformControls>[] = []
@@ -426,6 +427,19 @@ forceEllipsoidSwitch.addEventListener('change', () => {
   }
 })
 
+const accelEllipsoidSwitch = checkbox('accel-ellipsoid-switch')
+accelEllipsoidSwitch.addEventListener('change', () => {
+  showAccelerationEllipsoid = accelEllipsoidSwitch.checked
+  if (robot) {
+    robot.showAccelerationEllipsoid = showAccelerationEllipsoid
+    if (showAccelerationEllipsoid) {
+      robot.updateAccelerationEllipsoid()
+    } else {
+      const ae = scene.getObjectByName('acceleration-ellipsoid'); if (ae) scene.remove(ae)
+    }
+  }
+})
+
 // ── Scene setup ──
 
 function updateShadowsState () {
@@ -752,9 +766,11 @@ async function loadModel (modelId: string) {
     robot.showCenterOfMass = showCenterOfMass
     robot.showVelocityEllipsoid = showVelocityEllipsoid
     robot.showForceEllipsoid = showForceEllipsoid
+    robot.showAccelerationEllipsoid = showAccelerationEllipsoid
     if (showCenterOfMass) robot.updateCenterOfMass()
     if (showVelocityEllipsoid) robot.updateVelocityEllipsoid()
     if (showForceEllipsoid) robot.updateForceEllipsoid()
+    if (showAccelerationEllipsoid) robot.updateAccelerationEllipsoid()
 
     updateShadowsState()
     setupIkGoals()
@@ -878,6 +894,7 @@ function moveFromTo (q_s: number[], q_t: number[], duration = 10, easing: (t: nu
     if (robot.showCenterOfMass) robot.updateCenterOfMass()
     if (robot.showVelocityEllipsoid) robot.updateVelocityEllipsoid()
     if (robot.showForceEllipsoid) robot.updateForceEllipsoid()
+    if (robot.showAccelerationEllipsoid) robot.updateAccelerationEllipsoid()
   })
 
   tween.onComplete(function () {
