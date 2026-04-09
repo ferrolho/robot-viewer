@@ -92,6 +92,7 @@ resizeObserver.observe(canvasContainer)
 let castShadows = false
 let robot: Robot
 let rawPoints: THREE.Vector3[][] = [[], [], [], []]
+let showCenterOfMass = false
 let showVelocityEllipsoid = false
 let showForceEllipsoid = false
 let ikSolver = IkSolverEnum.OFF as typeof IkSolverEnum[keyof typeof IkSolverEnum]
@@ -384,6 +385,19 @@ pseudoInverseSwitch.addEventListener('change', () => {
     syncGizmoToolbar()
   }
   showGizmoToolbar(ikSolver !== IkSolverEnum.OFF)
+})
+
+const comSwitch = checkbox('com-switch')
+comSwitch.addEventListener('change', () => {
+  showCenterOfMass = comSwitch.checked
+  if (robot) {
+    robot.showCenterOfMass = showCenterOfMass
+    if (showCenterOfMass) {
+      robot.updateCenterOfMass()
+    } else {
+      const com = scene.getObjectByName('center-of-mass'); if (com) scene.remove(com)
+    }
+  }
 })
 
 const velocityEllipsoidSwitch = checkbox('velocity-ellipsoid-switch')
@@ -724,8 +738,8 @@ async function loadModel (modelId: string) {
     const model = modelLoader.getModel(modelId)!
     const kinematics = robotKinematicsFromURDF(urdfRobot)
 
-    // Remove stale ellipsoids from previous robot
-    for (const name of ['velocity-ellipsoid', 'force-ellipsoid', 'acceleration-ellipsoid']) {
+    // Remove stale visualizations from previous robot
+    for (const name of ['velocity-ellipsoid', 'force-ellipsoid', 'acceleration-ellipsoid', 'center-of-mass']) {
       const obj = scene.getObjectByName(name)
       if (obj) scene.remove(obj)
     }
@@ -734,9 +748,11 @@ async function loadModel (modelId: string) {
     robot.id = modelId
     robot.category = model.category
 
-    // Sync ellipsoid state from UI toggles to new robot
+    // Sync toggle state from UI to new robot
+    robot.showCenterOfMass = showCenterOfMass
     robot.showVelocityEllipsoid = showVelocityEllipsoid
     robot.showForceEllipsoid = showForceEllipsoid
+    if (showCenterOfMass) robot.updateCenterOfMass()
     if (showVelocityEllipsoid) robot.updateVelocityEllipsoid()
     if (showForceEllipsoid) robot.updateForceEllipsoid()
 
@@ -859,6 +875,7 @@ function moveFromTo (q_s: number[], q_t: number[], duration = 10, easing: (t: nu
         ikGoals[i].quaternion.setFromRotationMatrix(pose)
       }
     }
+    if (robot.showCenterOfMass) robot.updateCenterOfMass()
     if (robot.showVelocityEllipsoid) robot.updateVelocityEllipsoid()
     if (robot.showForceEllipsoid) robot.updateForceEllipsoid()
   })

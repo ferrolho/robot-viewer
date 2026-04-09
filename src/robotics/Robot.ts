@@ -21,6 +21,7 @@ export class Robot {
   category = ''
   showVelocityEllipsoid = false
   showForceEllipsoid = false
+  showCenterOfMass = false
 
   private _scene: THREE.Scene
   private _root: THREE.Object3D
@@ -194,6 +195,46 @@ export class Robot {
   computeInertia(): la.Mat {
     console.log('Robot.ts@computeInertia: THIS IS NOT YET FUNCTIONAL !')
     return la.identity(6)
+  }
+
+  /** Compute the robot's center of mass in world frame. */
+  computeCenterOfMass(): THREE.Vector3 {
+    this._root.updateMatrixWorld()
+    const com = new THREE.Vector3()
+    const linkCom = new THREE.Vector3()
+    let totalMass = 0
+
+    for (const name in this._linkMap) {
+      const link = this._linkMap[name] as any
+      const inertial = link.inertial
+      if (!inertial || inertial.mass === 0) continue
+
+      // inertial.origin.xyz is the COM offset in the link's local frame
+      linkCom.set(inertial.origin.xyz[0], inertial.origin.xyz[1], inertial.origin.xyz[2])
+      link.localToWorld(linkCom)
+
+      com.addScaledVector(linkCom, inertial.mass)
+      totalMass += inertial.mass
+    }
+
+    if (totalMass > 0) com.divideScalar(totalMass)
+    return com
+  }
+
+  updateCenterOfMass(): void {
+    const com = this.computeCenterOfMass()
+
+    let marker = this._scene.getObjectByName('center-of-mass') as THREE.Mesh | undefined
+    if (!marker) {
+      const geo = new THREE.SphereGeometry(0.03, 16, 16)
+      const mat = new THREE.MeshBasicMaterial({ color: 0xfbbf24, depthTest: false, transparent: true, opacity: 0.9 })
+      marker = new THREE.Mesh(geo, mat)
+      marker.name = 'center-of-mass'
+      marker.renderOrder = 999
+      this._scene.add(marker)
+    }
+
+    marker.position.copy(com)
   }
 
   get motionKeypoints(): number[][] {
@@ -540,6 +581,7 @@ export class Robot {
 
     if (this.showVelocityEllipsoid) this.updateVelocityEllipsoid()
     if (this.showForceEllipsoid) this.updateForceEllipsoid()
+    if (this.showCenterOfMass) this.updateCenterOfMass()
 
     console.log(`Solved with ${iterations} iterations (${delta} ms).`)
   }
@@ -663,6 +705,7 @@ export class Robot {
 
     if (this.showVelocityEllipsoid) this.updateVelocityEllipsoid()
     if (this.showForceEllipsoid) this.updateForceEllipsoid()
+    if (this.showCenterOfMass) this.updateCenterOfMass()
 
     const delta = Date.now() - start
     console.log(`Whole-body IK: ${iteration} iters (${delta} ms).`)
