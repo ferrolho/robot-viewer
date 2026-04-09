@@ -1,6 +1,7 @@
 import * as robotMath from './math.ts'
 import { type Partial } from './math.ts'
-import { math } from './math.ts'
+import * as la from './linalg.ts'
+import { SolverBuffers } from './linalg.ts'
 import * as THREE from 'three'
 
 export interface RobotJoint {
@@ -34,6 +35,10 @@ export class Robot {
   private _motionKeypoints: number[][] = []
   /** Link map from urdf-loader — immune to name collisions from async mesh loads. */
   private _linkMap: Record<string, THREE.Object3D>
+  /** Cached joint Object3D references (avoids getObjectByName DFS in hot loop). */
+  private _jointObjMap: Record<string, THREE.Object3D> = {}
+  /** Cached solver buffers, keyed by "totalDim,nj". */
+  private _solverBuf: { key: string; buf: SolverBuffers } | null = null
 
   constructor(scene: THREE.Scene, sceneRoot: THREE.Object3D, kinematics: RobotKinematics, tipLinks: string[]) {
     this._scene = scene
@@ -52,6 +57,12 @@ export class Robot {
           this._joints.push(prop)
         }
       }
+    }
+
+    // Cache joint Object3D references to avoid getObjectByName DFS in the IK loop
+    for (const name of this._joints) {
+      const obj = this._root.getObjectByName(name)
+      if (obj) this._jointObjMap[name] = obj
     }
 
     this._q = this.zeroConfiguration
@@ -95,27 +106,40 @@ export class Robot {
     })
   }
 
-  plotEllipsoid(A: any, name: string): void {
+  /** Get or create pre-allocated solver buffers for the given problem size. */
+  private _ensureBuf(totalDim: number, nj: number): SolverBuffers {
+    const key = `${totalDim},${nj}`
+    if (this._solverBuf?.key === key) return this._solverBuf.buf
+    const buf = new SolverBuffers(totalDim, nj)
+    this._solverBuf = { key, buf }
+    return buf
+  }
+
+  plotEllipsoid(A: la.Mat, name: string): void {
     const geometry = new THREE.SphereGeometry(0.5)
     const posAttr = geometry.getAttribute('position') as THREE.BufferAttribute
     const ps: number[][] = []
     for (let i = 0; i < posAttr.count; i++) {
       ps.push([posAttr.getX(i), posAttr.getY(i), posAttr.getZ(i)])
     }
-    const pe = math.multiply((math as any).sqrtm(A), math.transpose(ps)) as number[][]
+
+    const sqrtA = la.sqrtm3x3Symmetric(A)
+    const P = la.fromRows(ps)            // count × 3
+    const Pt = la.transpose(P)           // 3 × count
+    const pe = la.multiply(sqrtA, Pt)    // 3 × count
 
     for (let i = 0; i < posAttr.count; i++) {
-      posAttr.setXYZ(i, pe[0][i], pe[1][i], pe[2][i])
+      posAttr.setXYZ(i, pe.data[i], pe.data[posAttr.count + i], pe.data[2 * posAttr.count + i])
     }
     posAttr.needsUpdate = true
 
     const lineSegments = new THREE.LineSegments(new THREE.WireframeGeometry(geometry))
-    const mat = lineSegments.material as THREE.LineBasicMaterial
-    mat.depthTest = false
-    mat.opacity = 0.5
-    mat.transparent = true
+    const material = lineSegments.material as THREE.LineBasicMaterial
+    material.depthTest = false
+    material.opacity = 0.5
+    material.transparent = true
 
-    mat.color = ((name: string) => {
+    material.color = ((name: string) => {
       switch (name) {
         case 'acceleration-ellipsoid': return new THREE.Color(0xfbbf24)
         case 'force-ellipsoid': return new THREE.Color(0xf87171)
@@ -130,44 +154,46 @@ export class Robot {
     const ellipsoid = lineSegments
     ellipsoid.name = name
 
-    const eff = robotMath.transl(this.fkine(this.configuration))
+    const eff = robotMath.transl(this.fkine(this.configuration).elements)
     ellipsoid.position.set(eff.x, eff.y, eff.z)
 
     this._scene.add(ellipsoid)
   }
 
   updateAccelerationEllipsoid(): void {
-    const J = this.geometricJacobian()
-    const Jt = math.transpose(J)
+    const Jm = la.fromRows(this.geometricJacobian())
+    const Jt = la.transpose(Jm)
 
     const M = this.computeInertia()
-    const Minv = math.inv(M as any)
+    const Minv = la.inv(M)
 
-    let Mx = math.multiply(J, math.multiply(Minv, math.multiply(math.transpose(Minv as any), Jt)))
-    Mx = math.resize(Mx, [3, 3])
+    // J * Minv * Minv^T * J^T — but Minv is symmetric so Minv^T = Minv
+    const MinvJt = la.multiply(Minv, Jt)
+    const full = la.multiply(Jm, la.multiply(Minv, MinvJt))
+
+    // Extract top-left 3x3 block
+    const Mx = la.mat(3, 3)
+    for (let i = 0; i < 3; i++)
+      for (let j = 0; j < 3; j++)
+        Mx.data[i * 3 + j] = full.data[i * full.cols + j]
 
     this.plotEllipsoid(Mx, 'acceleration-ellipsoid')
   }
 
   updateForceEllipsoid(): void {
-    const J = this.geometricJacobian(0, 'translational')
-    const Jt = math.transpose(J)
-    const A = math.inv(math.multiply(J, Jt) as any)
-
-    this.plotEllipsoid(A, 'force-ellipsoid')
+    const Jm = la.fromRows(this.geometricJacobian(0, 'translational'))
+    const JJt = la.multiply(Jm, la.transpose(Jm))
+    this.plotEllipsoid(la.inv(JJt), 'force-ellipsoid')
   }
 
   updateVelocityEllipsoid(): void {
-    const J = this.geometricJacobian(0, 'translational')
-    const Jt = math.transpose(J)
-    const A = math.multiply(J, Jt)
-
-    this.plotEllipsoid(A, 'velocity-ellipsoid')
+    const Jm = la.fromRows(this.geometricJacobian(0, 'translational'))
+    this.plotEllipsoid(la.multiply(Jm, la.transpose(Jm)), 'velocity-ellipsoid')
   }
 
-  computeInertia(): any {
+  computeInertia(): la.Mat {
     console.log('Robot.ts@computeInertia: THIS IS NOT YET FUNCTIONAL !')
-    return math.identity(6) as any
+    return la.identity(6)
   }
 
   get motionKeypoints(): number[][] {
@@ -217,22 +243,13 @@ export class Robot {
     return obj.matrixWorld
   }
 
-  threejs2mathjsMatrix(T: THREE.Matrix4): any {
-    T = new THREE.Matrix4().copy(T).transpose()
-    return math.matrix([
-      T.elements.slice(0, 4),
-      T.elements.slice(4, 8),
-      T.elements.slice(8, 12),
-      T.elements.slice(12, 16)])
-  }
-
-  fkine(q: number[], tipIndex = 0): any {
+  fkine(q: number[], tipIndex = 0): THREE.Matrix4 {
     const q_backup = this.configuration
 
     this.configuration = q
     this._root.updateMatrixWorld()
 
-    const T = this.threejs2mathjsMatrix(this._getLink(this.tipLinks[tipIndex])!.matrixWorld)
+    const T = this._getLink(this.tipLinks[tipIndex])!.matrixWorld.clone()
 
     this.configuration = q_backup
     this._root.updateMatrixWorld()
@@ -352,7 +369,7 @@ export class Robot {
         continue
       }
 
-      const jointObj = this._root.getObjectByName(jointName)!
+      const jointObj = this._jointObjMap[jointName] ?? this._root.getObjectByName(jointName)!
       // Joint axis is defined in the joint's local frame — transform to world
       const localAxis = this._kinematics.joints[jointName].axis
       _rot.setFromMatrix4(jointObj.matrixWorld)
@@ -395,20 +412,22 @@ export class Robot {
     // Forward perturbation
     this.setJointValue(jointName, origVal + eps)
     this._root.updateMatrixWorld(true)
-    const T1 = this.threejs2mathjsMatrix(tipObj.matrixWorld)
+    const e1 = tipObj.matrixWorld.elements
 
     // Backward perturbation
     this.setJointValue(jointName, origVal - eps)
     this._root.updateMatrixWorld(true)
-    const T0 = this.threejs2mathjsMatrix(tipObj.matrixWorld)
+    const e0 = tipObj.matrixWorld.elements
+
+    // Compute delta from the two poses
+    const delta = robotMath.tr2delta(e0, e1, partial)
 
     // Restore original value
     this.setJointValue(jointName, origVal)
     this._root.updateMatrixWorld(true)
 
-    const delta = robotMath.tr2delta(T0, T1, partial)
     const scale = 1 / (2 * eps * THREE.MathUtils.DEG2RAD)
-    return (delta as number[]).map(v => v * scale)
+    return Array.from(delta, v => v * scale)
   }
 
   // ── IK Solver ──
@@ -422,7 +441,7 @@ export class Robot {
    *   with 6D task), projects a secondary objective (pull toward joint midpoints)
    *   into the null space to escape singularities and avoid joint limits.
    */
-  private _solveIk(tipIndex: number, Tf: any, jointIndices: number[], partial: Partial): number {
+  private _solveIk(tipIndex: number, tfElements: ArrayLike<number>, jointIndices: number[], partial: Partial): number {
     const maxIterations = 50
     const tolerance = 1e-3
     const alpha = 0.2
@@ -433,61 +452,71 @@ export class Robot {
     const nj = jointIndices.length
     const dim = partial === '' ? 6 : 3
     const hasNullSpace = nj > dim
+    const buf = this._ensureBuf(dim, nj)
 
     // Precompute joint midpoints for null-space bias
-    let qMid: number[] | null = null
     if (hasNullSpace) {
-      qMid = new Array(nj)
       for (let k = 0; k < nj; k++) {
         const ji = jointIndices[k]
         const joint = this._kinematics.joints[this._joints[ji]]
-        qMid[k] = (joint.limits.min + joint.limits.max) / 2
+        buf.qDiff[k] = (joint.limits.min + joint.limits.max) / 2 // store midpoints in qDiff temporarily
       }
     }
+    // Copy midpoints out so qDiff can be reused per-iteration
+    const qMid = hasNullSpace ? Float64Array.from(buf.qDiff.subarray(0, nj)) : null
 
     let iteration = 0
 
     for (; iteration < maxIterations; iteration++) {
-      const T0 = this.threejs2mathjsMatrix(this._fkineTip(tipIndex))
-      const error = robotMath.tr2delta(T0, Tf, partial)
+      const tipElements = this._fkineTip(tipIndex).elements
+      robotMath.tr2delta(tipElements, tfElements, partial, buf.error)
 
-      if ((math.norm(error) as number) <= tolerance) break
+      if (la.vecNorm(buf.error, dim) <= tolerance) break
 
-      const J = this.geometricJacobian(tipIndex, partial, jointIndices)
-      const Jm = math.matrix(J)
-      const Jt = math.transpose(Jm)
-      const JJt = math.multiply(Jm, Jt)
+      la.fromRows(this.geometricJacobian(tipIndex, partial, jointIndices), buf.J)
+
+      // JJt = J * J^T
+      la.multiplyABtInto(buf.JJt, buf.J, buf.J)
 
       // Adaptive damping: increase near singularities
-      const det = math.det(JJt) as number
+      la.copyInto(buf.luWork, buf.JJt)
+      const sign = la.luDecomposeInPlace(buf.luWork, buf.pivots)
+      const det = la.luDet(buf.luWork, sign)
       const w = Math.sqrt(Math.max(det, 0))
-      const lambda = w < manipThreshold
+      const dampLambda = w < manipThreshold
         ? lambdaMax * (1 - (w / manipThreshold) ** 2)
         : 0
-      const C = math.multiply(math.identity(dim) as any, Math.max(lambda, 1e-4))
 
-      const pinv = math.multiply(Jt, math.inv(math.add(JJt, C) as any))
+      // A = JJt + lambda*I
+      la.addScaledIdentityInto(buf.A, buf.JJt, Math.max(dampLambda, 1e-4))
 
-      // Primary task: move toward goal
-      let dq = math.multiply(alpha, math.multiply(pinv, error))
+      // pinv = J^T * inv(A)
+      la.luDecomposeInPlace(buf.A, buf.pivots)
+      la.luInvertInto(buf.Ainv, buf.A, buf.pivots)
+      la.multiplyAtBInto(buf.pinv, buf.J, buf.Ainv)
+
+      // dq = alpha * pinv * error
+      la.matVecMultiplyInto(buf.dq, buf.pinv, buf.error)
+      la.vecScaleInPlace(buf.dq, alpha, nj)
 
       // Null-space regularization: pull toward joint midpoints
       if (hasNullSpace && qMid) {
-        const I = math.identity(nj) as any
-        const nullProj = math.subtract(I, math.multiply(pinv, Jm))
-        const qDiff: number[] = new Array(nj)
+        // qDiff = qMid - q (in radians)
         for (let k = 0; k < nj; k++) {
-          qDiff[k] = (qMid[k] - this._q[jointIndices[k]]) * THREE.MathUtils.DEG2RAD
+          buf.qDiff[k] = (qMid[k] - this._q[jointIndices[k]]) * THREE.MathUtils.DEG2RAD
         }
-        const nullStep = math.multiply(nullSpaceGain, math.multiply(nullProj, qDiff))
-        dq = math.add(dq, nullStep)
+        // nullProj = I - pinv * J
+        la.multiplyInto(buf.pinvJ!, buf.pinv, buf.J)
+        la.identityInto(buf.nullProj!)
+        la.subtractInto(buf.nullProj!, buf.nullProj!, buf.pinvJ!)
+        // dq += gain * nullProj * qDiff
+        la.matVecMultiplyInto(buf.nullStep!, buf.nullProj!, buf.qDiff)
+        for (let k = 0; k < nj; k++) buf.dq[k] += nullSpaceGain * buf.nullStep![k]
       }
-
-      const dqArr: number[] = (dq as any).toArray ? (dq as any).toArray() : dq
 
       for (let k = 0; k < nj; k++) {
         const ji = jointIndices[k]
-        this.setJointValue(this._joints[ji], this._q[ji] + dqArr[k] * THREE.MathUtils.RAD2DEG)
+        this.setJointValue(this._joints[ji], this._q[ji] + buf.dq[k] * THREE.MathUtils.RAD2DEG)
       }
     }
 
@@ -502,10 +531,9 @@ export class Robot {
   moveTipToPose(goal: THREE.Object3D, tipIndex = 0): void {
     const partial = this._tipPartial(tipIndex)
     const jointIndices = this._tipJointIndices[tipIndex]
-    const Tf = this.threejs2mathjsMatrix(goal.matrixWorld)
 
     const start = Date.now()
-    const iterations = this._solveIk(tipIndex, Tf, jointIndices, partial)
+    const iterations = this._solveIk(tipIndex, goal.matrixWorld.elements, jointIndices, partial)
     const delta = Date.now() - start
 
     this._root.updateMatrixWorld()
@@ -541,11 +569,11 @@ export class Robot {
     const jointToCol = new Map<number, number>()
     for (let c = 0; c < nj; c++) jointToCol.set(allJoints[c], c)
 
-    // Precompute goal transforms
-    const Tfs = goals.map(g => this.threejs2mathjsMatrix(g.matrixWorld))
+    // Store goal elements references (column-major THREE.Matrix4.elements)
+    const goalElements = goals.map(g => g.matrixWorld.elements)
 
     // Precompute joint midpoints for null-space bias
-    const qMid = new Array(nj)
+    const qMid = new Float64Array(nj)
     for (let c = 0; c < nj; c++) {
       const joint = this._kinematics.joints[this._joints[allJoints[c]]]
       qMid[c] = (joint.limits.min + joint.limits.max) / 2
@@ -557,43 +585,40 @@ export class Robot {
     const lambda = 1e-3
     const nullSpaceGain = 0.1
 
-    // Fixed damping matrix — stacked systems are inherently stable, so adaptive
-    // det-based damping doesn't work (det of a 24×24 matrix is tiny even when
-    // the system is well-conditioned).
-    const C = math.multiply(math.identity(totalDim) as any, lambda)
+    const buf = this._ensureBuf(totalDim, nj)
+
+    // Temp buffer for per-tip tr2delta output
+    const tipError = new Float64Array(6)
 
     const start = Date.now()
     let iteration = 0
 
     for (; iteration < maxIterations; iteration++) {
       // Build stacked error and Jacobian
-      const stackedError: number[] = new Array(totalDim)
-      const stackedJ: number[][] = new Array(totalDim)
-      for (let r = 0; r < totalDim; r++) stackedJ[r] = new Array(nj).fill(0)
-
+      buf.J.data.fill(0)
       let maxTipError = 0
       let rowOffset = 0
 
       for (let ti = 0; ti < goals.length; ti++) {
         const dim = tipDims[ti]
         const p = tipPartials[ti]
-        const T0 = this.threejs2mathjsMatrix(this._fkineTip(ti))
-        const error = robotMath.tr2delta(T0, Tfs[ti], p)
-        const errorArr: number[] = Array.isArray(error) ? error : error.toArray ? error.toArray() : error
+        const tipElements = this._fkineTip(ti).elements
+        robotMath.tr2delta(tipElements, goalElements[ti], p, tipError)
 
-        let tipError = 0
+        let tipErrSq = 0
         for (let r = 0; r < dim; r++) {
-          stackedError[rowOffset + r] = errorArr[r]
-          tipError += errorArr[r] * errorArr[r]
+          buf.error[rowOffset + r] = tipError[r]
+          tipErrSq += tipError[r] * tipError[r]
         }
-        maxTipError = Math.max(maxTipError, Math.sqrt(tipError))
+        maxTipError = Math.max(maxTipError, Math.sqrt(tipErrSq))
 
         // Per-tip Jacobian — place columns into the correct stacked positions
         const tipJoints = this._tipJointIndices[ti]
         const J = this.geometricJacobian(ti, p, tipJoints)
         for (let r = 0; r < dim; r++) {
+          const rowBase = (rowOffset + r) * nj
           for (let c = 0; c < tipJoints.length; c++) {
-            stackedJ[rowOffset + r][jointToCol.get(tipJoints[c])!] = J[r][c]
+            buf.J.data[rowBase + jointToCol.get(tipJoints[c])!] = J[r][c]
           }
         }
         rowOffset += dim
@@ -601,30 +626,36 @@ export class Robot {
 
       if (maxTipError <= tolerance) break
 
-      const Jm = math.matrix(stackedJ)
-      const Jt = math.transpose(Jm)
-      const JJt = math.multiply(Jm, Jt)
+      // JJt = J * J^T
+      la.multiplyABtInto(buf.JJt, buf.J, buf.J)
 
-      const pinv = math.multiply(Jt, math.inv(math.add(JJt, C) as any))
+      // A = JJt + lambda*I
+      la.addScaledIdentityInto(buf.A, buf.JJt, lambda)
 
-      let dq = math.multiply(alpha, math.multiply(pinv, stackedError))
+      // pinv = J^T * inv(A)
+      la.luDecomposeInPlace(buf.A, buf.pivots)
+      la.luInvertInto(buf.Ainv, buf.A, buf.pivots)
+      la.multiplyAtBInto(buf.pinv, buf.J, buf.Ainv)
+
+      // dq = alpha * pinv * error
+      la.matVecMultiplyInto(buf.dq, buf.pinv, buf.error)
+      la.vecScaleInPlace(buf.dq, alpha, nj)
 
       // Null-space regularization: pull toward joint midpoints
       if (nj > totalDim) {
-        const I = math.identity(nj) as any
-        const nullProj = math.subtract(I, math.multiply(pinv, Jm))
-        const qDiff: number[] = new Array(nj)
         for (let c = 0; c < nj; c++) {
-          qDiff[c] = (qMid[c] - this._q[allJoints[c]]) * THREE.MathUtils.DEG2RAD
+          buf.qDiff[c] = (qMid[c] - this._q[allJoints[c]]) * THREE.MathUtils.DEG2RAD
         }
-        dq = math.add(dq, math.multiply(nullSpaceGain, math.multiply(nullProj, qDiff)))
+        la.multiplyInto(buf.pinvJ!, buf.pinv, buf.J)
+        la.identityInto(buf.nullProj!)
+        la.subtractInto(buf.nullProj!, buf.nullProj!, buf.pinvJ!)
+        la.matVecMultiplyInto(buf.nullStep!, buf.nullProj!, buf.qDiff)
+        for (let c = 0; c < nj; c++) buf.dq[c] += nullSpaceGain * buf.nullStep![c]
       }
-
-      const dqArr: number[] = (dq as any).toArray ? (dq as any).toArray() : dq
 
       for (let c = 0; c < nj; c++) {
         const ji = allJoints[c]
-        this.setJointValue(this._joints[ji], this._q[ji] + dqArr[c] * THREE.MathUtils.RAD2DEG)
+        this.setJointValue(this._joints[ji], this._q[ji] + buf.dq[c] * THREE.MathUtils.RAD2DEG)
       }
     }
 

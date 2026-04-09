@@ -13,6 +13,7 @@ Robot Explorer is an interactive 3D web application for visualizing and manipula
 - **Preview:** `npm run preview` (serve production build locally)
 - **Lint:** `npm run lint` (ESLint)
 - **Type check:** `npm run typecheck` (TypeScript)
+- **Benchmark:** `npm run bench` (IK benchmark on atlas_v4 via Node.js — requires `robot-explorer-models` repo adjacent)
 - **Check models:** `npm run check-models` (verify all CDN robot models use supported mesh formats)
 
 ## Architecture
@@ -21,10 +22,11 @@ Single-page app using TypeScript (no framework), bundled with Vite.
 
 **Key source files:**
 - `src/app.ts` — Main entry point: Three.js scene setup, UI event handlers, animation loop
-- `src/Robot.ts` — Core robot class: FK/IK computation, Jacobian, joint control. Uses a loader-agnostic `RobotKinematics` interface with a URDF adapter (`robotKinematicsFromURDF`)
+- `src/robotics/Robot.ts` — Core robot class: FK/IK computation, Jacobian, joint control. Uses a loader-agnostic `RobotKinematics` interface with a URDF adapter (`robotKinematicsFromURDF`)
+- `src/robotics/linalg.ts` — Lightweight linear algebra on flat `Float64Array` matrices (`Mat` type), LU solver, pre-allocated solver buffers
+- `src/robotics/math.ts` — Robotics math utilities (transform differentials, coordinate extraction)
 - `src/ModelLoader.ts` — Fetches model manifest from CDN, loads URDF + GLB meshes via `urdf-loader` and Three.js `GLTFLoader`
-- `src/math_.ts` — Robotics math utilities (transform matrices, Jacobians)
-- `src/IkSolver.ts` — IK solver type enum (Pseudo Inverse)
+- `src/robotics/IkSolver.ts` — IK solver type enum (Pseudo Inverse)
 - `src/types.d.ts` — Type declarations for untyped dependencies
 - Three.js addons imported from `three/addons/...` (OrbitControls, TransformControls, GLTFLoader, STLExporter, ConvexGeometry)
 
@@ -34,7 +36,7 @@ Single-page app using TypeScript (no framework), bundled with Vite.
 
 ## Tech Stack
 
-Three.js (3D rendering), urdf-loader (URDF parsing), mathjs (linear algebra), kinematics.js (analytical IK), TWEEN.js (animation), FileSaver (export).
+Three.js (3D rendering), urdf-loader (URDF parsing), TWEEN.js (animation), FileSaver (export). Linear algebra is handled by a custom `linalg.ts` module (no external dependency).
 
 ## Coordinate Conventions
 
@@ -64,6 +66,10 @@ Industrial control panel aesthetic — functional, precise, no decorative excess
 **Interactions:** Subtle and fast — 0.15s backgrounds, 0.2s transforms. No bounce or spring animations. `scale(0.97)` on button active. Hover states change background and text color, never add shadows or glow.
 
 **Icons:** Inline SVG, 16px, `stroke="currentColor" stroke-width="2"`. No icon library.
+
+## Architecture Decisions
+
+- [ADR-001: Replace mathjs with hand-written linear algebra](docs/adr-001-replace-mathjs.md) — IK solver uses `src/robotics/linalg.ts` instead of mathjs for a ~7x performance improvement
 
 ## Known Limitations
 
