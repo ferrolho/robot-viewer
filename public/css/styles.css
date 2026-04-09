@@ -953,6 +953,64 @@ kbd {
   line-height: 1;
 }
 
+/* ── Gizmo Toolbar ── */
+
+#gizmo-toolbar {
+  position: absolute;
+  bottom: 16px;
+  left: 16px;
+  display: flex;
+  gap: 1px;
+  z-index: 10;
+  background: var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+#gizmo-toolbar.hidden {
+  display: none;
+}
+
+.gizmo-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 36px;
+  border: none;
+  background: var(--bg-panel);
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.gizmo-btn:hover {
+  background: var(--bg-hover);
+  color: var(--text);
+}
+
+.gizmo-btn:active {
+  transform: scale(0.97);
+}
+
+.gizmo-btn.active {
+  background: var(--bg-surface);
+  color: var(--accent);
+}
+
+@media (max-width: 768px) {
+  #gizmo-toolbar {
+    bottom: 12px;
+    left: 12px;
+  }
+
+  .gizmo-btn {
+    width: 44px;
+    height: 40px;
+  }
+}
+
 /* ── Loader Dialog ── */
 
 #loader-modal {

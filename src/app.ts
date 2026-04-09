@@ -99,6 +99,32 @@ let ikGoals: THREE.Mesh[] = []
 let ikGoalControls: InstanceType<typeof TransformControls>[] = []
 let ikGoalControlHelpers: THREE.Object3D[] = []
 
+// ── Gizmo Toolbar ──
+
+const gizmoToolbar = $('gizmo-toolbar')
+const gizmoTranslateBtn = $<HTMLButtonElement>('gizmo-translate')
+const gizmoRotateBtn = $<HTMLButtonElement>('gizmo-rotate')
+
+function syncGizmoToolbar() {
+  const mode = ikGoalControls[0]?.mode ?? 'translate'
+  gizmoTranslateBtn.classList.toggle('active', mode === 'translate')
+  gizmoRotateBtn.classList.toggle('active', mode === 'rotate')
+}
+
+function showGizmoToolbar(visible: boolean) {
+  gizmoToolbar.classList.toggle('hidden', !visible)
+}
+
+gizmoTranslateBtn.addEventListener('click', () => {
+  for (const ctrl of ikGoalControls) ctrl.setMode('translate')
+  syncGizmoToolbar()
+})
+
+gizmoRotateBtn.addEventListener('click', () => {
+  for (const ctrl of ikGoalControls) { ctrl.setMode('rotate'); ctrl.setSpace('local') }
+  syncGizmoToolbar()
+})
+
 // ── Theme ──
 
 function getTheme(): 'dark' | 'light' {
@@ -344,7 +370,9 @@ pseudoInverseSwitch.addEventListener('change', () => {
       ikGoalControls[i].setMode('translate')
       ikGoalControls[i].setSpace('local')
     }
+    syncGizmoToolbar()
   }
+  showGizmoToolbar(ikSolver !== IkSolverEnum.OFF)
 })
 
 const velocityEllipsoidSwitch = checkbox('velocity-ellipsoid-switch')
@@ -763,9 +791,11 @@ window.addEventListener('keydown', function (event) {
       break
     case 'r':
       for (const ctrl of ikGoalControls) { ctrl.setMode('rotate'); ctrl.setSpace('local') }
+      syncGizmoToolbar()
       break
     case 't':
       for (const ctrl of ikGoalControls) ctrl.setMode('translate')
+      syncGizmoToolbar()
       break
     case 'x':
       doConvexHullStuff()

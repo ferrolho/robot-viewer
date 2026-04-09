@@ -76,6 +76,8 @@ const translations: Record<Locale, Record<string, string>> = {
     'aria.toggleSettings': 'Toggle settings',
     'aria.collapseSettings': 'Collapse settings',
     'aria.shortcuts': 'Keyboard shortcuts',
+    'aria.gizmoTranslate': 'Translate mode',
+    'aria.gizmoRotate': 'Rotate mode',
     'aria.close': 'Close',
   },
   ja: {
@@ -147,6 +149,8 @@ const translations: Record<Locale, Record<string, string>> = {
     'aria.toggleSettings': '設定切替',
     'aria.collapseSettings': '設定を閉じる',
     'aria.shortcuts': 'キーボードショートカット',
+    'aria.gizmoTranslate': '移動モード',
+    'aria.gizmoRotate': '回転モード',
     'aria.close': '閉じる',
   },
   zh: {
@@ -218,6 +222,8 @@ const translations: Record<Locale, Record<string, string>> = {
     'aria.toggleSettings': '切换设置',
     'aria.collapseSettings': '收起设置',
     'aria.shortcuts': '键盘快捷键',
+    'aria.gizmoTranslate': '平移模式',
+    'aria.gizmoRotate': '旋转模式',
     'aria.close': '关闭',
   },
 }
