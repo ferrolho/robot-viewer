@@ -19,11 +19,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/checkout@v4
-        with:
-          repository: ferrolho/urdf-loaders
-          ref: fix/address-pr-299-feedback
-          path: ../urdf-loaders
+      - run: git clone --depth 1 --branch fix/address-pr-299-feedback https://github.com/ferrolho/urdf-loaders.git ../urdf-loaders
 
       - uses: actions/setup-node@v4
         with:
