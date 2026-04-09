@@ -802,7 +802,7 @@ window.addEventListener('keydown', function (event) {
       syncGizmoToolbar()
       break
     case 'r':
-      for (const ctrl of ikGoalControls) { ctrl.setMode('rotate'); ctrl.setSpace('local') }
+      for (const ctrl of ikGoalControls) ctrl.setMode('rotate')
       syncGizmoToolbar()
       break
     case 't':
