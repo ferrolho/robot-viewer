@@ -51,6 +51,9 @@ const translations: Record<Locale, Record<string, string>> = {
     'shortcuts.clear': 'Clear motion keypoints',
     'shortcuts.export': 'Export convex hull as STL',
 
+    'gizmo.local': 'Local',
+    'gizmo.world': 'World',
+
     'hud.model': 'Model',
     'hud.brand': 'Brand',
     'hud.reach': 'Reach',
@@ -125,6 +128,9 @@ const translations: Record<Locale, Record<string, string>> = {
     'shortcuts.clear': 'モーションキーポイント消去',
     'shortcuts.export': '凸包をSTLでエクスポート',
 
+    'gizmo.local': 'ローカル',
+    'gizmo.world': 'ワールド',
+
     'hud.model': 'モデル',
     'hud.brand': 'ブランド',
     'hud.reach': 'リーチ',
@@ -198,6 +204,9 @@ const translations: Record<Locale, Record<string, string>> = {
     'shortcuts.play': '播放关键点',
     'shortcuts.clear': '清除运动关键点',
     'shortcuts.export': '导出凸包为STL',
+
+    'gizmo.local': '局部',
+    'gizmo.world': '世界',
 
     'hud.model': '模型',
     'hud.brand': '品牌',

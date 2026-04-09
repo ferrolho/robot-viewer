@@ -105,6 +105,7 @@ const gizmoToolbar = $('gizmo-toolbar')
 const gizmoTranslateBtn = $<HTMLButtonElement>('gizmo-translate')
 const gizmoRotateBtn = $<HTMLButtonElement>('gizmo-rotate')
 const gizmoSpaceBtn = $<HTMLButtonElement>('gizmo-space')
+const gizmoSpaceLabel = $('gizmo-space-label')
 
 function syncGizmoToolbar() {
   const mode = ikGoalControls[0]?.mode ?? 'translate'
@@ -112,6 +113,7 @@ function syncGizmoToolbar() {
   gizmoTranslateBtn.classList.toggle('active', mode === 'translate')
   gizmoRotateBtn.classList.toggle('active', mode === 'rotate')
   gizmoSpaceBtn.classList.toggle('active', space === 'world')
+  gizmoSpaceLabel.textContent = t(space === 'local' ? 'gizmo.local' : 'gizmo.world')
 }
 
 function showGizmoToolbar(visible: boolean) {
