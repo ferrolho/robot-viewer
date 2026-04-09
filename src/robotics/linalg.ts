@@ -270,146 +270,65 @@ export function inv(A: Mat): Mat {
   return out
 }
 
-// ── 3x3 symmetric matrix square root (for ellipsoid visualisation) ──
+// ── 3x3 matrix square root (for ellipsoid visualisation) ──
 
 /**
- * Matrix square root of a 3x3 symmetric positive semi-definite matrix.
+ * Matrix square root of a 3x3 symmetric positive definite matrix.
  *
- * Uses closed-form eigendecomposition (Cardano's formula for the characteristic
- * polynomial), then computes V * diag(sqrt(lambda)) * V^T.
+ * Uses the Denman-Beavers iteration, which converges quadratically and is
+ * unconditionally stable for SPD matrices — no eigendecomposition needed.
+ *
+ *   Y₀ = A,   Z₀ = I
+ *   Yₖ₊₁ = (Yₖ + Zₖ⁻¹) / 2
+ *   Zₖ₊₁ = (Zₖ + Yₖ⁻¹) / 2
+ *
+ * Converges to Y∞ = √A.
  */
 export function sqrtm3x3Symmetric(A: Mat): Mat {
-  const d = A.data
-  // Symmetric entries: a=d[0], b=d[1]=d[3], c=d[2]=d[6], e=d[4], f=d[5]=d[7], g=d[8]
+  const Y = mat(3, 3)
+  const Z = mat(3, 3)
+  const tmp = mat(3, 3)
+  Y.data.set(A.data)
+  identityInto(Z)
+
+  for (let iter = 0; iter < 8; iter++) {
+    // Ynext = (Y + Z⁻¹) / 2,  Znext = (Z + Y⁻¹) / 2
+    inv3x3Into(tmp, Z)
+    const y0 = Y.data[0], y1 = Y.data[1], y2 = Y.data[2]
+    const y3 = Y.data[3], y4 = Y.data[4], y5 = Y.data[5]
+    const y6 = Y.data[6], y7 = Y.data[7], y8 = Y.data[8]
+    for (let i = 0; i < 9; i++) Y.data[i] = 0.5 * (Y.data[i] + tmp.data[i])
+
+    // Now compute Z⁻¹ from the old Y values we saved
+    tmp.data[0] = y0; tmp.data[1] = y1; tmp.data[2] = y2
+    tmp.data[3] = y3; tmp.data[4] = y4; tmp.data[5] = y5
+    tmp.data[6] = y6; tmp.data[7] = y7; tmp.data[8] = y8
+    inv3x3Into(tmp, tmp) // tmp = oldY⁻¹
+    for (let i = 0; i < 9; i++) Z.data[i] = 0.5 * (Z.data[i] + tmp.data[i])
+  }
+
+  return Y
+}
+
+/** Analytical 3x3 matrix inverse via cofactor expansion. Overwrites `out`. */
+function inv3x3Into(out: Mat, M: Mat): void {
+  const d = M.data
   const a = d[0], b = d[1], c = d[2]
-  const e = d[4], f = d[5]
-  const g = d[8]
+  const e = d[3], f = d[4], g = d[5]
+  const h = d[6], i = d[7], j = d[8]
 
-  // Characteristic polynomial: lambda^3 - p*lambda^2 + q*lambda - r = 0
-  const p = a + e + g // trace
-  const q = a * e + a * g + e * g - b * b - c * c - f * f
-  const r = a * e * g + 2 * b * f * c - a * f * f - e * c * c - g * b * b // determinant
+  const det = a * (f * j - g * i) - b * (e * j - g * h) + c * (e * i - f * h)
+  const invDet = 1 / det
 
-  // Cardano's method for depressed cubic
-  const p3 = p / 3
-  const pp = p * p
-  const qq = (pp - 3 * q) / 9
-  const rr = (2 * pp * p3 - 9 * p * q + 27 * r) / 54
-
-  let lambda0: number, lambda1: number, lambda2: number
-
-  const qqq = qq * qq * qq
-  if (rr * rr < qqq) {
-    // Three real roots
-    const sqrtQQ = Math.sqrt(qq)
-    const theta = Math.acos(Math.max(-1, Math.min(1, rr / Math.sqrt(qqq)))) / 3
-    lambda0 = -2 * sqrtQQ * Math.cos(theta) + p3
-    lambda1 = -2 * sqrtQQ * Math.cos(theta + 2 * Math.PI / 3) + p3
-    lambda2 = -2 * sqrtQQ * Math.cos(theta - 2 * Math.PI / 3) + p3
-  } else {
-    // Fallback (near-degenerate case)
-    const sqrtR = Math.sqrt(Math.max(0, rr * rr - qqq))
-    const A_ = -Math.sign(rr) * Math.cbrt(Math.abs(rr) + sqrtR)
-    const B_ = Math.abs(A_) > 1e-30 ? qq / A_ : 0
-    lambda0 = (A_ + B_) + p3
-    lambda1 = lambda0
-    lambda2 = lambda0
-  }
-
-  // Clamp eigenvalues to non-negative (SPD but may have floating-point noise)
-  lambda0 = Math.max(0, lambda0)
-  lambda1 = Math.max(0, lambda1)
-  lambda2 = Math.max(0, lambda2)
-
-  // Compute eigenvectors for each eigenvalue
-  const vecs = [lambda0, lambda1, lambda2].map(lam => eigenvector3x3(a, b, c, e, f, g, lam))
-
-  // Gram-Schmidt orthogonalise (eigenvalues may be repeated)
-  orthonormalise3(vecs)
-
-  // sqrtm = V * diag(sqrt(lambda)) * V^T
-  const s0 = Math.sqrt(lambda0), s1 = Math.sqrt(lambda1), s2 = Math.sqrt(lambda2)
-  const out = mat(3, 3)
-  const od = out.data
-  for (let i = 0; i < 3; i++) {
-    for (let j = 0; j < 3; j++) {
-      od[i * 3 + j] = vecs[0][i] * s0 * vecs[0][j] +
-                       vecs[1][i] * s1 * vecs[1][j] +
-                       vecs[2][i] * s2 * vecs[2][j]
-    }
-  }
-  return out
-}
-
-/** Find an eigenvector for a 3x3 symmetric matrix given an eigenvalue. */
-function eigenvector3x3(
-  a: number, b: number, c: number,
-  e: number, f: number, g: number,
-  lam: number
-): number[] {
-  // (A - lam*I) has a null space; find it via cross-product of two rows
-  const r0 = [a - lam, b, c]
-  const r1 = [b, e - lam, f]
-  const r2 = [c, f, g - lam]
-
-  // Try cross products of row pairs to find a non-zero vector
-  const candidates = [
-    cross(r0, r1),
-    cross(r0, r2),
-    cross(r1, r2),
-  ]
-
-  let best = candidates[0]
-  let bestLen = len3(best)
-  for (let i = 1; i < 3; i++) {
-    const l = len3(candidates[i])
-    if (l > bestLen) { best = candidates[i]; bestLen = l }
-  }
-
-  if (bestLen < 1e-30) return [1, 0, 0] // degenerate — return arbitrary unit vector
-
-  const s = 1 / bestLen
-  return [best[0] * s, best[1] * s, best[2] * s]
-}
-
-function cross(a: number[], b: number[]): number[] {
-  return [
-    a[1] * b[2] - a[2] * b[1],
-    a[2] * b[0] - a[0] * b[2],
-    a[0] * b[1] - a[1] * b[0],
-  ]
-}
-
-function len3(v: number[]): number {
-  return Math.sqrt(v[0] * v[0] + v[1] * v[1] + v[2] * v[2])
-}
-
-function orthonormalise3(vecs: number[][]): void {
-  // Gram-Schmidt
-  normalise3(vecs[0])
-  subtract3(vecs[1], vecs[1], scale3(dot3(vecs[1], vecs[0]), vecs[0]))
-  normalise3(vecs[1])
-  subtract3(vecs[2], vecs[2], scale3(dot3(vecs[2], vecs[0]), vecs[0]))
-  subtract3(vecs[2], vecs[2], scale3(dot3(vecs[2], vecs[1]), vecs[1]))
-  normalise3(vecs[2])
-}
-
-function normalise3(v: number[]): void {
-  const l = len3(v)
-  if (l < 1e-30) return
-  v[0] /= l; v[1] /= l; v[2] /= l
-}
-
-function dot3(a: number[], b: number[]): number {
-  return a[0] * b[0] + a[1] * b[1] + a[2] * b[2]
-}
-
-function scale3(s: number, v: number[]): number[] {
-  return [v[0] * s, v[1] * s, v[2] * s]
-}
-
-function subtract3(out: number[], a: number[], b: number[]): void {
-  out[0] = a[0] - b[0]; out[1] = a[1] - b[1]; out[2] = a[2] - b[2]
+  out.data[0] = (f * j - g * i) * invDet
+  out.data[1] = (c * i - b * j) * invDet
+  out.data[2] = (b * g - c * f) * invDet
+  out.data[3] = (g * h - e * j) * invDet
+  out.data[4] = (a * j - c * h) * invDet
+  out.data[5] = (c * e - a * g) * invDet
+  out.data[6] = (e * i - f * h) * invDet
+  out.data[7] = (b * h - a * i) * invDet
+  out.data[8] = (a * f - b * e) * invDet
 }
 
 // ── Solver workspace ──
