@@ -126,7 +126,7 @@ gizmoTranslateBtn.addEventListener('click', () => {
 })
 
 gizmoRotateBtn.addEventListener('click', () => {
-  for (const ctrl of ikGoalControls) { ctrl.setMode('rotate'); ctrl.setSpace('local') }
+  for (const ctrl of ikGoalControls) ctrl.setMode('rotate')
   syncGizmoToolbar()
 })
 
