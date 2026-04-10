@@ -68,6 +68,7 @@
 
 html, body {
   height: 100%;
+  height: 100dvh;
   overflow: hidden;
   font-family: var(--font-body);
   font-size: 14px;
@@ -81,6 +82,7 @@ html, body {
   display: grid;
   grid-template-columns: var(--sidebar-left-w) 1fr var(--sidebar-right-w);
   height: 100vh;
+  height: 100dvh;
 }
 
 @media (max-width: 768px) {
@@ -112,6 +114,7 @@ html, body {
   flex-direction: column;
   background: var(--bg-panel);
   height: 100vh;
+  height: 100dvh;
   overflow: hidden;
   z-index: 20;
 }
