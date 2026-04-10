@@ -79,7 +79,7 @@ Create [`ferrolho/robot-explorer-models`](https://github.com/ferrolho/robot-expl
 - [x] Add brand logo icons for all 41 brands (GitHub org avatars)
 - [x] Load a random robot on page load
 - [x] Stats.js positioned inside 3D viewport (not overlapping sidebars)
-- [ ] GLB conversion with material preservation (Blender headless or assimp) for smaller downloads
+- [ ] ~~GLB conversion with material preservation~~ — Deferred. See [analysis below](#glb-conversion-analysis)
 - [x] Sidebar search and category filtering for large catalog
 - [x] i18n support with language picker dropdown (English, Japanese, Chinese)
 - [ ] Thumbnail generation for model list
@@ -100,3 +100,28 @@ Create [`ferrolho/robot-explorer-models`](https://github.com/ferrolho/robot-expl
 ### Known Issues
 - [x] Closed-chain linkages (e.g. Robotiq parallel grippers) — mimic joints are now excluded from controllable DOFs and driven automatically by urdf-loader
 - [x] IK goal is only created for the first tipLink — robots with multiple end-effectors (hands, feet) only have one IK target
+
+---
+
+### GLB Conversion Analysis
+
+Investigated 2025-04-10. Current mesh hosting: ~973 MB of visual meshes across 81 models.
+
+**Format distribution:** 877 STL, 570 DAE, 169 OBJ, 0 GLB.
+
+**Sample model sizes (visual meshes only):**
+
+| Model | Meshes | Size | Format |
+|-------|--------|------|--------|
+| finger_edu (ODRI) | 7 | 501 KB | STL |
+| pr2 (Willow Garage) | 18 | 1.05 MB | DAE+STL |
+| atlas_v4 (Boston Dynamics) | 23 | 3.83 MB | DAE |
+| anymal_c (ANYbotics) | 19 | 4.83 MB | DAE |
+| talos (PAL Robotics) | 25 | 5.98 MB | STL |
+| ur5 (Universal Robots) | 7 | 6.35 MB | DAE |
+| abb_irb4600 (ABB) | 7 | 3.97 MB | DAE |
+| panda (Franka) | 10 | 10.03 MB | DAE |
+
+**Expected savings:** DAE→GLB: 60-80%. STL→GLB: 40-60%. Fleet-wide: ~973 MB → ~250-400 MB.
+
+**Decision: deferred.** The savings are meaningful but the pipeline cost (Blender headless or assimp in `robot-explorer-models` CI) is high relative to the benefit. Models load acceptably today. Revisit if the catalog grows significantly or users report slow load times.
