@@ -5,7 +5,7 @@
     "moduleResolution": "bundler",
     "strict": true,
     "strictNullChecks": true,
-    "noImplicitAny": false,
+    "noImplicitAny": true,
     "noEmit": true,
     "allowImportingTsExtensions": true,
     "isolatedModules": true,

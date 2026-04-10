@@ -36,8 +36,7 @@
 
 ### Phase 6: Code Quality
 - [ ] Split `app.ts` into modules: scene setup, UI handlers, model loader, animation loop
-- [ ] Enable `noImplicitAny` in tsconfig (mathjs is gone — main blocker was removed)
-- [ ] Add Playwright E2E tests for critical flows (load model, IK drag, reachability)
+- [x] Enable `noImplicitAny` in tsconfig (mathjs is gone — main blocker was removed)
 
 ### Phase 7: URDF Migration — Model Processing Pipeline (new repo)
 Create [`ferrolho/robot-explorer-models`](https://github.com/ferrolho/robot-explorer-models) with a Python pipeline that:
@@ -79,12 +78,10 @@ Create [`ferrolho/robot-explorer-models`](https://github.com/ferrolho/robot-expl
 - [x] Add brand logo icons for all 41 brands (GitHub org avatars)
 - [x] Load a random robot on page load
 - [x] Stats.js positioned inside 3D viewport (not overlapping sidebars)
-- [ ] GLB conversion with material preservation (Blender headless or assimp) for smaller downloads and multi-LOD support
-- [ ] LOD switching UI (auto: low on mobile, medium on desktop)
+- [ ] GLB conversion with material preservation (Blender headless or assimp) for smaller downloads
 - [x] Sidebar search and category filtering for large catalog
 - [x] i18n support with language picker dropdown (English, Japanese, Chinese)
 - [ ] Thumbnail generation for model list
-- [ ] Optional: service worker for offline model caching
 
 ### Phase 11: Robustness and UX
 - [x] Support `?robot=<id>` URL param for shareable model links
@@ -95,7 +92,8 @@ Create [`ferrolho/robot-explorer-models`](https://github.com/ferrolho/robot-expl
 - [x] Mobile gizmo toolbar for IK mode switching (translate/rotate, local/world frame toggle, keyboard shortcut tooltips)
 - [x] Fix DAE mesh name collisions by using urdf-loader link map instead of `getObjectByName`
 - [x] Replace unstable eigendecomposition sqrtm with Denman-Beavers iteration
-- [x] Center of mass visualization using forked urdf-loader with inertial parsing
+- [x] Center of mass visualization using urdf-loader with inertial parsing
+- [x] Switch urdf-loader from local fork to npm (upstream merged inertial parsing PR)
 
 ### Known Issues
 - [x] Closed-chain linkages (e.g. Robotiq parallel grippers) — mimic joints are now excluded from controllable DOFs and driven automatically by urdf-loader

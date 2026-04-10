@@ -1,5 +1,6 @@
 import URDFLoader from 'urdf-loader'
 import type { URDFRobot } from 'urdf-loader'
+import * as THREE from 'three'
 import { OBJLoader } from 'three/addons/loaders/OBJLoader.js'
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
 
@@ -69,7 +70,7 @@ export class ModelLoader {
     // Extend the default mesh loader (STL + DAE) with OBJ and GLB support
     urdfLoader.loadMeshCb = (path, manager, done) => {
       if (/\.obj$/i.test(path)) {
-        new OBJLoader(manager).load(path, obj => done(obj))
+        new OBJLoader(manager).load(path, (obj: THREE.Group) => done(obj))
       } else if (/\.glb$/i.test(path) || /\.gltf$/i.test(path)) {
         new GLTFLoader(manager).load(path, gltf => done(gltf.scene))
       } else {

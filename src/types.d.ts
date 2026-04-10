@@ -27,6 +27,10 @@ declare module 'three/addons/loaders/GLTFLoader.js' {
   export { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 }
 
+declare module 'three/addons/loaders/OBJLoader.js' {
+  export { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader.js'
+}
+
 declare module 'three/addons/lines/LineSegments2.js' {
   export { LineSegments2 } from 'three/examples/jsm/lines/LineSegments2.js'
 }
