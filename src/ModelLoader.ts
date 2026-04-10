@@ -70,7 +70,16 @@ export class ModelLoader {
     // Extend the default mesh loader (STL + DAE) with OBJ and GLB support
     urdfLoader.loadMeshCb = (path, manager, done) => {
       if (/\.obj$/i.test(path)) {
-        new OBJLoader(manager).load(path, (obj: THREE.Group) => done(obj))
+        new OBJLoader(manager).load(path, (obj: THREE.Group) => {
+          // OBJLoader returns a Group, but urdf-loader only applies URDF
+          // material colors to THREE.Mesh instances (not Groups). Extract the
+          // single child mesh so the URDF-defined colour is applied correctly.
+          const meshes: THREE.Mesh[] = []
+          obj.traverse(child => {
+            if ((child as THREE.Mesh).isMesh) meshes.push(child as THREE.Mesh)
+          })
+          done(meshes.length === 1 ? meshes[0] : obj)
+        })
       } else if (/\.glb$/i.test(path) || /\.gltf$/i.test(path)) {
         new GLTFLoader(manager).load(path, gltf => done(gltf.scene))
       } else {
