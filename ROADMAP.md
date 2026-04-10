@@ -35,8 +35,9 @@
 ## Upcoming
 
 ### Phase 6: Code Quality
-- [ ] Split `app.ts` into modules: scene setup, UI handlers, model loader, animation loop
+- [x] Split `app.ts` into modules: `scene.ts` (Three.js setup), `gallery.ts` (model browser), `app.ts` (state, UI, animation)
 - [x] Enable `noImplicitAny` in tsconfig (mathjs is gone — main blocker was removed)
+- [x] Add vitest test suite for linalg and math modules
 
 ### Phase 7: URDF Migration — Model Processing Pipeline (new repo)
 Create [`ferrolho/robot-explorer-models`](https://github.com/ferrolho/robot-explorer-models) with a Python pipeline that:
@@ -94,6 +95,7 @@ Create [`ferrolho/robot-explorer-models`](https://github.com/ferrolho/robot-expl
 - [x] Replace unstable eigendecomposition sqrtm with Denman-Beavers iteration
 - [x] Center of mass visualization using urdf-loader with inertial parsing
 - [x] Switch urdf-loader from local fork to npm (upstream merged inertial parsing PR)
+- [x] Fix Dependabot security alerts (bump vite to ^8.0.8)
 
 ### Known Issues
 - [x] Closed-chain linkages (e.g. Robotiq parallel grippers) — mimic joints are now excluded from controllable DOFs and driven automatically by urdf-loader

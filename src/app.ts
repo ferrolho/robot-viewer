@@ -1,23 +1,17 @@
+import { scene, renderer, camera, orbitControls, stats, grid, axis, shadowPlane, applySceneTheme } from './scene.ts'
+import { initGallery, setupCategoryChips, showBrandGrid } from './gallery.ts'
 import { IkSolverEnum, Robot, robotKinematicsFromURDF } from './robotics/index.ts'
-import { ModelLoader, type ManifestModel } from './ModelLoader.ts'
+import { ModelLoader } from './ModelLoader.ts'
 import { getLocale, setLocale, t, applyTranslations, LOCALES } from './i18n.ts'
-
-import WebGL from 'three/addons/capabilities/WebGL.js'
-if (!WebGL.isWebGL2Available()) document.body.appendChild(WebGL.getWebGL2ErrorMessage())
 
 import FileSaver from 'file-saver'
 import * as THREE from 'three'
 import { Tween, Easing, Group } from '@tweenjs/tween.js'
 const tweenGroup = new Group()
-import Stats from 'stats.js'
 
-import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 import { TransformControls } from 'three/addons/controls/TransformControls.js'
 import { STLExporter } from 'three/addons/exporters/STLExporter.js'
 import { ConvexGeometry } from 'three/addons/geometries/ConvexGeometry.js'
-import { LineSegments2 } from 'three/addons/lines/LineSegments2.js'
-import { LineSegmentsGeometry } from 'three/addons/lines/LineSegmentsGeometry.js'
-import { LineMaterial } from 'three/addons/lines/LineMaterial.js'
 
 const modelLoader = new ModelLoader()
 
@@ -30,62 +24,6 @@ function $<T extends HTMLElement>(id: string): T {
 function checkbox(id: string): HTMLInputElement {
   return $(id) as HTMLInputElement
 }
-
-// ── Stats ──
-
-const stats = new Stats()
-stats.dom.id = 'statsjs'
-$('canvas-container').appendChild(stats.dom)
-
-// ── Renderer (sized by container via ResizeObserver) ──
-
-const canvasContainer = $('canvas-container')
-
-const renderer = new THREE.WebGLRenderer({ antialias: true })
-renderer.shadowMap.enabled = true
-renderer.shadowMap.type = THREE.PCFShadowMap
-renderer.setPixelRatio(window.devicePixelRatio)
-renderer.domElement.style.display = 'block'
-canvasContainer.appendChild(renderer.domElement)
-
-// Initial size sync before ResizeObserver kicks in
-const initRect = canvasContainer.getBoundingClientRect()
-renderer.setSize(initRect.width, initRect.height)
-
-// Camera
-const cameraTarget = new THREE.Vector3(0, 0.4, 0)
-const camera = new THREE.PerspectiveCamera(45, initRect.width / initRect.height, 0.01, 1000)
-camera.position.set(1, 1, 1)
-camera.lookAt(cameraTarget)
-
-// Orbit Controls
-const orbitControls = new OrbitControls(camera, renderer.domElement)
-orbitControls.target = cameraTarget
-orbitControls.mouseButtons = { LEFT: THREE.MOUSE.ROTATE, MIDDLE: THREE.MOUSE.PAN, RIGHT: THREE.MOUSE.DOLLY }
-orbitControls.screenSpacePanning = true
-orbitControls.zoomSpeed = 0.8
-orbitControls.update()
-
-// Scene
-const scene = new THREE.Scene()
-
-// ── Resize: driven by container, not window math ──
-
-function handleResize(width: number, height: number) {
-  camera.aspect = width / height
-  camera.updateProjectionMatrix()
-  renderer.setSize(width, height)
-}
-
-const resizeObserver = new ResizeObserver((entries) => {
-  for (const entry of entries) {
-    const { width, height } = entry.contentRect
-    if (width > 0 && height > 0) {
-      handleResize(width, height)
-    }
-  }
-})
-resizeObserver.observe(canvasContainer)
 
 // ── Global state ──
 
@@ -144,19 +82,12 @@ function getTheme(): 'dark' | 'light' {
   return (localStorage.getItem('theme') as 'dark' | 'light') || 'dark'
 }
 
-let sceneThemeReady = false
-
 function applyTheme(theme: 'dark' | 'light') {
   document.documentElement.setAttribute('data-theme', theme)
   localStorage.setItem('theme', theme)
-  const isDark = theme === 'dark'
-  renderer.setClearColor(isDark ? 0x0f1114 : 0xe8eaed)
-  if (sceneThemeReady) {
-    ;(grid.material as LineMaterial).color.set(isDark ? 0x3a3f48 : 0xb0b4bc)
-  }
+  applySceneTheme(theme)
 }
 
-// Apply CSS theme immediately; scene objects update after they're created
 applyTheme(getTheme())
 
 $('theme-toggle').addEventListener('click', () => {
@@ -256,30 +187,10 @@ shortcutsModal.addEventListener('click', (e) => {
 
 // ── View Options ──
 
-const axis = new THREE.AxesHelper(1)
-;(axis.material as THREE.LineBasicMaterial).depthTest = false
-axis.renderOrder = 1
 const axisSwitch = checkbox('axis-switch')
 axisSwitch.addEventListener('change', () => {
   if (axisSwitch.checked) { scene.add(axis) } else { scene.remove(axis) }
 })
-
-const grid = (() => {
-  const size = 10
-  const divisions = 10
-  const step = size / divisions
-  const half = size / 2
-  const positions: number[] = []
-  for (let i = 0; i <= divisions; i++) {
-    const pos = -half + i * step
-    positions.push(-half, 0, pos, half, 0, pos)
-    positions.push(pos, 0, -half, pos, 0, half)
-  }
-  const geo = new LineSegmentsGeometry()
-  geo.setPositions(positions)
-  const mat = new LineMaterial({ color: 0x3a3f48, linewidth: 0.008, worldUnits: true })
-  return new LineSegments2(geo, mat)
-})()
 
 const gridSwitch = checkbox('grid-switch')
 gridSwitch.addEventListener('change', () => {
@@ -287,10 +198,6 @@ gridSwitch.addEventListener('change', () => {
 })
 gridSwitch.checked = true
 gridSwitch.dispatchEvent(new Event('change'))
-
-// Grid is ready — sync its color with the current theme
-sceneThemeReady = true
-applyTheme(getTheme())
 
 const shadowsSwitch = checkbox('shadows-switch')
 shadowsSwitch.addEventListener('change', () => {
@@ -440,63 +347,17 @@ accelEllipsoidSwitch.addEventListener('change', () => {
   }
 })
 
-// ── Scene setup ──
+// ── Shadows ──
 
-function updateShadowsState () {
-  plane.visible = castShadows
+function updateShadowsState() {
+  shadowPlane.visible = castShadows
   robot.updateShadowsState(castShadows)
-}
-
-// Lights
-const ambientLight = new THREE.AmbientLight(0xffffff, 2.0)
-scene.add(ambientLight)
-
-const directionalLight = new THREE.DirectionalLight(0xffffff, 2.5)
-directionalLight.castShadow = true
-directionalLight.position.set(5, 10, 7)
-const shadowCameraSize = 2
-directionalLight.shadow.camera.far = 50
-directionalLight.shadow.camera.bottom = -shadowCameraSize
-directionalLight.shadow.camera.left = -shadowCameraSize
-directionalLight.shadow.camera.right = shadowCameraSize
-directionalLight.shadow.camera.top = shadowCameraSize
-scene.add(directionalLight)
-
-const fillLight = new THREE.DirectionalLight(0xffffff, 1.0)
-fillLight.position.set(-5, 5, -5)
-scene.add(fillLight)
-
-// Shadow plane
-const planeGeometry = new THREE.PlaneGeometry(10, 10)
-const planeMaterial = new THREE.ShadowMaterial({ opacity: 0.4 })
-const plane = new THREE.Mesh(planeGeometry, planeMaterial)
-plane.receiveShadow = true
-plane.rotateX(-90 * THREE.MathUtils.DEG2RAD)
-scene.add(plane)
-
-// Sphere helpers
-const sphereGeometry = new THREE.SphereGeometry(0.01)
-const sphereMaterialRed = new THREE.MeshLambertMaterial({ color: 0xff0000, transparent: true, opacity: 0.8 })
-const sphereMaterialBlue = new THREE.MeshLambertMaterial({ color: 0x0000ff, transparent: true, opacity: 0.8 })
-
-function _addSphereAtPose (pose: THREE.Matrix4) {
-  const sphere = new THREE.Mesh(sphereGeometry, sphereMaterialRed)
-  sphere.position.setFromMatrixPosition(pose)
-  scene.add(sphere)
-  console.log(`Added sphere at (${sphere.position.x}, ${sphere.position.y}, ${sphere.position.z})`)
-}
-
-function _addSphereAtXYZ (x: number, y: number, z: number) {
-  const sphere = new THREE.Mesh(sphereGeometry, sphereMaterialBlue)
-  sphere.position.set(x, y, z)
-  console.log(`Added sphere at (${x}, ${y}, ${z})`)
-  return sphere
 }
 
 // ── Animation loop ──
 
 requestAnimationFrame(animate)
-function animate (time: number) {
+function animate(time: number) {
   requestAnimationFrame(animate)
 
   if (ikSolver === IkSolverEnum.OFF) {
@@ -525,199 +386,9 @@ function animate (time: number) {
 
 // ── Model list ──
 
-const modelsListContainer = document.getElementById('models-list')!
-const searchInput = document.getElementById('model-search') as HTMLInputElement
-const categoryChipsContainer = document.getElementById('category-chips')!
-let brandMap = new Map<string, ManifestModel[]>()
-let allModels: ManifestModel[] = []
-let activeCategory: string | null = null
-
-function getFilteredModels (): ManifestModel[] {
-  const query = searchInput.value.trim().toLowerCase()
-  return allModels.filter(m => {
-    if (activeCategory && m.category !== activeCategory) return false
-    if (query && !m.name.toLowerCase().includes(query) && !m.brand.toLowerCase().includes(query) && !m.id.toLowerCase().includes(query)) return false
-    return true
-  })
-}
-
-function buildBrandMap (models: ManifestModel[]): Map<string, ManifestModel[]> {
-  const map = new Map<string, ManifestModel[]>()
-  for (const model of models) {
-    const list = map.get(model.brand) ?? []
-    list.push(model)
-    map.set(model.brand, list)
-  }
-  return map
-}
-
-function isFiltering (): boolean {
-  return activeCategory !== null || searchInput.value.trim() !== ''
-}
-
-function showBrandGrid () {
-  const filtered = getFilteredModels()
-  const currentBrandMap = buildBrandMap(filtered)
-  const sortedBrands = [...currentBrandMap.keys()].sort()
-
-  // If filtering, show flat list instead of brand grid
-  if (isFiltering()) {
-    showFlatResults(filtered)
-    return
-  }
-
-  const grid = document.createElement('div')
-  grid.className = 'brand-grid models-view'
-
-  for (const brand of sortedBrands) {
-    const brandSlug = brand.replace(/\s+/g, '-').toLowerCase()
-    const count = currentBrandMap.get(brand)!.length
-
-    const tile = document.createElement('button')
-    tile.className = 'brand-tile'
-    tile.addEventListener('click', () => showBrandRobots(brand))
-
-    const img = document.createElement('img')
-    img.src = `${(import.meta as any).env.BASE_URL}images/logos/${brandSlug}.png`
-    img.alt = brand
-    img.onerror = () => {
-      img.remove()
-      const fallback = document.createElement('div')
-      fallback.className = 'brand-icon-fallback'
-      fallback.textContent = brand.slice(0, 2).toUpperCase()
-      tile.insertBefore(fallback, tile.firstChild)
-    }
-    tile.appendChild(img)
-
-    const name = document.createElement('span')
-    name.textContent = brand
-    tile.appendChild(name)
-
-    const countEl = document.createElement('span')
-    countEl.className = 'brand-count'
-    countEl.textContent = count === 1 ? t('models.count.one') : t('models.count.other', { n: count })
-    tile.appendChild(countEl)
-
-    grid.appendChild(tile)
-  }
-
-  modelsListContainer.innerHTML = ''
-  modelsListContainer.appendChild(grid)
-}
-
-function showFlatResults (models: ManifestModel[]) {
-  const view = document.createElement('div')
-  view.className = 'models-view'
-
-  const countLabel = document.createElement('div')
-  countLabel.className = 'filter-count'
-  countLabel.textContent = models.length === 1 ? t('results.count.one') : t('results.count.other', { n: models.length })
-  view.appendChild(countLabel)
-
-  const ul = document.createElement('ul')
-  ul.className = 'model-list'
-  for (const model of models) {
-    const li = document.createElement('li')
-    li.id = model.id
-    const a = document.createElement('a')
-    a.href = '#!'
-    a.innerHTML = `<span class="result-name">${model.name}</span><span class="result-brand">${model.brand}</span>`
-    a.addEventListener('click', () => {
-      loadModel(model.id)
-      hideSidebar()
-    })
-    li.appendChild(a)
-    ul.appendChild(li)
-  }
-  view.appendChild(ul)
-
-  modelsListContainer.innerHTML = ''
-  modelsListContainer.appendChild(view)
-}
-
-function showBrandRobots (brand: string) {
-  const brandSlug = brand.replace(/\s+/g, '-').toLowerCase()
-  const models = brandMap.get(brand)!
-
-  const view = document.createElement('div')
-  view.className = 'models-view'
-
-  // Back button
-  const back = document.createElement('button')
-  back.className = 'brand-back'
-  back.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>`
-
-  const backImg = document.createElement('img')
-  backImg.src = `${(import.meta as any).env.BASE_URL}images/logos/${brandSlug}.png`
-  backImg.alt = brand
-  backImg.onerror = () => backImg.remove()
-  back.appendChild(backImg)
-
-  const backName = document.createElement('span')
-  backName.className = 'brand-name'
-  backName.textContent = brand
-  back.appendChild(backName)
-
-  back.addEventListener('click', showBrandGrid)
-  view.appendChild(back)
-
-  // Robot list
-  const ul = document.createElement('ul')
-  ul.className = 'model-list'
-  for (const model of models) {
-    const li = document.createElement('li')
-    li.id = model.id
-    const a = document.createElement('a')
-    a.href = '#!'
-    a.textContent = model.name
-    a.addEventListener('click', () => {
-      loadModel(model.id)
-      hideSidebar()
-    })
-    li.appendChild(a)
-    ul.appendChild(li)
-  }
-  view.appendChild(ul)
-
-  modelsListContainer.innerHTML = ''
-  modelsListContainer.appendChild(view)
-}
-
-
-function setupCategoryChips () {
-  const categories = [...new Set(allModels.map(m => m.category))].sort()
-  categoryChipsContainer.innerHTML = ''
-  for (const cat of categories) {
-    const chip = document.createElement('button')
-    chip.className = 'category-chip'
-    chip.textContent = t('category.' + cat)
-    chip.addEventListener('click', () => {
-      activeCategory = activeCategory === cat ? null : cat
-      updateChipStates()
-      showBrandGrid()
-    })
-    chip.dataset.category = cat
-    categoryChipsContainer.appendChild(chip)
-  }
-}
-
-function updateChipStates () {
-  categoryChipsContainer.querySelectorAll('.category-chip').forEach(el => {
-    const chip = el as HTMLElement
-    chip.classList.toggle('active', chip.dataset.category === activeCategory)
-  })
-}
-
-searchInput.addEventListener('input', () => showBrandGrid())
-
-async function setupModelsList () {
+async function setupModelsList() {
   const manifest = await modelLoader.fetchManifest()
-
-  allModels = manifest.models
-  brandMap = buildBrandMap(allModels)
-
-  setupCategoryChips()
-  showBrandGrid()
+  initGallery(manifest.models, (id) => { loadModel(id); hideSidebar() })
 }
 
 setupModelsList()
@@ -726,7 +397,7 @@ setupModelsList()
 
 const modelsInScene: THREE.Object3D[] = []
 
-async function loadModel (modelId: string) {
+async function loadModel(modelId: string) {
   console.log(`Loading ${modelId}...`)
 
   document.querySelectorAll('#models-list li').forEach(el => el.classList.remove('active'))
@@ -854,7 +525,7 @@ window.addEventListener('keydown', function (event) {
   }
 })
 
-function doConvexHullStuff () {
+function doConvexHullStuff() {
   const exporter = new STLExporter()
   const material = new THREE.MeshBasicMaterial({color: 0x00ff00})
 
@@ -871,7 +542,7 @@ function doConvexHullStuff () {
 
 // ── Motion ──
 
-function moveFromTo (q_s: number[], q_t: number[], duration = 10, easing: (t: number) => number = Easing.Linear.None) {
+function moveFromTo(q_s: number[], q_t: number[], duration = 10, easing: (t: number) => number = Easing.Linear.None) {
   const tweenStart: Record<string, number> = {}
   const tweenFinal: Record<string, number> = {}
 
@@ -914,7 +585,7 @@ window.addEventListener('gamepaddisconnected', e => {
   console.log(`Controller ${e.gamepad.index} disconnected: ${e.gamepad.id}`)
 })
 
-function pollGamepad () {
+function pollGamepad() {
   const gamepads = navigator.getGamepads()
   for (const gp of gamepads) {
     if (!gp) continue
@@ -929,9 +600,9 @@ function pollGamepad () {
   }
 }
 
-// ── Start ──
+// ── IK Goals ──
 
-function cleanupIkGoals () {
+function cleanupIkGoals() {
   for (let i = 0; i < ikGoals.length; i++) {
     ikGoalControls[i].detach()
     scene.remove(ikGoals[i])
@@ -943,7 +614,7 @@ function cleanupIkGoals () {
   ikGoalControlHelpers = []
 }
 
-function setupIkGoals () {
+function setupIkGoals() {
   cleanupIkGoals()
 
   const colors = [0xff0000, 0x00ff00, 0x0000ff, 0xffff00]
@@ -997,7 +668,9 @@ function setupIkGoals () {
   }
 }
 
-async function main () {
+// ── Start ──
+
+async function main() {
   const manifest = await modelLoader.fetchManifest()
   const models = manifest.models
 

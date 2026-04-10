@@ -21,7 +21,9 @@ Robot Explorer is an interactive 3D web application for visualizing and manipula
 Single-page app using TypeScript (no framework), bundled with Vite.
 
 **Key source files:**
-- `src/app.ts` — Main entry point: Three.js scene setup, UI event handlers, animation loop
+- `src/app.ts` — Main entry point: global state, UI event handlers, animation loop, model loading, IK goals, keyboard/gamepad
+- `src/scene.ts` — Three.js scene construction: renderer, camera, orbit controls, lights, grid, shadow plane, resize observer, scene theme
+- `src/gallery.ts` — Model browser UI: brand grid, search, category filtering, flat results list
 - `src/robotics/Robot.ts` — Core robot class: FK/IK computation, Jacobian, joint control. Uses a loader-agnostic `RobotKinematics` interface with a URDF adapter (`robotKinematicsFromURDF`)
 - `src/robotics/linalg.ts` — Lightweight linear algebra on flat `Float64Array` matrices (`Mat` type), LU solver, pre-allocated solver buffers
 - `src/robotics/math.ts` — Robotics math utilities (transform differentials, coordinate extraction)
