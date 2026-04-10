@@ -19,7 +19,7 @@
     "hammerjs": "^2.0.8",
     "stats.js": "^0.17.0",
     "three": "^0.183.2",
-    "urdf-loader": "file:../urdf-loaders/javascript"
+    "urdf-loader": "^0.12.7"
   },
   "scripts": {
     "dev": "vite",
