@@ -31,6 +31,8 @@ export function robotKinematicsFromURDF(urdf: URDFRobot): RobotKinematics {
       effort: joint.limit.effort > 0 ? joint.limit.effort : undefined,
       axis: joint.axis.clone(),
       mimics: mimicParent,
+      mimicMultiplier: mimicParent ? ((joint as any).multiplier ?? 1) : undefined,
+      mimicOffset: mimicParent ? (((joint as any).offset ?? 0) * THREE.MathUtils.RAD2DEG) : undefined,
     }
   }
 

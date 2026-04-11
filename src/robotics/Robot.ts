@@ -20,6 +20,10 @@ interface FkSeg {
   ax: number; ay: number; az: number
   /** Joint angle (degrees) at the time the chain was captured. */
   refDeg: number
+  /** Mimic multiplier (1 for direct joints, e.g. -1 to reverse direction). */
+  mul: number
+  /** Mimic offset in degrees (0 for direct joints). */
+  off: number
 }
 
 export interface RobotJoint {
@@ -28,6 +32,8 @@ export interface RobotJoint {
   effort?: number  // max torque (Nm) from URDF <limit effort="..."/>
   axis: THREE.Vector3
   mimics?: string  // name of the parent joint this joint mimics
+  mimicMultiplier?: number  // multiplier for mimic relationship (default 1)
+  mimicOffset?: number      // offset for mimic relationship in degrees (default 0)
 }
 
 export interface RobotKinematics {
@@ -888,11 +894,13 @@ export class Robot {
             ? this._joints.indexOf(node.name)
             : this._joints.indexOf(jInfo!.mimics!)
           const refDeg = this._q[qIdx]
+          const mul = isMimic ? (jInfo!.mimicMultiplier ?? 1) : 1
+          const off = isMimic ? (jInfo!.mimicOffset ?? 0) : 0
 
           segs.push({
             m: merged, qIdx,
             ax: jInfo!.axis.x, ay: jInfo!.axis.y, az: jInfo!.axis.z,
-            refDeg,
+            refDeg, mul, off,
           })
 
           // Reset accumulator to identity
@@ -911,7 +919,7 @@ export class Robot {
           acc[6] !== 0 || acc[7] !== 0 || acc[8] !== 0 || acc[9] !== 0 ||
           acc[11] !== 0 || acc[12] !== 0 || acc[13] !== 0 || acc[14] !== 0 ||
           acc[0] !== 1 || acc[5] !== 1 || acc[10] !== 1 || acc[15] !== 1) {
-        segs.push({ m: Float64Array.from(acc), qIdx: -1, ax: 0, ay: 0, az: 0, refDeg: 0 })
+        segs.push({ m: Float64Array.from(acc), qIdx: -1, ax: 0, ay: 0, az: 0, refDeg: 0, mul: 1, off: 0 })
       }
 
       chains.push(segs)
@@ -969,8 +977,8 @@ export class Robot {
           T.set(tmp)
 
           if (seg.qIdx >= 0) {
-            // T = T * R(axis, (q_desired − refDeg) · DEG2RAD)
-            mat4AxisAngle(R, seg.ax, seg.ay, seg.az, (q[seg.qIdx] - seg.refDeg) * DEG2RAD)
+            // T = T * R(axis, mul · (q_desired − refDeg) · DEG2RAD)
+            mat4AxisAngle(R, seg.ax, seg.ay, seg.az, seg.mul * (q[seg.qIdx] - seg.refDeg) * DEG2RAD)
             mat4Multiply(tmp, T, R)
             T.set(tmp)
           }
