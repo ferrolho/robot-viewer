@@ -124,7 +124,8 @@ export function frameCameraOn(modelId: string) {
   if (!data) return
 
   const fovRad = THREE.MathUtils.degToRad(camera.fov)
-  const dist = data.radius / Math.tan(fovRad / 2)
+  const cameraPadding = 1.2
+  const dist = cameraPadding * data.radius / Math.tan(fovRad / 2)
 
   const el = Math.PI / 8  // ~17.5° above ground
   const az = Math.PI / 8  // ~22.5° from front
