@@ -36,7 +36,7 @@ let showForceEllipsoid = false
 let showAccelerationEllipsoid = false
 let showForcePolytope = false
 let ikSolver = IkSolverEnum.OFF as typeof IkSolverEnum[keyof typeof IkSolverEnum]
-let ikGoals: THREE.Mesh[] = []
+let ikGoals: THREE.Object3D[] = []
 let ikGoalControls: InstanceType<typeof TransformControls>[] = []
 let ikGoalControlHelpers: THREE.Object3D[] = []
 
@@ -698,7 +698,6 @@ function cleanupIkGoals() {
 function setupIkGoals() {
   cleanupIkGoals()
 
-  const colors = [0xff0000, 0x00ff00, 0x0000ff, 0xffff00]
   const n = robot.tipLinks.length
 
   // Precompute which tips are fully coupled to each tip (e.g. mimic fingers
@@ -712,12 +711,7 @@ function setupIkGoals() {
   }
 
   for (let i = 0; i < n; i++) {
-    const material = new THREE.MeshLambertMaterial({
-      color: colors[i % colors.length],
-      transparent: true,
-      opacity: 0.8,
-    })
-    const goal = new THREE.Mesh(new THREE.SphereGeometry(0.01), material)
+    const goal = new THREE.Object3D()
     goal.name = `ikGoal-${i}`
 
     const control = new TransformControls(camera, renderer.domElement)
