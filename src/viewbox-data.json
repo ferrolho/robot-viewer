@@ -550,5 +550,25 @@
   "fanuc_r2000id_210fh": {
     "radius": 2.344,
     "elevation": 1.383
+  },
+  "fetch": {
+    "radius": 0.986,
+    "elevation": 0.922
+  },
+  "iiwa7": {
+    "radius": 0.773,
+    "elevation": 0.493
+  },
+  "mini_cheetah": {
+    "radius": 0.399,
+    "elevation": 0.002
+  },
+  "sigmaban": {
+    "radius": 0.361,
+    "elevation": -0.08
+  },
+  "skydio_x2": {
+    "radius": 0.3,
+    "elevation": 0.05
   }
 }
