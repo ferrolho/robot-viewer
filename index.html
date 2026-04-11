@@ -243,44 +243,44 @@
 			</div>
 			<div class="info-content">
 				<section class="info-section">
-					<h5>Velocity Ellipsoid</h5>
-					<p>Shows the set of achievable end-effector velocities assuming unit joint-velocity norm. The ellipsoid matrix is:</p>
+					<h5 data-i18n="capability.info.velocityTitle">Velocity Ellipsoid</h5>
+					<p data-i18n="capability.info.velocityDesc1">Shows the set of achievable end-effector velocities assuming unit joint-velocity norm. The ellipsoid matrix is:</p>
 					<div class="math-block" data-math="E_v = J \, J^\top"></div>
-					<p>where <span class="math" data-math="J"></span> is the translational Jacobian. The semi-axes reveal which Cartesian directions the robot can move fastest in.</p>
+					<p data-i18n-html="capability.info.velocityDesc2">where <span class="math" data-math="J"></span> is the translational Jacobian. The semi-axes reveal which Cartesian directions the robot can move fastest in.</p>
 				</section>
 				<section class="info-section">
-					<h5>Acceleration Ellipsoid</h5>
-					<p>Incorporates the joint-space inertia matrix <span class="math" data-math="M(q)"></span> to show achievable end-effector accelerations:</p>
+					<h5 data-i18n="capability.info.accelTitle">Acceleration Ellipsoid</h5>
+					<p data-i18n-html="capability.info.accelDesc1">Incorporates the joint-space inertia matrix <span class="math" data-math="M(q)"></span> to show achievable end-effector accelerations:</p>
 					<div class="math-block" data-math="E_a = J \, M^{-2} J^\top"></div>
-					<p>Normalized to the velocity ellipsoid scale for visual comparison of directional capability.</p>
+					<p data-i18n="capability.info.accelDesc2">Normalized to the velocity ellipsoid scale for visual comparison of directional capability.</p>
 				</section>
 				<section class="info-section">
-					<h5>Force Ellipsoid</h5>
-					<p>A quadratic approximation of the force polytope. Three levels of fidelity exist:</p>
+					<h5 data-i18n="capability.info.ellipsoidTitle">Force Ellipsoid</h5>
+					<p data-i18n="capability.info.ellipsoidDesc">A quadratic approximation of the force polytope. Three levels of fidelity exist:</p>
 					<div class="info-subsection">
-						<h6>Unweighted</h6>
-						<p>The textbook form, assuming unit joint-torque norm <span class="math" data-math="\|\boldsymbol{\tau}\|_2 \leq 1"></span>:</p>
+						<h6 data-i18n="capability.info.unweightedTitle">Unweighted</h6>
+						<p data-i18n-html="capability.info.unweightedDesc1">The textbook form, assuming unit joint-torque norm <span class="math" data-math="\|\boldsymbol{\tau}\|_2 \leq 1"></span>:</p>
 						<div class="math-block" data-math="E_f = \left(J \, J^\top\right)^{-1}"></div>
-						<p>Shows the pure directional shape of force capability. No torque limit data needed, but the absolute size is not in physical units.</p>
+						<p data-i18n="capability.info.unweightedDesc2">Shows the pure directional shape of force capability. No torque limit data needed, but the absolute size is not in physical units.</p>
 					</div>
 					<div class="info-subsection">
-						<h6>RMS-scaled (toggle off)</h6>
-						<p>Scales the unweighted form by <span class="math" data-math="\tau_\text{rms} = \sqrt{\frac{1}{n}\sum \tau_{\max,i}^2}"></span> to give physically meaningful size:</p>
+						<h6 data-i18n="capability.info.rmsTitle">RMS-scaled (toggle off)</h6>
+						<p data-i18n-html="capability.info.rmsDesc1">Scales the unweighted form by <span class="math" data-math="\tau_\text{rms} = \sqrt{\frac{1}{n}\sum \tau_{\max,i}^2}"></span> to give physically meaningful size:</p>
 						<div class="math-block" data-math="E_f^{\text{rms}} = \tau_\text{rms}^2 \left(J \, J^\top\right)^{-1}"></div>
-						<p>Assumes all joints share effort equally. The shape is identical to the unweighted version — only the scale changes.</p>
+						<p data-i18n="capability.info.rmsDesc2">Assumes all joints share effort equally. The shape is identical to the unweighted version — only the scale changes.</p>
 					</div>
 					<div class="info-subsection">
-						<h6>Torque-weighted (toggle on)</h6>
-						<p>Scales each Jacobian column by the joint's actual torque limit <span class="math" data-math="T = \text{diag}(\tau_{\max,i})"></span>, changing both shape and scale:</p>
+						<h6 data-i18n="capability.info.weightedTitle2">Torque-weighted (toggle on)</h6>
+						<p data-i18n-html="capability.info.weightedDesc1">Scales each Jacobian column by the joint's actual torque limit <span class="math" data-math="T = \text{diag}(\tau_{\max,i})"></span>, changing both shape and scale:</p>
 						<div class="math-block" data-math="E_f^w = W T \left(W T\right)^\top, \quad W = \left(J J^\top\right)^{-1} J"></div>
-						<p>Produces the tightest ellipsoidal fit to the polytope. The improvement is most visible on robots with asymmetric torque limits. When all joints have equal limits, this reduces to the RMS-scaled version.</p>
+						<p data-i18n="capability.info.weightedDesc2">Produces the tightest ellipsoidal fit to the polytope. The improvement is most visible on robots with asymmetric torque limits. When all joints have equal limits, this reduces to the RMS-scaled version.</p>
 					</div>
 				</section>
 				<section class="info-section">
-					<h5>Force Polytope</h5>
-					<p>The exact representation of the robot's force capability. Maps each vertex of the joint-torque hypercube <span class="math" data-math="|\tau_i| \leq \tau_{\max,i}"></span> through the force mapping:</p>
+					<h5 data-i18n="capability.info.polytopeTitle">Force Polytope</h5>
+					<p data-i18n-html="capability.info.polytopeDesc1">The exact representation of the robot's force capability. Maps each vertex of the joint-torque hypercube <span class="math" data-math="|\tau_i| \leq \tau_{\max,i}"></span> through the force mapping:</p>
 					<div class="math-block" data-math="\mathcal{F} = \left\{ \left(J J^\top\right)^{-1} J \, \boldsymbol{\tau} \;\middle|\; |\tau_i| \leq \tau_{\max,i} \right\}"></div>
-					<p>The convex hull of the resulting <span class="math" data-math="2^n"></span> vertices forms the polytope in Cartesian force space.</p>
+					<p data-i18n-html="capability.info.polytopeDesc2">The convex hull of the resulting <span class="math" data-math="2^n"></span> vertices forms the polytope in Cartesian force space.</p>
 				</section>
 			</div>
 		</dialog>

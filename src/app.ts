@@ -115,6 +115,7 @@ for (const locale of LOCALES) {
     langMenu.classList.remove('open')
     setupCategoryChips()
     showBrandGrid()
+    renderMath(capabilityModal)
   })
   langMenu.appendChild(item)
 }
