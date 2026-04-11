@@ -952,8 +952,18 @@ dialog::backdrop {
   font-weight: 600;
 }
 
-#capability-modal {
-  max-width: 560px;
+#capability-modal[open] {
+  max-width: 75vw;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+@media (max-width: 768px) {
+  #capability-modal[open] {
+    width: 95%;
+    max-width: 95%;
+  }
 }
 
 /* ── Info Content ── */
@@ -961,7 +971,8 @@ dialog::backdrop {
 .info-content {
   padding: 16px 20px;
   overflow-y: auto;
-  max-height: calc(90vh - 60px);
+  flex: 1;
+  min-height: 0;
 }
 
 .info-section {

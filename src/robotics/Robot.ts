@@ -235,8 +235,8 @@ export class Robot {
     let E: la.Mat
 
     if (!hasEffort || !this.torqueWeightedEllipsoid) {
-      // Unweighted: E = (JJᵀ)⁻¹, scaled by RMS effort when available.
-      // Assumes ‖τ‖₂ ≤ τ_rms, a uniform norm bound.
+      // RMS-scaled: E = τ_rms² (JJᵀ)⁻¹.
+      // Assumes ‖τ‖₂ ≤ τ_rms, a uniform norm bound in physical units.
       E = la.mat(3, 3)
       la.copyInto(E, JJtInv)
       if (hasEffort) {

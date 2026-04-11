@@ -256,14 +256,24 @@
 				</section>
 				<section class="info-section">
 					<h5>Force Ellipsoid</h5>
-					<p>A quadratic approximation of the force polytope. The unweighted version assumes a 2-norm constraint <span class="math" data-math="\|\boldsymbol{\tau}\|_2 \leq \tau_\text{rms}"></span> on joint torques:</p>
-					<div class="math-block" data-math="E_f = \tau_\text{rms}^2 \left(J \, J^\top\right)^{-1}"></div>
-					<p>This produces a smooth shape always inscribed within the polytope.</p>
+					<p>A quadratic approximation of the force polytope. Three levels of fidelity exist:</p>
 					<div class="info-subsection">
-						<h6>Torque-weighted</h6>
-						<p>Scales each Jacobian column by the joint's actual torque limit <span class="math" data-math="T = \text{diag}(\tau_{\max,i})"></span>, giving a tighter fit:</p>
+						<h6>Unweighted</h6>
+						<p>The textbook form, assuming unit joint-torque norm <span class="math" data-math="\|\boldsymbol{\tau}\|_2 \leq 1"></span>:</p>
+						<div class="math-block" data-math="E_f = \left(J \, J^\top\right)^{-1}"></div>
+						<p>Shows the pure directional shape of force capability. No torque limit data needed, but the absolute size is not in physical units.</p>
+					</div>
+					<div class="info-subsection">
+						<h6>RMS-scaled (toggle off)</h6>
+						<p>Scales the unweighted form by <span class="math" data-math="\tau_\text{rms} = \sqrt{\frac{1}{n}\sum \tau_{\max,i}^2}"></span> to give physically meaningful size:</p>
+						<div class="math-block" data-math="E_f^{\text{rms}} = \tau_\text{rms}^2 \left(J \, J^\top\right)^{-1}"></div>
+						<p>Assumes all joints share effort equally. The shape is identical to the unweighted version — only the scale changes.</p>
+					</div>
+					<div class="info-subsection">
+						<h6>Torque-weighted (toggle on)</h6>
+						<p>Scales each Jacobian column by the joint's actual torque limit <span class="math" data-math="T = \text{diag}(\tau_{\max,i})"></span>, changing both shape and scale:</p>
 						<div class="math-block" data-math="E_f^w = W T \left(W T\right)^\top, \quad W = \left(J J^\top\right)^{-1} J"></div>
-						<p>The improvement is most visible on robots with asymmetric torque limits (e.g. large shoulder vs small wrist motors). When all joints have equal limits, both modes produce identical results.</p>
+						<p>Produces the tightest ellipsoidal fit to the polytope. The improvement is most visible on robots with asymmetric torque limits. When all joints have equal limits, this reduces to the RMS-scaled version.</p>
 					</div>
 				</section>
 				<section class="info-section">
