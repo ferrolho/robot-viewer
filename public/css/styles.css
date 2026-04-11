@@ -1229,14 +1229,16 @@ kbd {
 
 .donate-toast {
   position: fixed;
-  bottom: 20px;
-  right: 20px;
+  bottom: 5%;
+  left: 50%;
+  transform: translateX(-50%);
   z-index: 1000;
   background: var(--bg-panel);
   border: 1px solid var(--border);
   border-radius: var(--radius);
   padding: 16px 20px;
-  max-width: 280px;
+  max-width: 480px;
+  width: 80%;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
   animation: toast-in 0.3s ease-out;
 }
@@ -1246,8 +1248,8 @@ kbd {
 }
 
 @keyframes toast-in {
-  from { opacity: 0; transform: translateY(12px); }
-  to   { opacity: 1; transform: translateY(0); }
+  from { opacity: 0; transform: translateX(-50%) translateY(12px); }
+  to   { opacity: 1; transform: translateX(-50%) translateY(0); }
 }
 
 .donate-close {
