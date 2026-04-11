@@ -54,3 +54,9 @@ declare module 'stats.js' {
   }
 }
 
+interface KaTeX {
+  render(expression: string, element: HTMLElement, options?: { displayMode?: boolean; throwOnError?: boolean }): void
+}
+
+declare const katex: KaTeX
+

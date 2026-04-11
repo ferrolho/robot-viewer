@@ -334,6 +334,39 @@ body.sidebar-left-collapsed.sidebar-right-collapsed #app {
   margin-bottom: 10px;
 }
 
+.section-label-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.section-label-row .section-label {
+  margin-bottom: 0;
+}
+
+.section-label-row + .toggle-row {
+  margin-top: 10px;
+}
+
+.info-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border: none;
+  background: none;
+  color: var(--text-dim);
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  transition: color 0.15s, background 0.15s;
+}
+
+.info-btn:hover {
+  color: var(--text);
+  background: var(--bg-hover);
+}
+
 /* ── Toggle Rows ── */
 
 .toggle-row {
@@ -917,6 +950,73 @@ dialog::backdrop {
 .dialog-header h4 {
   font-size: 15px;
   font-weight: 600;
+}
+
+#capability-modal {
+  max-width: 560px;
+}
+
+/* ── Info Content ── */
+
+.info-content {
+  padding: 16px 20px;
+  overflow-y: auto;
+  max-height: calc(90vh - 60px);
+}
+
+.info-section {
+  margin-bottom: 16px;
+}
+
+.info-section:last-child {
+  margin-bottom: 0;
+}
+
+.info-section h5 {
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 6px;
+  color: var(--text);
+}
+
+.info-section p {
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text-muted);
+  margin: 0;
+}
+
+.math-block {
+  margin: 6px 0;
+  text-align: center;
+  font-size: 12px;
+  color: var(--text);
+  overflow: visible;
+}
+
+.math-block .katex-display {
+  margin: 0;
+  overflow: visible;
+}
+
+.info-subsection {
+  margin-top: 10px;
+  padding-left: 14px;
+  border-left: 2px solid var(--border);
+}
+
+.info-subsection h6 {
+  font-size: 12px;
+  font-weight: 600;
+  margin-bottom: 4px;
+  color: var(--text);
+}
+
+.info-subsection p {
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text-muted);
+  margin: 0;
 }
 
 /* ── Shortcuts Table ── */

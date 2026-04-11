@@ -176,15 +176,37 @@ function hideSidebar() {
 
 const loaderModal = $<HTMLDialogElement>('loader-modal')
 const shortcutsModal = $<HTMLDialogElement>('shortcuts-modal')
+const capabilityModal = $<HTMLDialogElement>('capability-modal')
 
 loaderModal.addEventListener('cancel', (e) => e.preventDefault())
 
 $('shortcuts-close').addEventListener('click', () => shortcutsModal.close())
 $('shortcuts-btn').addEventListener('click', () => shortcutsModal.showModal())
+$('capability-close').addEventListener('click', () => capabilityModal.close())
+$('capability-info-btn').addEventListener('click', () => {
+  capabilityModal.showModal()
+  renderMath(capabilityModal)
+})
 
 shortcutsModal.addEventListener('click', (e) => {
   if (e.target === shortcutsModal) shortcutsModal.close()
 })
+
+capabilityModal.addEventListener('click', (e) => {
+  if (e.target === capabilityModal) capabilityModal.close()
+})
+
+/** Render all data-math attributes inside a container using KaTeX. */
+function renderMath(root: HTMLElement) {
+  if (typeof katex === 'undefined') return
+  root.querySelectorAll<HTMLElement>('[data-math]').forEach(el => {
+    if (el.dataset.mathRendered) return
+    const tex = el.dataset.math!
+    const displayMode = el.classList.contains('math-block')
+    katex.render(tex, el, { displayMode, throwOnError: false })
+    el.dataset.mathRendered = '1'
+  })
+}
 
 // ── View Options ──
 

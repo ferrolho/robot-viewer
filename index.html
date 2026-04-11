@@ -6,6 +6,8 @@
 		<title data-i18n="app.title">Robot Explorer</title>
 		<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 		<link href="/css/styles.css" rel="stylesheet" type="text/css">
+		<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+		<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
 	</head>
 	<body>
 
@@ -158,7 +160,12 @@
 					</section>
 
 					<section class="panel-section">
-						<h6 class="section-label" data-i18n="capability.label">Capability</h6>
+						<div class="section-label-row">
+							<h6 class="section-label" data-i18n="capability.label">Capability</h6>
+							<button id="capability-info-btn" class="info-btn" aria-label="About capability visualizations">
+								<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+							</button>
+						</div>
 						<label class="toggle-row">
 							<span data-i18n="capability.velocityEllipsoid">Velocity Ellipsoid</span>
 							<input id="velocity-ellipsoid-switch" type="checkbox">
@@ -224,6 +231,47 @@
 			<div class="loader-content">
 				<div class="loader-spinner"></div>
 				<p data-i18n="loader.message">Loading robot model...</p>
+			</div>
+		</dialog>
+
+		<dialog id="capability-modal">
+			<div class="dialog-header">
+				<h4 data-i18n="capability.info.title">Capability Visualizations</h4>
+				<button id="capability-close" class="icon-btn" data-i18n-aria-label="aria.close" aria-label="Close">
+					<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+				</button>
+			</div>
+			<div class="info-content">
+				<section class="info-section">
+					<h5>Velocity Ellipsoid</h5>
+					<p>Shows the set of achievable end-effector velocities assuming unit joint-velocity norm. The ellipsoid matrix is:</p>
+					<div class="math-block" data-math="E_v = J \, J^\top"></div>
+					<p>where <span class="math" data-math="J"></span> is the translational Jacobian. The semi-axes reveal which Cartesian directions the robot can move fastest in.</p>
+				</section>
+				<section class="info-section">
+					<h5>Acceleration Ellipsoid</h5>
+					<p>Incorporates the joint-space inertia matrix <span class="math" data-math="M(q)"></span> to show achievable end-effector accelerations:</p>
+					<div class="math-block" data-math="E_a = J \, M^{-2} J^\top"></div>
+					<p>Normalized to the velocity ellipsoid scale for visual comparison of directional capability.</p>
+				</section>
+				<section class="info-section">
+					<h5>Force Ellipsoid</h5>
+					<p>A quadratic approximation of the force polytope. The unweighted version assumes a 2-norm constraint <span class="math" data-math="\|\boldsymbol{\tau}\|_2 \leq \tau_\text{rms}"></span> on joint torques:</p>
+					<div class="math-block" data-math="E_f = \tau_\text{rms}^2 \left(J \, J^\top\right)^{-1}"></div>
+					<p>This produces a smooth shape always inscribed within the polytope.</p>
+					<div class="info-subsection">
+						<h6>Torque-weighted</h6>
+						<p>Scales each Jacobian column by the joint's actual torque limit <span class="math" data-math="T = \text{diag}(\tau_{\max,i})"></span>, giving a tighter fit:</p>
+						<div class="math-block" data-math="E_f^w = W T \left(W T\right)^\top, \quad W = \left(J J^\top\right)^{-1} J"></div>
+						<p>The improvement is most visible on robots with asymmetric torque limits (e.g. large shoulder vs small wrist motors). When all joints have equal limits, both modes produce identical results.</p>
+					</div>
+				</section>
+				<section class="info-section">
+					<h5>Force Polytope</h5>
+					<p>The exact representation of the robot's force capability. Maps each vertex of the joint-torque hypercube <span class="math" data-math="|\tau_i| \leq \tau_{\max,i}"></span> through the force mapping:</p>
+					<div class="math-block" data-math="\mathcal{F} = \left\{ \left(J J^\top\right)^{-1} J \, \boldsymbol{\tau} \;\middle|\; |\tau_i| \leq \tau_{\max,i} \right\}"></div>
+					<p>The convex hull of the resulting <span class="math" data-math="2^n"></span> vertices forms the polytope in Cartesian force space.</p>
+				</section>
 			</div>
 		</dialog>
 
