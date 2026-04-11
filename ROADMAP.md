@@ -32,8 +32,6 @@
 - [x] Replace jQuery + Materialize v0.100 (unmaintained) with vanilla JS + modern CSS
 - [x] Custom sidebar panel with dark/light theme, ResizeObserver-driven canvas, fat grid lines
 
-## Upcoming
-
 ### Phase 6: Code Quality
 - [x] Split `app.ts` into modules: `scene.ts` (Three.js setup), `gallery.ts` (model browser), `app.ts` (state, UI, animation)
 - [x] Enable `noImplicitAny` in tsconfig (mathjs is gone — main blocker was removed)
@@ -82,7 +80,6 @@ Create [`ferrolho/robot-explorer-models`](https://github.com/ferrolho/robot-expl
 - [ ] ~~GLB conversion with material preservation~~ — Deferred. See [analysis below](#glb-conversion-analysis)
 - [x] Sidebar search and category filtering for large catalog
 - [x] i18n support with language picker dropdown (English, Japanese, Chinese)
-- [ ] Thumbnail generation for model list
 
 ### Phase 11: Robustness and UX
 - [x] Support `?robot=<id>` URL param for shareable model links
@@ -96,6 +93,21 @@ Create [`ferrolho/robot-explorer-models`](https://github.com/ferrolho/robot-expl
 - [x] Center of mass visualization using urdf-loader with inertial parsing
 - [x] Switch urdf-loader from local fork to npm (upstream merged inertial parsing PR)
 - [x] Fix Dependabot security alerts (bump vite to ^8.0.8)
+
+### Phase 12: Robotics Analysis & Visualization
+- [x] Joint-space inertia matrix computation from URDF inertial data
+- [x] Acceleration ellipsoid visualization at end-effector
+- [x] Force polytope visualization with effort limits from URDF
+- [x] Torque-weighted force ellipsoid toggle with scale correction
+- [x] Capability info modal with LaTeX equations rendered via KaTeX
+- [x] i18n support for info modal with inline math
+- [x] Auto-frame camera on robot using precomputed viewbox data
+- [x] Viewbox data for 60 FANUC robots
+- [x] Consolidate visualization updates into `Robot.updateVisualizations()`
+- [x] Fix OBJ mesh extraction so urdf-loader applies URDF material colors
+- [x] Fix brand logo backgrounds in dark theme
+- [x] Fix mobile viewport with `dvh` units for bottom-positioned elements
+- [ ] Thumbnail generation for model list
 
 ### Known Issues
 - [x] Closed-chain linkages (e.g. Robotiq parallel grippers) — mimic joints are now excluded from controllable DOFs and driven automatically by urdf-loader

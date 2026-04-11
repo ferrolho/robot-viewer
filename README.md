@@ -2,13 +2,17 @@
 
 Interactive 3D web application for visualizing and manipulating robot models with real-time forward and inverse kinematics.
 
-Browse 81+ robots from 35+ brands, loaded as URDF models from a [dedicated model repository](https://github.com/ferrolho/robot-explorer-models). Features include IK solvers, velocity/force ellipsoid visualization, reachability point clouds, and motion keypoint recording.
+Browse 81+ robots from 35+ brands, loaded as URDF models from a [dedicated model repository](https://github.com/ferrolho/robot-explorer-models). Features include IK solvers, manipulability ellipsoids, force polytopes, reachability point clouds, and motion keypoint recording.
 
 ## Features
 
 - **Robot catalog** — 81+ URDF models from 35+ brands, organized in a two-level brand gallery with search and category filtering
 - **Forward / Inverse Kinematics** — drag IK gizmos to pose end-effectors in real time (Pseudo Inverse solver); supports multi-tip robots
-- **Ellipsoid visualization** — velocity and force manipulability ellipsoids at the end-effector
+- **Manipulability ellipsoids** — velocity, acceleration, and force ellipsoids at the end-effector, computed from the Jacobian and joint-space inertia matrix
+- **Force polytopes** — visualize the achievable force set at the end-effector using URDF effort limits
+- **Capability info modal** — mathematical background for each visualization tier, rendered with KaTeX
+- **Auto-frame camera** — automatically frames the camera on the loaded robot using precomputed viewbox data
+- **Center of mass** — visualize the robot's center of mass from URDF inertial data
 - **Reachability clouds** — sample random configurations to visualize the workspace
 - **Motion keypoints** — record, play back, and export convex hulls as STL
 - **Dark / Light theme** — persisted in localStorage
@@ -39,7 +43,7 @@ npm run typecheck  # TypeScript type checking
 
 ## Tech Stack
 
-Three.js, urdf-loader, mathjs, @tweenjs/tween.js, TypeScript, Vite.
+Three.js, urdf-loader, KaTeX, @tweenjs/tween.js, TypeScript, Vite.
 
 ## Screenshots
 
