@@ -22,7 +22,7 @@ import * as THREE from 'three'
 import URDFLoader from 'urdf-loader'
 import { Robot, robotKinematicsFromURDF } from '../src/robotics/index.ts'
 
-const BASE_URL = 'https://raw.githubusercontent.com/ferrolho/robot-explorer-models/dist/'
+const BASE_URL = process.env.MODELS_BASE_URL ?? 'https://raw.githubusercontent.com/ferrolho/robot-explorer-models/dist/'
 const NUM_SAMPLES = 50
 
 interface ViewData {
