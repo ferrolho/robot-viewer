@@ -181,6 +181,20 @@ const capabilityModal = $<HTMLDialogElement>('capability-modal')
 
 loaderModal.addEventListener('cancel', (e) => e.preventDefault())
 
+// ── Donate toast ──
+
+const donateToast = $('donate-toast')
+const DONATE_DISMISSED_KEY = 'robot-explorer-donate-dismissed'
+
+if (!localStorage.getItem(DONATE_DISMISSED_KEY)) {
+  setTimeout(() => { donateToast.hidden = false }, 10_000)
+}
+
+$('donate-close').addEventListener('click', () => {
+  donateToast.hidden = true
+  localStorage.setItem(DONATE_DISMISSED_KEY, '1')
+})
+
 $('shortcuts-close').addEventListener('click', () => shortcutsModal.close())
 $('shortcuts-btn').addEventListener('click', () => shortcutsModal.showModal())
 $('capability-close').addEventListener('click', () => capabilityModal.close())

@@ -1175,3 +1175,72 @@ kbd {
 @keyframes spin {
   to { transform: rotate(360deg); }
 }
+
+/* ── Donate toast ── */
+
+.donate-toast {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  z-index: 1000;
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px 20px;
+  max-width: 280px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  animation: toast-in 0.3s ease-out;
+}
+
+.donate-toast[hidden] {
+  display: none;
+}
+
+@keyframes toast-in {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.donate-close {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 4px;
+  line-height: 1;
+  transition: color 0.15s;
+}
+
+.donate-close:hover {
+  color: var(--text);
+}
+
+.donate-text {
+  font-family: var(--font-body);
+  font-size: 13px;
+  color: var(--text);
+  line-height: 1.5;
+  margin: 0 0 12px;
+  padding-right: 16px;
+}
+
+.donate-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  text-decoration: none;
+}
+
+.donate-btn .paypal-logo {
+  flex-shrink: 0;
+  /* Override currentColor for the wordmark paths — keep brand colours */
+}
+
+.donate-btn .paypal-logo path:nth-child(-n+5) {
+  fill: var(--accent-text);
+}
