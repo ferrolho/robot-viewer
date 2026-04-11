@@ -29,6 +29,7 @@
     "typecheck": "tsc",
     "test": "vitest run",
     "check-models": "node scripts/check-models.mjs",
+    "compute-viewbox": "tsx scripts/compute-viewbox.ts",
     "bench": "tsx benchmarks/ik.ts"
   },
   "bugs": {

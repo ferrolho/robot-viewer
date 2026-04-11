@@ -1,0 +1,318 @@
+{
+  "a1": {
+    "radius": 0.515,
+    "elevation": 0.002
+  },
+  "ability_hand": {
+    "radius": 0.089,
+    "elevation": 0.089
+  },
+  "aliengo": {
+    "radius": 0.472,
+    "elevation": -0.184
+  },
+  "allegro_hand": {
+    "radius": 0.126,
+    "elevation": 0.116
+  },
+  "anymal_b": {
+    "radius": 0.92,
+    "elevation": 0.003
+  },
+  "anymal_c": {
+    "radius": 0.961,
+    "elevation": 0.007
+  },
+  "anymal_d": {
+    "radius": 1.045,
+    "elevation": -0.002
+  },
+  "atlas_drc": {
+    "radius": 1.246,
+    "elevation": 0.264
+  },
+  "atlas_v4": {
+    "radius": 0.989,
+    "elevation": 0.127
+  },
+  "b1": {
+    "radius": 0.939,
+    "elevation": 0.016
+  },
+  "b2": {
+    "radius": 0.927,
+    "elevation": -0.009
+  },
+  "bambot": {
+    "radius": 0.458,
+    "elevation": 0.363
+  },
+  "barrett_hand": {
+    "radius": 0.175,
+    "elevation": 0.097
+  },
+  "baxter": {
+    "radius": 1.16,
+    "elevation": 0.441
+  },
+  "berkeley_humanoid": {
+    "radius": 0.447,
+    "elevation": -0.276
+  },
+  "bolt": {
+    "radius": 0.402,
+    "elevation": -0.036
+  },
+  "booster_t1": {
+    "radius": 0.632,
+    "elevation": -0.012
+  },
+  "cassie": {
+    "radius": 0.808,
+    "elevation": -0.159
+  },
+  "draco3": {
+    "radius": 0.832,
+    "elevation": -0.078
+  },
+  "edo": {
+    "radius": 0.481,
+    "elevation": 0.481
+  },
+  "ergocub": {
+    "radius": 0.87,
+    "elevation": 0.09
+  },
+  "eve_r3": {
+    "radius": 1.031,
+    "elevation": 0.141
+  },
+  "fanuc_m710ic": {
+    "radius": 2.006,
+    "elevation": 0.951
+  },
+  "finger_edu": {
+    "radius": 0.318,
+    "elevation": 0.192
+  },
+  "g1": {
+    "radius": 0.739,
+    "elevation": -0.046
+  },
+  "gen2": {
+    "radius": 0.752,
+    "elevation": 0.39
+  },
+  "gen3_lite": {
+    "radius": 0.716,
+    "elevation": 0.287
+  },
+  "go1": {
+    "radius": 0.521,
+    "elevation": 0.016
+  },
+  "go2": {
+    "radius": 0.561,
+    "elevation": -0.015
+  },
+  "gr1": {
+    "radius": 0.896,
+    "elevation": 0.028
+  },
+  "h1": {
+    "radius": 0.872,
+    "elevation": -0.102
+  },
+  "h1_2": {
+    "radius": 1.058,
+    "elevation": 0.074
+  },
+  "hyq": {
+    "radius": 0.963,
+    "elevation": -0.328
+  },
+  "icub": {
+    "radius": 0.591,
+    "elevation": -0.049
+  },
+  "iiwa14": {
+    "radius": 0.829,
+    "elevation": 0.553
+  },
+  "jaxon": {
+    "radius": 1.024,
+    "elevation": 0.102
+  },
+  "jvrc": {
+    "radius": 0.907,
+    "elevation": 0.14
+  },
+  "leap_hand_v1": {
+    "radius": 0.105,
+    "elevation": -0.049
+  },
+  "minitaur": {
+    "radius": 0.21,
+    "elevation": 0.056
+  },
+  "n1": {
+    "radius": 0.669,
+    "elevation": 0.008
+  },
+  "nextage": {
+    "radius": 0.555,
+    "elevation": 0.345
+  },
+  "open_manipulator_x": {
+    "radius": 0.339,
+    "elevation": 0.137
+  },
+  "panda": {
+    "radius": 0.818,
+    "elevation": 0.42
+  },
+  "pepper": {
+    "radius": 0.767,
+    "elevation": 0.648
+  },
+  "piper": {
+    "radius": 0.677,
+    "elevation": 0.241
+  },
+  "poppy_ergo_jr": {
+    "radius": 0.089,
+    "elevation": 0.078
+  },
+  "poppy_torso": {
+    "radius": 0.253,
+    "elevation": 0.192
+  },
+  "pr2": {
+    "radius": 1.102,
+    "elevation": 0.782
+  },
+  "r2": {
+    "radius": 1.322,
+    "elevation": -0.065
+  },
+  "reachy": {
+    "radius": 0.822,
+    "elevation": 0.776
+  },
+  "robotiq_2f85": {
+    "radius": 0.085,
+    "elevation": 0.085
+  },
+  "romeo": {
+    "radius": 0.823,
+    "elevation": -0.252
+  },
+  "so_arm100": {
+    "radius": 0.304,
+    "elevation": 0.157
+  },
+  "solo": {
+    "radius": 0.505,
+    "elevation": -0.006
+  },
+  "stretch": {
+    "radius": 0.752,
+    "elevation": 0.657
+  },
+  "talos": {
+    "radius": 1.029,
+    "elevation": -0.054
+  },
+  "tiago": {
+    "radius": 0.948,
+    "elevation": 0.825
+  },
+  "trifinger_edu": {
+    "radius": 0.33,
+    "elevation": 0.224
+  },
+  "upkie": {
+    "radius": 0.369,
+    "elevation": -0.263
+  },
+  "ur10": {
+    "radius": 1.244,
+    "elevation": 0.153
+  },
+  "ur3": {
+    "radius": 0.48,
+    "elevation": 0.119
+  },
+  "ur5": {
+    "radius": 0.803,
+    "elevation": 0.166
+  },
+  "valkyrie": {
+    "radius": 1.064,
+    "elevation": -0.098
+  },
+  "yumi": {
+    "radius": 0.738,
+    "elevation": 0.603
+  },
+  "z1": {
+    "radius": 0.562,
+    "elevation": 0.357
+  },
+  "abb_irb120": {
+    "radius": 0.606,
+    "elevation": 0.368
+  },
+  "abb_irb1200": {
+    "radius": 0.849,
+    "elevation": 0.48
+  },
+  "abb_irb1600": {
+    "radius": 1.153,
+    "elevation": 0.673
+  },
+  "abb_irb2400": {
+    "radius": 1.412,
+    "elevation": 0.76
+  },
+  "abb_irb2600": {
+    "radius": 1.438,
+    "elevation": 0.598
+  },
+  "abb_irb4400": {
+    "radius": 2.154,
+    "elevation": 1.1
+  },
+  "abb_irb4600": {
+    "radius": 1.938,
+    "elevation": 0.666
+  },
+  "abb_irb5400": {
+    "radius": 2.659,
+    "elevation": 1.347
+  },
+  "abb_irb6640": {
+    "radius": 2.487,
+    "elevation": 1.345
+  },
+  "abb_irb7600": {
+    "radius": 3.134,
+    "elevation": 1.407
+  },
+  "kuka_kr5_arc": {
+    "radius": 1.362,
+    "elevation": 0.411
+  },
+  "kuka_kr10r1100sixx": {
+    "radius": 1.064,
+    "elevation": 0.501
+  },
+  "kuka_kr16_2": {
+    "radius": 1.587,
+    "elevation": 0.956
+  },
+  "kuka_kr120r2500pro": {
+    "radius": 2.494,
+    "elevation": 1.169
+  }
+}

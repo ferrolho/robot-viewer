@@ -115,6 +115,29 @@ shadowPlane.receiveShadow = true
 shadowPlane.rotateX(-90 * THREE.MathUtils.DEG2RAD)
 scene.add(shadowPlane)
 
+// ── Frame camera on model ──
+
+import viewBoxData from './viewbox-data.json'
+
+export function frameCameraOn(modelId: string) {
+  const data = (viewBoxData as Record<string, { radius: number; elevation: number }>)[modelId]
+  if (!data) return
+
+  const fovRad = THREE.MathUtils.degToRad(camera.fov)
+  const dist = data.radius / Math.tan(fovRad / 2)
+
+  const el = Math.PI / 8  // ~17.5° above ground
+  const az = Math.PI / 8  // ~22.5° from front
+  camera.position.set(
+    dist * Math.cos(el) * Math.cos(az),
+    data.elevation + dist * Math.sin(el),
+    dist * Math.cos(el) * Math.sin(az),
+  )
+
+  orbitControls.target.set(0, data.elevation, 0)
+  orbitControls.update()
+}
+
 // ── Theme ──
 
 export function applySceneTheme(theme: 'dark' | 'light') {

@@ -1,4 +1,4 @@
-import { scene, renderer, camera, orbitControls, stats, grid, axis, shadowPlane, applySceneTheme } from './scene.ts'
+import { scene, renderer, camera, orbitControls, stats, grid, axis, shadowPlane, applySceneTheme, frameCameraOn } from './scene.ts'
 import { initGallery, setupCategoryChips, showBrandGrid } from './gallery.ts'
 import { IkSolverEnum, Robot, robotKinematicsFromURDF } from './robotics/index.ts'
 import { ModelLoader } from './ModelLoader.ts'
@@ -444,6 +444,7 @@ async function loadModel(modelId: string) {
     if (showAccelerationEllipsoid) robot.updateAccelerationEllipsoid()
 
     updateShadowsState()
+    frameCameraOn(modelId)
     setupIkGoals()
 
     // If IK is active, position goals at the new robot's end-effectors
