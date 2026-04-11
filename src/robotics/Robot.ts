@@ -1075,12 +1075,12 @@ export class Robot {
     // Forward perturbation
     this.setJointValue(jointName, origVal + eps)
     this._root.updateMatrixWorld(true)
-    const e1 = tipObj.matrixWorld.elements
+    const e1 = tipObj.matrixWorld.elements.slice()
 
     // Backward perturbation
     this.setJointValue(jointName, origVal - eps)
     this._root.updateMatrixWorld(true)
-    const e0 = tipObj.matrixWorld.elements
+    const e0 = tipObj.matrixWorld.elements.slice()
 
     // Compute delta from the two poses
     const delta = robotMath.tr2delta(e0, e1, partial)
