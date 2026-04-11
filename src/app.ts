@@ -173,6 +173,14 @@ function hideSidebar() {
   sidebarOverlay.classList.remove('visible')
 }
 
+// ── Collapsible panel sections ──
+
+document.querySelectorAll('#sidebar-right .panel-section .section-label').forEach(label => {
+  label.addEventListener('click', () => {
+    label.closest('.panel-section')!.classList.toggle('collapsed')
+  })
+})
+
 // ── Modals ──
 
 const loaderModal = $<HTMLDialogElement>('loader-modal')

@@ -110,6 +110,7 @@
 				<div class="sidebar-scroll">
 					<section class="panel-section">
 						<h6 class="section-label" data-i18n="display.label">Display</h6>
+						<div class="section-content"><div>
 						<label class="toggle-row">
 							<span data-i18n="display.grid">Grid</span>
 							<input id="grid-switch" type="checkbox">
@@ -130,10 +131,12 @@
 							<input id="stats-switch" type="checkbox">
 							<span class="toggle-track"><span class="toggle-thumb"></span></span>
 						</label>
+						</div></div>
 					</section>
 
 					<section class="panel-section">
 						<h6 class="section-label" data-i18n="controls.label">Controls</h6>
+						<div class="section-content"><div>
 						<div class="btn-group">
 							<button id="reset-button" class="btn" data-i18n="controls.home">Home</button>
 							<button id="random-button" class="btn" data-i18n="controls.random">Random</button>
@@ -142,24 +145,29 @@
 							<button id="reachability-button" class="btn btn-outline" data-i18n="controls.reachability">Reachability</button>
 							<button id="clear-clouds-button" class="btn btn-outline" data-i18n="controls.clearPoints">Clear Points</button>
 						</div>
+						</div></div>
 					</section>
 
 					<section class="panel-section">
 						<h6 class="section-label" data-i18n="solvers.label">Solvers</h6>
+						<div class="section-content"><div>
 						<label class="toggle-row">
 							<span data-i18n="solvers.ik">Inverse Kinematics</span>
 							<input id="pseudo-inverse-switch" type="checkbox">
 							<span class="toggle-track"><span class="toggle-thumb"></span></span>
 						</label>
+						</div></div>
 					</section>
 
 					<section class="panel-section">
 						<h6 class="section-label">Dynamics</h6>
+						<div class="section-content"><div>
 						<label class="toggle-row">
 							<span>Center of Mass</span>
 							<input id="com-switch" type="checkbox">
 							<span class="toggle-track"><span class="toggle-thumb"></span></span>
 						</label>
+						</div></div>
 					</section>
 
 					<section class="panel-section">
@@ -169,6 +177,7 @@
 								<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
 							</button>
 						</div>
+						<div class="section-content"><div>
 						<label class="toggle-row">
 							<span data-i18n="capability.velocityEllipsoid">Velocity Ellipsoid</span>
 							<input id="velocity-ellipsoid-switch" type="checkbox">
@@ -194,19 +203,20 @@
 							<input id="force-polytope-switch" type="checkbox">
 							<span class="toggle-track"><span class="toggle-thumb"></span></span>
 						</label>
+						</div></div>
 					</section>
 
-					<div class="sidebar-footer">
-						<button id="shortcuts-btn" class="icon-btn" data-i18n-aria-label="aria.shortcuts" aria-label="Keyboard shortcuts">
-							<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M6 8h.01M10 8h.01M14 8h.01M18 8h.01M8 12h.01M12 12h.01M16 12h.01M8 16h8"/></svg>
-							<span data-i18n="shortcuts.button">Shortcuts</span>
-							<kbd>?</kbd>
-						</button>
-						<a id="donate-btn" class="icon-btn" href="https://www.paypal.com/donate/?hosted_button_id=6P2UU4WMA9Y8L" target="_blank" rel="noopener" aria-label="Donate">
-							<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
-							<span>Donate</span>
-						</a>
-					</div>
+				</div>
+				<div class="sidebar-footer">
+					<button id="shortcuts-btn" class="icon-btn" data-i18n-aria-label="aria.shortcuts" aria-label="Keyboard shortcuts">
+						<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M6 8h.01M10 8h.01M14 8h.01M18 8h.01M8 12h.01M12 12h.01M16 12h.01M8 16h8"/></svg>
+						<span data-i18n="shortcuts.button">Shortcuts</span>
+						<kbd>?</kbd>
+					</button>
+					<a id="donate-btn" class="icon-btn" href="https://www.paypal.com/donate/?hosted_button_id=6P2UU4WMA9Y8L" target="_blank" rel="noopener" aria-label="Donate">
+						<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+						<span>Donate</span>
+					</a>
 				</div>
 			</aside>
 		</div>

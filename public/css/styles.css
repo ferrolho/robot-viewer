@@ -348,8 +348,53 @@ body.sidebar-left-collapsed.sidebar-right-collapsed #app {
   margin-bottom: 0;
 }
 
-.section-label-row + .toggle-row {
+.section-label-row + .toggle-row,
+.section-label-row + .section-content > div > .toggle-row:first-child {
   margin-top: 10px;
+}
+
+/* ── Collapsible panel sections (right sidebar) ── */
+
+#sidebar-right .section-label {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  user-select: none;
+  transition: margin-bottom 0.2s ease-out;
+}
+
+#sidebar-right .section-label::before {
+  content: '';
+  width: 5px;
+  height: 5px;
+  border-right: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
+  transform: translateY(-1px) rotate(45deg);
+  transition: transform 0.2s ease-out;
+  margin-right: 6px;
+  flex-shrink: 0;
+}
+
+#sidebar-right .panel-section.collapsed .section-label {
+  margin-bottom: 0;
+}
+
+#sidebar-right .panel-section.collapsed .section-label::before {
+  transform: translateY(0px) rotate(-45deg);
+}
+
+#sidebar-right .section-content {
+  display: grid;
+  grid-template-rows: 1fr;
+  transition: grid-template-rows 0.2s ease-out;
+}
+
+#sidebar-right .panel-section.collapsed .section-content {
+  grid-template-rows: 0fr;
+}
+
+#sidebar-right .section-content > div {
+  overflow: hidden;
 }
 
 .info-btn {
