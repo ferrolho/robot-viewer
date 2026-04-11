@@ -1,6 +1,7 @@
 import URDFLoader from 'urdf-loader'
 import type { URDFRobot } from 'urdf-loader'
 import * as THREE from 'three'
+import { MTLLoader } from 'three/addons/loaders/MTLLoader.js'
 import { OBJLoader } from 'three/addons/loaders/OBJLoader.js'
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
 
@@ -70,17 +71,38 @@ export class ModelLoader {
     // Extend the default mesh loader (STL + DAE) with OBJ and GLB support
     urdfLoader.loadMeshCb = (path, manager, done) => {
       if (/\.obj$/i.test(path)) {
-        new OBJLoader(manager).load(path, (obj: THREE.Group) => {
-          // TODO: Remove this workaround once https://github.com/gkjohnson/urdf-loaders/pull/333 is merged.
-          // OBJLoader returns a Group, but urdf-loader only applies URDF
-          // material colors to THREE.Mesh instances (not Groups). Extract the
-          // single child mesh so the URDF-defined colour is applied correctly.
-          const meshes: THREE.Mesh[] = []
-          obj.traverse(child => {
-            if ((child as THREE.Mesh).isMesh) meshes.push(child as THREE.Mesh)
+        const mtlPath = path.replace(/\.obj$/i, '.mtl')
+        const loadObj = (materials?: MTLLoader.MaterialCreator) => {
+          const loader = new OBJLoader(manager)
+          if (materials) loader.setMaterials(materials)
+          loader.load(path, (obj: THREE.Group) => {
+            if (materials) {
+              // MTL materials are loaded — return the full group as-is
+              done(obj)
+            } else {
+              // TODO: Remove this workaround once https://github.com/gkjohnson/urdf-loaders/pull/333 is merged.
+              // OBJLoader returns a Group, but urdf-loader only applies URDF
+              // material colors to THREE.Mesh instances (not Groups). Extract the
+              // single child mesh so the URDF-defined colour is applied correctly.
+              const meshes: THREE.Mesh[] = []
+              obj.traverse(child => {
+                if ((child as THREE.Mesh).isMesh) meshes.push(child as THREE.Mesh)
+              })
+              done(meshes.length === 1 ? meshes[0] : obj)
+            }
           })
-          done(meshes.length === 1 ? meshes[0] : obj)
-        })
+        }
+        // Try to load the companion MTL file for textures/materials
+        fetch(mtlPath, { method: 'HEAD' }).then(res => {
+          if (res.ok) {
+            new MTLLoader(manager).load(mtlPath, (materials) => {
+              materials.preload()
+              loadObj(materials)
+            })
+          } else {
+            loadObj()
+          }
+        }).catch(() => loadObj())
       } else if (/\.glb$/i.test(path) || /\.gltf$/i.test(path)) {
         new GLTFLoader(manager).load(path, gltf => done(gltf.scene))
       } else {
