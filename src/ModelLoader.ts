@@ -71,6 +71,7 @@ export class ModelLoader {
     urdfLoader.loadMeshCb = (path, manager, done) => {
       if (/\.obj$/i.test(path)) {
         new OBJLoader(manager).load(path, (obj: THREE.Group) => {
+          // TODO: Remove this workaround once https://github.com/gkjohnson/urdf-loaders/pull/333 is merged.
           // OBJLoader returns a Group, but urdf-loader only applies URDF
           // material colors to THREE.Mesh instances (not Groups). Extract the
           // single child mesh so the URDF-defined colour is applied correctly.
