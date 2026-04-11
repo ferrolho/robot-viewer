@@ -34,10 +34,11 @@ const translations: Record<Locale, Record<string, string>> = {
     'solvers.label': 'Solvers',
     'solvers.ik': 'Inverse Kinematics',
 
-    'ellipsoids.label': 'Ellipsoids',
-    'ellipsoids.velocity': 'Velocity',
-    'ellipsoids.force': 'Force',
-    'ellipsoids.acceleration': 'Acceleration',
+    'capability.label': 'Capability',
+    'capability.velocityEllipsoid': 'Velocity Ellipsoid',
+    'capability.accelEllipsoid': 'Accel. Ellipsoid',
+    'capability.forceEllipsoid': 'Force Ellipsoid',
+    'capability.forcePolytope': 'Force Polytope',
 
     'shortcuts.button': 'Shortcuts',
     'shortcuts.title': 'Keyboard Shortcuts',
@@ -113,10 +114,11 @@ const translations: Record<Locale, Record<string, string>> = {
     'solvers.label': 'ソルバー',
     'solvers.ik': '逆運動学',
 
-    'ellipsoids.label': '楕円体',
-    'ellipsoids.velocity': '速度',
-    'ellipsoids.force': '力',
-    'ellipsoids.acceleration': '加速度',
+    'capability.label': '能力',
+    'capability.velocityEllipsoid': '速度楕円体',
+    'capability.accelEllipsoid': '加速度楕円体',
+    'capability.forceEllipsoid': '力楕円体',
+    'capability.forcePolytope': '力ポリトープ',
 
     'shortcuts.button': 'ショートカット',
     'shortcuts.title': 'キーボードショートカット',
@@ -192,10 +194,11 @@ const translations: Record<Locale, Record<string, string>> = {
     'solvers.label': '求解器',
     'solvers.ik': '逆运动学',
 
-    'ellipsoids.label': '椭球体',
-    'ellipsoids.velocity': '速度',
-    'ellipsoids.force': '力',
-    'ellipsoids.acceleration': '加速度',
+    'capability.label': '能力',
+    'capability.velocityEllipsoid': '速度椭球',
+    'capability.accelEllipsoid': '加速度椭球',
+    'capability.forceEllipsoid': '力椭球',
+    'capability.forcePolytope': '力多面体',
 
     'shortcuts.button': '快捷键',
     'shortcuts.title': '键盘快捷键',

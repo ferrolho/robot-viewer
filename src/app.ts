@@ -34,6 +34,7 @@ let showCenterOfMass = false
 let showVelocityEllipsoid = false
 let showForceEllipsoid = false
 let showAccelerationEllipsoid = false
+let showForcePolytope = false
 let ikSolver = IkSolverEnum.OFF as typeof IkSolverEnum[keyof typeof IkSolverEnum]
 let ikGoals: THREE.Mesh[] = []
 let ikGoalControls: InstanceType<typeof TransformControls>[] = []
@@ -347,6 +348,19 @@ accelEllipsoidSwitch.addEventListener('change', () => {
   }
 })
 
+const forcePolytopeSwitch = checkbox('force-polytope-switch')
+forcePolytopeSwitch.addEventListener('change', () => {
+  showForcePolytope = forcePolytopeSwitch.checked
+  if (robot) {
+    robot.showForcePolytope = showForcePolytope
+    if (showForcePolytope) {
+      robot.updateForcePolytope()
+    } else {
+      const fp = scene.getObjectByName('force-polytope'); if (fp) scene.remove(fp)
+    }
+  }
+})
+
 // ── Shadows ──
 
 function updateShadowsState() {
@@ -424,7 +438,7 @@ async function loadModel(modelId: string) {
     const kinematics = robotKinematicsFromURDF(urdfRobot)
 
     // Remove stale visualizations from previous robot
-    for (const name of ['velocity-ellipsoid', 'force-ellipsoid', 'acceleration-ellipsoid', 'center-of-mass']) {
+    for (const name of ['velocity-ellipsoid', 'force-ellipsoid', 'acceleration-ellipsoid', 'force-polytope', 'center-of-mass']) {
       const obj = scene.getObjectByName(name)
       if (obj) scene.remove(obj)
     }
@@ -438,10 +452,12 @@ async function loadModel(modelId: string) {
     robot.showVelocityEllipsoid = showVelocityEllipsoid
     robot.showForceEllipsoid = showForceEllipsoid
     robot.showAccelerationEllipsoid = showAccelerationEllipsoid
+    robot.showForcePolytope = showForcePolytope
     if (showCenterOfMass) robot.updateCenterOfMass()
     if (showVelocityEllipsoid) robot.updateVelocityEllipsoid()
     if (showForceEllipsoid) robot.updateForceEllipsoid()
     if (showAccelerationEllipsoid) robot.updateAccelerationEllipsoid()
+    if (showForcePolytope) robot.updateForcePolytope()
 
     updateShadowsState()
     frameCameraOn(modelId)
@@ -567,6 +583,7 @@ function moveFromTo(q_s: number[], q_t: number[], duration = 10, easing: (t: num
     if (robot.showVelocityEllipsoid) robot.updateVelocityEllipsoid()
     if (robot.showForceEllipsoid) robot.updateForceEllipsoid()
     if (robot.showAccelerationEllipsoid) robot.updateAccelerationEllipsoid()
+    if (robot.showForcePolytope) robot.updateForcePolytope()
   })
 
   tween.onComplete(function () {
@@ -658,6 +675,11 @@ function setupIkGoals() {
           ikGoals[j].position.setFromMatrixPosition(pose)
           ikGoals[j].quaternion.setFromRotationMatrix(pose)
         }
+        if (robot.showCenterOfMass) robot.updateCenterOfMass()
+        if (robot.showVelocityEllipsoid) robot.updateVelocityEllipsoid()
+        if (robot.showForceEllipsoid) robot.updateForceEllipsoid()
+        if (robot.showAccelerationEllipsoid) robot.updateAccelerationEllipsoid()
+        if (robot.showForcePolytope) robot.updateForcePolytope()
       }
     })
     control.addEventListener('mouseDown', () => { orbitControls.enabled = false })

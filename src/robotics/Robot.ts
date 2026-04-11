@@ -3,10 +3,15 @@ import { type Partial } from './math.ts'
 import * as la from './linalg.ts'
 import { SolverBuffers } from './linalg.ts'
 import * as THREE from 'three'
+import { ConvexGeometry } from 'three/addons/geometries/ConvexGeometry.js'
+
+/** Fixed scale factor for force visualizations: 1 mm per Newton. */
+const FORCE_SCALE = 0.001
 
 export interface RobotJoint {
   static: boolean
   limits: { min: number; max: number }
+  effort?: number  // max torque (Nm) from URDF <limit effort="..."/>
   axis: THREE.Vector3
   mimics?: string  // name of the parent joint this joint mimics
 }
@@ -22,6 +27,7 @@ export class Robot {
   showVelocityEllipsoid = false
   showForceEllipsoid = false
   showAccelerationEllipsoid = false
+  showForcePolytope = false
   showCenterOfMass = false
 
   private _scene: THREE.Scene
@@ -209,14 +215,151 @@ export class Robot {
   }
 
   updateForceEllipsoid(): void {
+    const indices = this._tipJointIndices[0]
     const Jm = la.fromRows(this.geometricJacobian(0, 'translational'))
     const JJt = la.multiply(Jm, la.transpose(Jm))
-    this.plotEllipsoid(la.inv(JJt), 'force-ellipsoid')
+    const E = la.inv(JJt)
+
+    // Scale to Newtons using RMS effort, then apply the same m/N factor as the
+    // force polytope so the ellipsoid (quadratic approximation) is directly
+    // comparable to the polytope.
+    let sumSq = 0, count = 0
+    for (const ji of indices) {
+      const eff = this._kinematics.joints[this._joints[ji]].effort
+      if (eff != null && eff > 0) { sumSq += eff * eff; count++ }
+    }
+    if (count > 0) {
+      const tauRms = Math.sqrt(sumSq / count)
+      const scale = (tauRms * FORCE_SCALE) ** 2  // squared because plotEllipsoid takes √
+      for (let i = 0; i < 9; i++) E.data[i] *= scale
+    }
+
+    this.plotEllipsoid(E, 'force-ellipsoid')
   }
 
   updateVelocityEllipsoid(): void {
     const Jm = la.fromRows(this.geometricJacobian(0, 'translational'))
     this.plotEllipsoid(la.multiply(Jm, la.transpose(Jm)), 'velocity-ellipsoid')
+  }
+
+  /**
+   * Plot a convex polytope as a wireframe at the end-effector.
+   *
+   * @param vertices Array of 3D points (the polytope vertices in task space)
+   * @param name Scene object name for replacement/removal
+   */
+  plotPolytope(vertices: THREE.Vector3[], name: string): void {
+    const existing = this._scene.getObjectByName(name)
+    if (existing) this._scene.remove(existing)
+
+    if (vertices.length < 4) return  // need at least 4 non-coplanar points
+
+    const geometry = new ConvexGeometry(vertices)
+
+    // Semi-transparent solid faces
+    const solidMat = new THREE.MeshBasicMaterial({
+      color: 0xf87171,
+      transparent: true,
+      opacity: 0.15,
+      depthTest: false,
+      side: THREE.DoubleSide,
+    })
+    const solid = new THREE.Mesh(geometry, solidMat)
+
+    // Wireframe edges on top
+    const wireMat = new THREE.LineBasicMaterial({
+      color: 0xf87171,
+      transparent: true,
+      opacity: 0.6,
+      depthTest: false,
+    })
+    const wireframe = new THREE.LineSegments(new THREE.WireframeGeometry(geometry), wireMat)
+
+    const group = new THREE.Group()
+    group.add(solid)
+    group.add(wireframe)
+    group.name = name
+
+    const eff = robotMath.transl(this.fkine(this.configuration).elements)
+    group.position.set(eff.x, eff.y, eff.z)
+
+    this._scene.add(group)
+  }
+
+  /**
+   * Force polytope: the set of feasible end-effector forces given joint torque limits.
+   *
+   * The feasible force set is the zonotope  F = { J⁺ᵀ τ : |τᵢ| ≤ τ_max_i }
+   * where J⁺ᵀ = (JJᵀ)⁻¹ J maps joint torques to task-space forces.
+   *
+   * We enumerate all 2ⁿ vertices of the torque hypercube and map each through
+   * the force mapping, then take the convex hull for rendering.
+   */
+  updateForcePolytope(): void {
+    const indices = this._tipJointIndices[0]
+    const n = indices.length
+
+    // Guard: cap at 16 DOF to keep 2^n vertex enumeration tractable
+    if (n < 3 || n > 16) {
+      const existing = this._scene.getObjectByName('force-polytope')
+      if (existing) this._scene.remove(existing)
+      return
+    }
+
+    // Collect effort limits for the tip's joints
+    const efforts: number[] = []
+    let hasEffort = false
+    for (const ji of indices) {
+      const joint = this._kinematics.joints[this._joints[ji]]
+      const eff = joint.effort ?? 0
+      efforts.push(eff)
+      if (eff > 0) hasEffort = true
+    }
+
+    // If no effort data, remove polytope and bail
+    if (!hasEffort) {
+      const existing = this._scene.getObjectByName('force-polytope')
+      if (existing) this._scene.remove(existing)
+      return
+    }
+
+    // 3×n translational Jacobian for the tip's joints
+    const J = la.fromRows(this.geometricJacobian(0, 'translational'))
+
+    // Force mapping: W = (JJᵀ)⁻¹ J  (3×n)
+    // Guard against singularity: check manipulability before inverting
+    const JJt = la.multiply(J, la.transpose(J))
+    const lu = la.mat(3, 3)
+    la.copyInto(lu, JJt)
+    const pivots = new Int32Array(3)
+    const sign = la.luDecomposeInPlace(lu, pivots)
+    const det = la.luDet(lu, sign)
+    if (Math.abs(det) < 1e-10) {
+      const existing = this._scene.getObjectByName('force-polytope')
+      if (existing) this._scene.remove(existing)
+      return
+    }
+    const JJtInv = la.mat(3, 3)
+    la.luInvertInto(JJtInv, lu, pivots)
+    const W = la.multiply(JJtInv, J)
+
+    // Enumerate 2^n torque hypercube vertices → task-space force vertices
+    const numVertices = 1 << n  // 2^n
+    const tau = new Float64Array(n)
+    const force = new Float64Array(3)
+    const vertices: THREE.Vector3[] = []
+
+    for (let v = 0; v < numVertices; v++) {
+      for (let j = 0; j < n; j++) {
+        tau[j] = (v & (1 << j)) ? efforts[j] : -efforts[j]
+      }
+      la.matVecMultiplyInto(force, W, tau)
+      vertices.push(new THREE.Vector3(force[0], force[1], force[2]))
+    }
+
+    for (const v of vertices) v.multiplyScalar(FORCE_SCALE)
+
+    this.plotPolytope(vertices, 'force-polytope')
   }
 
   /**

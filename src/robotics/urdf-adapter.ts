@@ -28,6 +28,7 @@ export function robotKinematicsFromURDF(urdf: URDFRobot): RobotKinematics {
         min: joint.limit.lower * THREE.MathUtils.RAD2DEG,
         max: joint.limit.upper * THREE.MathUtils.RAD2DEG,
       },
+      effort: joint.limit.effort > 0 ? joint.limit.effort : undefined,
       axis: joint.axis.clone(),
       mimics: mimicParent,
     }
