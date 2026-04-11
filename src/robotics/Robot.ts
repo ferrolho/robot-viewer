@@ -31,6 +31,15 @@ export class Robot {
   torqueWeightedEllipsoid = true
   showCenterOfMass = false
 
+  /** Recompute all active capability visualizations for the current configuration. */
+  updateVisualizations(): void {
+    if (this.showCenterOfMass) this.updateCenterOfMass()
+    if (this.showVelocityEllipsoid) this.updateVelocityEllipsoid()
+    if (this.showForceEllipsoid) this.updateForceEllipsoid()
+    if (this.showAccelerationEllipsoid) this.updateAccelerationEllipsoid()
+    if (this.showForcePolytope) this.updateForcePolytope()
+  }
+
   private _scene: THREE.Scene
   private _root: THREE.Object3D
   private _kinematics: RobotKinematics

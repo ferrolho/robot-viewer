@@ -484,11 +484,7 @@ async function loadModel(modelId: string) {
     robot.showForceEllipsoid = showForceEllipsoid
     robot.showAccelerationEllipsoid = showAccelerationEllipsoid
     robot.showForcePolytope = showForcePolytope
-    if (showCenterOfMass) robot.updateCenterOfMass()
-    if (showVelocityEllipsoid) robot.updateVelocityEllipsoid()
-    if (showForceEllipsoid) robot.updateForceEllipsoid()
-    if (showAccelerationEllipsoid) robot.updateAccelerationEllipsoid()
-    if (showForcePolytope) robot.updateForcePolytope()
+    robot.updateVisualizations()
 
     updateShadowsState()
     frameCameraOn(modelId)
@@ -610,11 +606,7 @@ function moveFromTo(q_s: number[], q_t: number[], duration = 10, easing: (t: num
         ikGoals[i].quaternion.setFromRotationMatrix(pose)
       }
     }
-    if (robot.showCenterOfMass) robot.updateCenterOfMass()
-    if (robot.showVelocityEllipsoid) robot.updateVelocityEllipsoid()
-    if (robot.showForceEllipsoid) robot.updateForceEllipsoid()
-    if (robot.showAccelerationEllipsoid) robot.updateAccelerationEllipsoid()
-    if (robot.showForcePolytope) robot.updateForcePolytope()
+    robot.updateVisualizations()
   })
 
   tween.onComplete(function () {
@@ -706,11 +698,7 @@ function setupIkGoals() {
           ikGoals[j].position.setFromMatrixPosition(pose)
           ikGoals[j].quaternion.setFromRotationMatrix(pose)
         }
-        if (robot.showCenterOfMass) robot.updateCenterOfMass()
-        if (robot.showVelocityEllipsoid) robot.updateVelocityEllipsoid()
-        if (robot.showForceEllipsoid) robot.updateForceEllipsoid()
-        if (robot.showAccelerationEllipsoid) robot.updateAccelerationEllipsoid()
-        if (robot.showForcePolytope) robot.updateForcePolytope()
+        robot.updateVisualizations()
       }
     })
     control.addEventListener('mouseDown', () => { orbitControls.enabled = false })
