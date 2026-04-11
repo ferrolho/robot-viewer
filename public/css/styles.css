@@ -353,6 +353,12 @@ body.sidebar-left-collapsed.sidebar-right-collapsed #app {
   background: var(--bg-hover);
 }
 
+.toggle-row.sub-toggle {
+  padding-left: 20px;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
 .toggle-row.disabled {
   opacity: 0.35;
   cursor: not-allowed;

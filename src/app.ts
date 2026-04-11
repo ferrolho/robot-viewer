@@ -348,6 +348,14 @@ accelEllipsoidSwitch.addEventListener('change', () => {
   }
 })
 
+const torqueWeightedSwitch = checkbox('torque-weighted-switch')
+torqueWeightedSwitch.addEventListener('change', () => {
+  if (robot) {
+    robot.torqueWeightedEllipsoid = torqueWeightedSwitch.checked
+    if (showForceEllipsoid) robot.updateForceEllipsoid()
+  }
+})
+
 const forcePolytopeSwitch = checkbox('force-polytope-switch')
 forcePolytopeSwitch.addEventListener('change', () => {
   showForcePolytope = forcePolytopeSwitch.checked

@@ -28,6 +28,7 @@ export class Robot {
   showForceEllipsoid = false
   showAccelerationEllipsoid = false
   showForcePolytope = false
+  torqueWeightedEllipsoid = true
   showCenterOfMass = false
 
   private _scene: THREE.Scene
@@ -124,7 +125,7 @@ export class Robot {
   }
 
   plotEllipsoid(A: la.Mat, name: string): void {
-    const geometry = new THREE.SphereGeometry(0.5)
+    const geometry = new THREE.SphereGeometry(1)
     const posAttr = geometry.getAttribute('position') as THREE.BufferAttribute
     const ps: number[][] = []
     for (let i = 0; i < posAttr.count; i++) {
@@ -216,25 +217,91 @@ export class Robot {
 
   updateForceEllipsoid(): void {
     const indices = this._tipJointIndices[0]
+    const n = indices.length
     const Jm = la.fromRows(this.geometricJacobian(0, 'translational'))
     const JJt = la.multiply(Jm, la.transpose(Jm))
-    const E = la.inv(JJt)
+    const JJtInv = la.inv(JJt)
+    const W = la.multiply(JJtInv, Jm)  // 3×n force mapping
 
-    // Scale to Newtons using RMS effort, then apply the same m/N factor as the
-    // force polytope so the ellipsoid (quadratic approximation) is directly
-    // comparable to the polytope.
-    let sumSq = 0, count = 0
-    for (const ji of indices) {
-      const eff = this._kinematics.joints[this._joints[ji]].effort
-      if (eff != null && eff > 0) { sumSq += eff * eff; count++ }
+    // Collect per-joint effort limits
+    const efforts: number[] = []
+    let hasEffort = false
+    for (let j = 0; j < n; j++) {
+      const eff = this._kinematics.joints[this._joints[indices[j]]].effort ?? 0
+      if (eff > 0) hasEffort = true
+      efforts.push(eff)
     }
-    if (count > 0) {
-      const tauRms = Math.sqrt(sumSq / count)
-      const scale = (tauRms * FORCE_SCALE) ** 2  // squared because plotEllipsoid takes √
-      for (let i = 0; i < 9; i++) E.data[i] *= scale
+
+    let E: la.Mat
+
+    if (!hasEffort || !this.torqueWeightedEllipsoid) {
+      // Unweighted: E = (JJᵀ)⁻¹, scaled by RMS effort when available.
+      // Assumes ‖τ‖₂ ≤ τ_rms, a uniform norm bound.
+      E = la.mat(3, 3)
+      la.copyInto(E, JJtInv)
+      if (hasEffort) {
+        let sumSq = 0
+        for (const eff of efforts) sumSq += eff * eff
+        const tauRms = Math.sqrt(sumSq / n)
+        const s2 = (tauRms * FORCE_SCALE) ** 2
+        for (let i = 0; i < 9; i++) E.data[i] *= s2
+      }
+    } else {
+      // Torque-weighted: E = (WT)(WT)ᵀ where T = diag(τ_max).
+      // Uses per-joint limits so the ellipsoid better approximates the polytope.
+      const WT = la.mat(3, n)
+      for (let j = 0; j < n; j++) {
+        for (let i = 0; i < 3; i++) {
+          WT.data[i * n + j] = W.data[i * n + j] * efforts[j]
+        }
+      }
+      E = la.mat(3, 3)
+      la.multiplyABtInto(E, WT, WT)
+      const s2 = FORCE_SCALE * FORCE_SCALE
+      for (let i = 0; i < 9; i++) E.data[i] *= s2
     }
+
+    // Log rendered semi-axes
+    const semiAxes = Robot._eigenvalues3x3Symmetric(E).map(v => Math.sqrt(v))
+    semiAxes.sort((a, b) => b - a)
+    const ellVol = (4 / 3) * Math.PI * semiAxes[0] * semiAxes[1] * semiAxes[2]
+    console.log(
+      `[Force Ellipsoid] mode=${this.torqueWeightedEllipsoid ? 'torque-weighted' : 'unweighted'}` +
+      ` | semi-axes=[${semiAxes.map(v => v.toFixed(4)).join(', ')}]` +
+      ` | volume=${ellVol.toFixed(6)}`
+    )
 
     this.plotEllipsoid(E, 'force-ellipsoid')
+  }
+
+  /** Eigenvalues of a 3×3 symmetric matrix (analytical, Cardano's method). */
+  private static _eigenvalues3x3Symmetric(A: la.Mat): number[] {
+    const a = A.data
+    const p1 = a[1] * a[1] + a[2] * a[2] + a[5] * a[5]  // off-diagonal sum of squares
+    if (p1 < 1e-30) return [a[0], a[4], a[8]]  // already diagonal
+
+    const q = (a[0] + a[4] + a[8]) / 3  // trace / 3
+    const p2 = (a[0] - q) ** 2 + (a[4] - q) ** 2 + (a[8] - q) ** 2 + 2 * p1
+    const p = Math.sqrt(p2 / 6)
+
+    // B = (1/p)(A - qI)
+    const b00 = (a[0] - q) / p, b01 = a[1] / p, b02 = a[2] / p
+    const b11 = (a[4] - q) / p, b12 = a[5] / p
+    const b22 = (a[8] - q) / p
+
+    // det(B) for symmetric 3x3
+    const detB = b00 * (b11 * b22 - b12 * b12)
+               - b01 * (b01 * b22 - b12 * b02)
+               + b02 * (b01 * b12 - b11 * b02)
+    const r = detB / 2
+
+    // Clamp for numerical safety
+    const phi = Math.acos(Math.max(-1, Math.min(1, r))) / 3
+
+    const eig1 = q + 2 * p * Math.cos(phi)
+    const eig3 = q + 2 * p * Math.cos(phi + (2 * Math.PI / 3))
+    const eig2 = 3 * q - eig1 - eig3  // trace = sum of eigenvalues
+    return [eig1, eig2, eig3]
   }
 
   updateVelocityEllipsoid(): void {
@@ -359,7 +426,48 @@ export class Robot {
 
     for (const v of vertices) v.multiplyScalar(FORCE_SCALE)
 
+    // Log polytope metrics
+    let maxR = 0, minR = Infinity
+    const extents = [0, 0, 0]
+    for (const v of vertices) {
+      const r = v.length()
+      if (r > maxR) maxR = r
+      if (r < minR) minR = r
+      extents[0] = Math.max(extents[0], Math.abs(v.x))
+      extents[1] = Math.max(extents[1], Math.abs(v.y))
+      extents[2] = Math.max(extents[2], Math.abs(v.z))
+    }
+    const polyVol = Robot._convexHullVolume(vertices)
+    console.log(
+      `[Force Polytope] ${numVertices} hypercube vertices, ${vertices.length} after mapping` +
+      ` | extents=[${extents.map(v => v.toFixed(4)).join(', ')}]` +
+      ` | max radius=${maxR.toFixed(4)}, min radius=${minR.toFixed(4)}` +
+      ` | volume=${polyVol.toFixed(6)}`
+    )
+
     this.plotPolytope(vertices, 'force-polytope')
+  }
+
+  /** Volume of a convex hull from a set of points (signed tetrahedra method). */
+  private static _convexHullVolume(points: THREE.Vector3[]): number {
+    const geometry = new ConvexGeometry(points)
+    const pos = geometry.getAttribute('position') as THREE.BufferAttribute
+    const idx = geometry.getIndex()
+    const triCount = idx ? idx.count / 3 : pos.count / 3
+    let vol = 0
+    for (let t = 0; t < triCount; t++) {
+      const i0 = t * 3
+      const a = idx ? idx.getX(i0) : i0
+      const b = idx ? idx.getX(i0 + 1) : i0 + 1
+      const c = idx ? idx.getX(i0 + 2) : i0 + 2
+      const ax = pos.getX(a), ay = pos.getY(a), az = pos.getZ(a)
+      const bx = pos.getX(b), by = pos.getY(b), bz = pos.getZ(b)
+      const cx = pos.getX(c), cy = pos.getY(c), cz = pos.getZ(c)
+      // Signed volume of tetrahedron with origin
+      vol += (ax * (by * cz - bz * cy) - ay * (bx * cz - bz * cx) + az * (bx * cy - by * cx))
+    }
+    geometry.dispose()
+    return Math.abs(vol) / 6
   }
 
   /**

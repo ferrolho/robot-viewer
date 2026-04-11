@@ -39,6 +39,7 @@ const translations: Record<Locale, Record<string, string>> = {
     'capability.accelEllipsoid': 'Accel. Ellipsoid',
     'capability.forceEllipsoid': 'Force Ellipsoid',
     'capability.forcePolytope': 'Force Polytope',
+    'capability.torqueWeighted': 'Torque-weighted',
 
     'shortcuts.button': 'Shortcuts',
     'shortcuts.title': 'Keyboard Shortcuts',
@@ -119,6 +120,7 @@ const translations: Record<Locale, Record<string, string>> = {
     'capability.accelEllipsoid': '加速度楕円体',
     'capability.forceEllipsoid': '力楕円体',
     'capability.forcePolytope': '力ポリトープ',
+    'capability.torqueWeighted': 'トルク重み付き',
 
     'shortcuts.button': 'ショートカット',
     'shortcuts.title': 'キーボードショートカット',
@@ -199,6 +201,7 @@ const translations: Record<Locale, Record<string, string>> = {
     'capability.accelEllipsoid': '加速度椭球',
     'capability.forceEllipsoid': '力椭球',
     'capability.forcePolytope': '力多面体',
+    'capability.torqueWeighted': '扭矩加权',
 
     'shortcuts.button': '快捷键',
     'shortcuts.title': '键盘快捷键',
