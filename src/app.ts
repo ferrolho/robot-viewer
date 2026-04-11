@@ -29,7 +29,7 @@ function checkbox(id: string): HTMLInputElement {
 
 let castShadows = false
 let robot: Robot
-let rawPoints: THREE.Vector3[][] = [[], [], [], []]
+let rawPointChunks: Float32Array[][] = [[], [], [], []]
 let showCenterOfMass = false
 let showVelocityEllipsoid = false
 let showForceEllipsoid = false
@@ -282,44 +282,37 @@ const pointsMaterials = [
 $('reachability-button').addEventListener('click', () => {
   while (pointCloudsInScene.length) { scene.remove(pointCloudsInScene.shift()!) }
 
-  const q_backup = robot.configuration
-
-  for (let i = 0; i < 1e4; i++) {
-    robot.configuration = robot.randomConfiguration
-
-    for (let j = 0; j < robot.tipLinks.length; j++) {
-      const point = new THREE.Vector3()
-      point.setFromMatrixPosition(robot.getLinkPose(robot.tipLinks[j]))
-      rawPoints[j].push(point)
-    }
-  }
-
-  robot.configuration = q_backup
+  const start = performance.now()
+  const newChunks = robot.computeReachability(1e4)
+  console.log(`Reachability FK: ${(performance.now() - start).toFixed(1)} ms`)
 
   let totalPoints = 0
   for (let j = 0; j < robot.tipLinks.length; j++) {
-    totalPoints += rawPoints[j].length
+    rawPointChunks[j].push(newChunks[j])
 
-    const geometry = new THREE.BufferGeometry().setFromPoints(rawPoints[j])
+    // Concat all accumulated chunks into a single buffer
+    const totalLen = rawPointChunks[j].reduce((s, c) => s + c.length, 0)
+    const buf = new Float32Array(totalLen)
+    let offset = 0
+    for (const chunk of rawPointChunks[j]) { buf.set(chunk, offset); offset += chunk.length }
+
+    const geometry = new THREE.BufferGeometry()
+    geometry.setAttribute('position', new THREE.Float32BufferAttribute(buf, 3))
     const pointCloud = new THREE.Points(geometry, pointsMaterials[j])
 
     scene.add(pointCloud)
     pointCloudsInScene.push(pointCloud)
+
+    totalPoints += totalLen / 3
   }
 
   console.log(`The cloud now has ${totalPoints} particles.`)
 })
 
 $('clear-clouds-button').addEventListener('click', () => {
-  rawPoints = [[], [], [], []]
+  rawPointChunks = [[], [], [], []]
   while (pointCloudsInScene.length) { scene.remove(pointCloudsInScene.shift()!) }
-
-  let totalPoints = 0
-  for (let j = 0; j < robot.tipLinks.length; j++) {
-    totalPoints += rawPoints[j].length
-  }
-
-  console.log(`The cloud now has ${totalPoints} particles.`)
+  console.log(`The cloud now has 0 particles.`)
 })
 
 // ── Inverse Kinematics ──
@@ -597,7 +590,15 @@ function doConvexHullStuff() {
 
   let rawPointsIdx = 0
   for (const link of robot.tipLinks) {
-    const geometry = new ConvexGeometry(rawPoints[rawPointsIdx++])
+    // Convert accumulated Float32Array chunks to Vector3[] for ConvexGeometry
+    const points: THREE.Vector3[] = []
+    for (const chunk of rawPointChunks[rawPointsIdx]) {
+      for (let i = 0; i < chunk.length; i += 3) {
+        points.push(new THREE.Vector3(chunk[i], chunk[i + 1], chunk[i + 2]))
+      }
+    }
+    rawPointsIdx++
+    const geometry = new ConvexGeometry(points)
 
     const stlscene = new THREE.Scene()
     stlscene.add(new THREE.Mesh(geometry, material))

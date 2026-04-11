@@ -1,12 +1,26 @@
 import * as robotMath from './math.ts'
 import { type Partial } from './math.ts'
 import * as la from './linalg.ts'
-import { SolverBuffers } from './linalg.ts'
+import { SolverBuffers, mat4Multiply, mat4AxisAngle } from './linalg.ts'
 import * as THREE from 'three'
 import { ConvexGeometry } from 'three/addons/geometries/ConvexGeometry.js'
 
 /** Fixed scale factor for force visualizations: 1 mm per Newton. */
 const FORCE_SCALE = 0.001
+
+const DEG2RAD = Math.PI / 180
+
+/** Pre-computed segment in a pure-math FK chain. */
+interface FkSeg {
+  /** Column-major 4×4 static pre-transform (accumulated non-joint transforms merged with joint origin). */
+  m: Float64Array
+  /** Index into q vector, or -1 for a trailing static segment. */
+  qIdx: number
+  /** Joint axis in local frame (valid when qIdx >= 0). */
+  ax: number; ay: number; az: number
+  /** Joint angle (degrees) at the time the chain was captured. */
+  refDeg: number
+}
 
 export interface RobotJoint {
   static: boolean
@@ -57,6 +71,11 @@ export class Robot {
   private _jointObjMap: Record<string, THREE.Object3D> = {}
   /** Cached solver buffers, keyed by "totalDim,nj". */
   private _solverBuf: { key: string; buf: SolverBuffers } | null = null
+  /** Cached pure-math FK chains (one per tip link). */
+  private _fkChains: FkSeg[][] | null = null
+  /** Pre-computed flat joint limit arrays (degrees). */
+  private _limitsMin: Float64Array | null = null
+  private _limitsMax: Float64Array | null = null
 
   constructor(scene: THREE.Scene, sceneRoot: THREE.Object3D, kinematics: RobotKinematics, tipLinks: string[]) {
     this._scene = scene
@@ -796,6 +815,176 @@ export class Robot {
       const err = e as Error
       console.log(err.name + ': ' + err.message)
     }
+  }
+
+  // ── Pure-math batch FK (for reachability) ──
+
+  /** Lazily build and cache FK chains + joint-limit arrays. */
+  private _ensureFkChains(): void {
+    if (this._fkChains) return
+    this._fkChains = this._buildFkChains()
+    const n = this._degreesOfFreedom
+    const lo = new Float64Array(n)
+    const hi = new Float64Array(n)
+    for (let i = 0; i < n; i++) {
+      const j = this._kinematics.joints[this._joints[i]]
+      lo[i] = j.limits.min
+      hi[i] = j.limits.max
+    }
+    this._limitsMin = lo
+    this._limitsMax = hi
+  }
+
+  /**
+   * Build a pure-math FK chain for each tip link by walking the scene graph.
+   *
+   * Each chain is an array of segments. A segment with qIdx >= 0 represents a
+   * joint: its `m` is the pre-multiplied static transforms up to (and including)
+   * the joint-origin transform; at runtime the segment contributes `m · R(axis, θ)`.
+   * A segment with qIdx === -1 is a trailing static transform.
+   *
+   * The chain captures the current joint angles as reference so it can compute
+   * the correct rotation delta for any target configuration:
+   *   R_applied = R(axis, (q_target − refDeg) · DEG2RAD)
+   * Since R(axis, a) · R(axis, b) = R(axis, a+b), the reference cancels out,
+   * making the chain valid regardless of when it was built.
+   */
+  private _buildFkChains(): FkSeg[][] {
+    const allJoints = this._kinematics.joints
+    const jointSet = new Set(this._joints)
+    const chains: FkSeg[][] = []
+
+    this._root.updateMatrixWorld(true)
+
+    for (const tipName of this._tipLinks) {
+      // Collect path from root's child to tip (exclusive of _root itself)
+      const path: THREE.Object3D[] = []
+      let obj: THREE.Object3D | null = this._getLink(tipName)
+      while (obj && obj !== this._root) {
+        path.push(obj)
+        obj = obj.parent
+      }
+      path.reverse()
+
+      const segs: FkSeg[] = []
+      // Accumulated static transform (identity)
+      const acc = new Float64Array(16)
+      acc[0] = acc[5] = acc[10] = acc[15] = 1
+
+      for (const node of path) {
+        node.updateMatrix()
+        const lm = node.matrix.elements
+
+        const jInfo = allJoints[node.name]
+        const isControllable = jInfo != null && jointSet.has(node.name)
+        const isMimic = jInfo != null && !isControllable && !!jInfo.mimics
+
+        if (isControllable || isMimic) {
+          // Merge accumulated statics with this joint's current local matrix
+          const merged = new Float64Array(16)
+          mat4Multiply(merged, acc, lm)
+
+          const qIdx = isControllable
+            ? this._joints.indexOf(node.name)
+            : this._joints.indexOf(jInfo!.mimics!)
+          const refDeg = this._q[qIdx]
+
+          segs.push({
+            m: merged, qIdx,
+            ax: jInfo!.axis.x, ay: jInfo!.axis.y, az: jInfo!.axis.z,
+            refDeg,
+          })
+
+          // Reset accumulator to identity
+          acc.fill(0)
+          acc[0] = acc[5] = acc[10] = acc[15] = 1
+        } else {
+          // Non-joint (or fixed joint): accumulate its local transform
+          const tmp = new Float64Array(16)
+          mat4Multiply(tmp, acc, lm)
+          acc.set(tmp)
+        }
+      }
+
+      // Trailing static transforms after the last joint
+      if (acc[1] !== 0 || acc[2] !== 0 || acc[3] !== 0 || acc[4] !== 0 ||
+          acc[6] !== 0 || acc[7] !== 0 || acc[8] !== 0 || acc[9] !== 0 ||
+          acc[11] !== 0 || acc[12] !== 0 || acc[13] !== 0 || acc[14] !== 0 ||
+          acc[0] !== 1 || acc[5] !== 1 || acc[10] !== 1 || acc[15] !== 1) {
+        segs.push({ m: Float64Array.from(acc), qIdx: -1, ax: 0, ay: 0, az: 0, refDeg: 0 })
+      }
+
+      chains.push(segs)
+    }
+
+    return chains
+  }
+
+  /**
+   * Compute tip-link positions for many random configurations using pure-math FK.
+   *
+   * This is orders of magnitude faster than setting `configuration` + `getLinkPose`
+   * in a loop because it never touches the Three.js scene graph or urdf-loader.
+   *
+   * @returns One Float32Array per tip link, each containing interleaved [x,y,z,…] positions.
+   */
+  computeReachability(numSamples: number): Float32Array[] {
+    this._ensureFkChains()
+    const chains = this._fkChains!
+    const lo = this._limitsMin!
+    const hi = this._limitsMax!
+    const nDof = this._degreesOfFreedom
+    const nTips = this._tipLinks.length
+
+    // Capture root world matrix once (includes the Z-up → Y-up rotation)
+    this._root.updateMatrixWorld(true)
+    const rootWorld = new Float64Array(this._root.matrixWorld.elements)
+
+    // Pre-allocate output buffers
+    const out: Float32Array[] = []
+    for (let t = 0; t < nTips; t++) out.push(new Float32Array(numSamples * 3))
+
+    // Scratch matrices (reused every iteration)
+    const T = new Float64Array(16)
+    const R = new Float64Array(16)
+    const tmp = new Float64Array(16)
+    const q = new Float64Array(nDof)
+
+    for (let s = 0; s < numSamples; s++) {
+      // Generate random configuration (degrees)
+      for (let d = 0; d < nDof; d++) {
+        q[d] = lo[d] + Math.random() * (hi[d] - lo[d])
+      }
+
+      for (let t = 0; t < nTips; t++) {
+        const segs = chains[t]
+        // Start with root world matrix
+        T.set(rootWorld)
+
+        for (let si = 0; si < segs.length; si++) {
+          const seg = segs[si]
+
+          // T = T * seg.m  (static pre-transform)
+          mat4Multiply(tmp, T, seg.m)
+          T.set(tmp)
+
+          if (seg.qIdx >= 0) {
+            // T = T * R(axis, (q_desired − refDeg) · DEG2RAD)
+            mat4AxisAngle(R, seg.ax, seg.ay, seg.az, (q[seg.qIdx] - seg.refDeg) * DEG2RAD)
+            mat4Multiply(tmp, T, R)
+            T.set(tmp)
+          }
+        }
+
+        // Extract position (column 3 of the column-major 4×4)
+        const off = s * 3
+        out[t][off]     = T[12]
+        out[t][off + 1] = T[13]
+        out[t][off + 2] = T[14]
+      }
+    }
+
+    return out
   }
 
   // ── Jacobian ──
