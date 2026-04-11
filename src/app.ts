@@ -29,7 +29,7 @@ function checkbox(id: string): HTMLInputElement {
 
 let castShadows = false
 let robot: Robot
-let rawPointChunks: Float32Array[][] = [[], [], [], []]
+let rawPointChunks: Float32Array[][] = []
 let showCenterOfMass = false
 let showVelocityEllipsoid = false
 let showForceEllipsoid = false
@@ -271,19 +271,39 @@ $('random-button').addEventListener('click', () => {
 })
 
 const pointCloudsInScene: THREE.Points[] = []
+let pointsMaterials: THREE.PointsMaterial[] = []
 
-const pointsMaterials = [
-  new THREE.PointsMaterial({ color: 0xff0000, transparent: true, opacity: 0.5, size: 0.01 }),
-  new THREE.PointsMaterial({ color: 0xff00ff, transparent: true, opacity: 0.5, size: 0.01 }),
-  new THREE.PointsMaterial({ color: 0xffff00, transparent: true, opacity: 0.5, size: 0.01 }),
-  new THREE.PointsMaterial({ color: 0x00ffff, transparent: true, opacity: 0.5, size: 0.01 })
-]
+/** Generate evenly-spaced, visually distinct point cloud materials for n tip links. */
+function buildPointsMaterials(n: number): THREE.PointsMaterial[] {
+  const materials: THREE.PointsMaterial[] = []
+  for (let i = 0; i < n; i++) {
+    const hue = (i / n) * 360
+    const color = new THREE.Color(`hsl(${hue}, 90%, 60%)`)
+    materials.push(new THREE.PointsMaterial({ color, transparent: true, opacity: 0.5, size: 0.01 }))
+  }
+  return materials
+}
+
+function clearPointClouds() {
+  const had = pointCloudsInScene.length > 0
+  while (pointCloudsInScene.length) { scene.remove(pointCloudsInScene.shift()!) }
+  rawPointChunks = robot ? robot.tipLinks.map(() => []) : []
+  if (had) console.log('The cloud now has 0 particles.')
+}
 
 $('reachability-button').addEventListener('click', () => {
   while (pointCloudsInScene.length) { scene.remove(pointCloudsInScene.shift()!) }
 
+  const nTips = robot.tipLinks.length
+  if (pointsMaterials.length !== nTips) {
+    pointsMaterials = buildPointsMaterials(nTips)
+  }
+  if (rawPointChunks.length !== nTips) {
+    rawPointChunks = robot.tipLinks.map(() => [])
+  }
+
   const start = performance.now()
-  const newChunks = robot.computeReachability(1e4)
+  const newChunks = robot.computeReachability(1e5)
   console.log(`Reachability FK: ${(performance.now() - start).toFixed(1)} ms`)
 
   let totalPoints = 0
@@ -309,11 +329,7 @@ $('reachability-button').addEventListener('click', () => {
   console.log(`The cloud now has ${totalPoints} particles.`)
 })
 
-$('clear-clouds-button').addEventListener('click', () => {
-  rawPointChunks = [[], [], [], []]
-  while (pointCloudsInScene.length) { scene.remove(pointCloudsInScene.shift()!) }
-  console.log(`The cloud now has 0 particles.`)
-})
+$('clear-clouds-button').addEventListener('click', clearPointClouds)
 
 // ── Inverse Kinematics ──
 
@@ -483,7 +499,8 @@ async function loadModel(modelId: string) {
     const model = modelLoader.getModel(modelId)!
     const kinematics = robotKinematicsFromURDF(urdfRobot)
 
-    // Remove stale visualizations from previous robot
+    // Remove stale visualizations and point clouds from previous robot
+    clearPointClouds()
     for (const name of ['velocity-ellipsoid', 'force-ellipsoid', 'acceleration-ellipsoid', 'force-polytope', 'center-of-mass']) {
       const obj = scene.getObjectByName(name)
       if (obj) scene.remove(obj)
