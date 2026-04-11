@@ -87,10 +87,6 @@
     "radius": 1.031,
     "elevation": 0.141
   },
-  "fanuc_m710ic": {
-    "radius": 2.006,
-    "elevation": 0.951
-  },
   "finger_edu": {
     "radius": 0.318,
     "elevation": 0.192
