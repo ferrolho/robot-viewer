@@ -331,6 +331,54 @@ function inv3x3Into(out: Mat, M: Mat): void {
   out.data[8] = (a * f - b * e) * invDet
 }
 
+// ── Column-major 4×4 matrix helpers (SE(3) / Three.js convention) ──
+//
+// These operate on raw Float64Array(16) in column-major layout:
+//   element (row i, col j) = data[j * 4 + i]
+// This matches Three.js Matrix4.elements, making it cheap to copy data
+// between these routines and the scene graph.
+
+/** Column-major 4×4 multiply: out = a * b. All must be length-16 typed arrays. */
+export function mat4Multiply(out: Float64Array, a: ArrayLike<number>, b: ArrayLike<number>): void {
+  const a0 = a[0], a1 = a[1], a2 = a[2], a3 = a[3]
+  const a4 = a[4], a5 = a[5], a6 = a[6], a7 = a[7]
+  const a8 = a[8], a9 = a[9], a10 = a[10], a11 = a[11]
+  const a12 = a[12], a13 = a[13], a14 = a[14], a15 = a[15]
+
+  let b0 = b[0], b1 = b[1], b2 = b[2], b3 = b[3]
+  out[0] = a0*b0 + a4*b1 + a8*b2 + a12*b3
+  out[1] = a1*b0 + a5*b1 + a9*b2 + a13*b3
+  out[2] = a2*b0 + a6*b1 + a10*b2 + a14*b3
+  out[3] = a3*b0 + a7*b1 + a11*b2 + a15*b3
+
+  b0 = b[4]; b1 = b[5]; b2 = b[6]; b3 = b[7]
+  out[4] = a0*b0 + a4*b1 + a8*b2 + a12*b3
+  out[5] = a1*b0 + a5*b1 + a9*b2 + a13*b3
+  out[6] = a2*b0 + a6*b1 + a10*b2 + a14*b3
+  out[7] = a3*b0 + a7*b1 + a11*b2 + a15*b3
+
+  b0 = b[8]; b1 = b[9]; b2 = b[10]; b3 = b[11]
+  out[8] = a0*b0 + a4*b1 + a8*b2 + a12*b3
+  out[9] = a1*b0 + a5*b1 + a9*b2 + a13*b3
+  out[10] = a2*b0 + a6*b1 + a10*b2 + a14*b3
+  out[11] = a3*b0 + a7*b1 + a11*b2 + a15*b3
+
+  b0 = b[12]; b1 = b[13]; b2 = b[14]; b3 = b[15]
+  out[12] = a0*b0 + a4*b1 + a8*b2 + a12*b3
+  out[13] = a1*b0 + a5*b1 + a9*b2 + a13*b3
+  out[14] = a2*b0 + a6*b1 + a10*b2 + a14*b3
+  out[15] = a3*b0 + a7*b1 + a11*b2 + a15*b3
+}
+
+/** Write a column-major 4×4 rotation matrix for `rad` radians about unit axis (ax, ay, az). */
+export function mat4AxisAngle(out: Float64Array, ax: number, ay: number, az: number, rad: number): void {
+  const c = Math.cos(rad), s = Math.sin(rad), t = 1 - c
+  out[0]  = t*ax*ax + c;     out[1]  = t*ax*ay + s*az; out[2]  = t*ax*az - s*ay; out[3]  = 0
+  out[4]  = t*ax*ay - s*az;  out[5]  = t*ay*ay + c;    out[6]  = t*ay*az + s*ax; out[7]  = 0
+  out[8]  = t*ax*az + s*ay;  out[9]  = t*ay*az - s*ax; out[10] = t*az*az + c;    out[11] = 0
+  out[12] = 0;                out[13] = 0;              out[14] = 0;              out[15] = 1
+}
+
 // ── Solver workspace ──
 
 /**
