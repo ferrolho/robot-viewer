@@ -149,7 +149,12 @@
 					</section>
 
 					<section class="panel-section">
-						<h6 class="section-label" data-i18n="solvers.label">Solvers</h6>
+						<div class="section-label-row">
+							<h6 class="section-label" data-i18n="solvers.label">Solvers</h6>
+							<button id="ik-info-btn" class="info-btn" aria-label="About inverse kinematics">
+								<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+							</button>
+						</div>
 						<div class="section-content"><div>
 						<label class="toggle-row">
 							<span data-i18n="solvers.ik">Inverse Kinematics</span>
@@ -298,6 +303,51 @@
 					<p data-i18n-html="capability.info.polytopeDesc1">The exact representation of the robot's force capability. Maps each vertex of the joint-torque hypercube <span class="math" data-math="|\tau_i| \leq \tau_{\max,i}"></span> through the force mapping:</p>
 					<div class="math-block" data-math="\mathcal{F} = \left\{ \left(J J^\top\right)^{-1} J \, \boldsymbol{\tau} \;\middle|\; |\tau_i| \leq \tau_{\max,i} \right\}"></div>
 					<p data-i18n-html="capability.info.polytopeDesc2">The convex hull of the resulting <span class="math" data-math="2^n"></span> vertices forms the polytope in Cartesian force space.</p>
+				</section>
+			</div>
+		</dialog>
+
+		<dialog id="ik-modal">
+			<div class="dialog-header">
+				<h4 data-i18n="ik.info.title">Inverse Kinematics</h4>
+				<button id="ik-close" class="icon-btn" data-i18n-aria-label="aria.close" aria-label="Close">
+					<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+				</button>
+			</div>
+			<div class="info-content">
+				<section class="info-section">
+					<h5 data-i18n="ik.info.jacobianTitle">The Jacobian</h5>
+					<p data-i18n-html="ik.info.jacobianDesc1">The Jacobian <span class="math" data-math="J"></span> maps joint velocities to end-effector velocity in Cartesian space:</p>
+					<div class="math-block" data-math="\mathbf{v}_{\text{tip}} = J \, \dot{\mathbf{q}}"></div>
+					<p data-i18n-html="ik.info.jacobianDesc2">Each column of <span class="math" data-math="J"></span> describes how one joint moves the tip. For a revolute joint <span class="math" data-math="i"></span>, the column depends on three quantities: the joint axis <span class="math" data-math="\mathbf{z}_i"></span> (the direction the joint rotates around), the joint position <span class="math" data-math="\mathbf{p}_i"></span>, and the tip position <span class="math" data-math="\mathbf{p}_{\text{tip}}"></span> — all in world frame:</p>
+					<div class="math-block" data-math="J_i = \begin{bmatrix} \mathbf{z}_i \times (\mathbf{p}_{\text{tip}} - \mathbf{p}_i) \\ \mathbf{z}_i \end{bmatrix}"></div>
+					<p data-i18n-html="ik.info.jacobianDesc3">The cross product <span class="math" data-math="\mathbf{z}_i \times (\mathbf{p}_{\text{tip}} - \mathbf{p}_i)"></span> gives the linear velocity of the tip due to rotation: the further the tip is from the joint, the larger the effect. For a prismatic joint, the column is simply the axis direction (pure translation, no rotation):</p>
+					<div class="math-block" data-math="J_i = \begin{bmatrix} \mathbf{z}_i \\ \mathbf{0} \end{bmatrix}"></div>
+				</section>
+				<section class="info-section">
+					<h5 data-i18n="ik.info.solveTitle">Solving for Joint Velocities</h5>
+					<p data-i18n-html="ik.info.solveDesc1">Given a desired tip motion <span class="math" data-math="\mathbf{e}"></span> (the error between current and target pose), we need joint velocities that achieve it. We use the damped least-squares pseudo-inverse:</p>
+					<div class="math-block" data-math="J^{+} = J^\top \left( J J^\top + \lambda^2 I \right)^{-1}"></div>
+					<p data-i18n-html="ik.info.solveDesc2">The damping factor <span class="math" data-math="\lambda"></span> prevents large joint velocities near singularities, where <span class="math" data-math="J J^\top"></span> becomes ill-conditioned. The joint velocity update is then:</p>
+					<div class="math-block" data-math="\Delta \mathbf{q} = \alpha \, J^{+} \mathbf{e}"></div>
+					<p data-i18n-html="ik.info.solveDesc3">where <span class="math" data-math="\alpha"></span> is a step-size parameter. This is applied iteratively until the error converges.</p>
+				</section>
+				<section class="info-section">
+					<h5 data-i18n="ik.info.nullTitle">Null-Space Projection</h5>
+					<p data-i18n-html="ik.info.nullDesc1">When the robot has more joints than task DOFs (e.g. 7 joints for a 6D pose task), the extra freedom forms a <em>null space</em> — joint motions that don't move the tip at all. The null-space projector is:</p>
+					<div class="math-block" data-math="N = I - J^{+} J"></div>
+					<p data-i18n-html="ik.info.nullDesc2">For any joint-space vector <span class="math" data-math="\mathbf{v}"></span> (e.g. a desired joint velocity), the product <span class="math" data-math="N \mathbf{v}"></span> strips out everything that would affect the tip, keeping only the component that moves joints without disturbing the end-effector. This allows a secondary objective to be added without interfering with the primary task:</p>
+					<div class="math-block" data-math="\Delta \mathbf{q} = \underbrace{J^{+} \mathbf{e}}_{\text{reach target}} \;+\; \underbrace{N \, \mathbf{q}_{\text{avoid}}}_{\text{avoid limits}}"></div>
+				</section>
+				<section class="info-section">
+					<h5 data-i18n="ik.info.limitTitle">Limit Avoidance</h5>
+					<p data-i18n-html="ik.info.limitDesc1">The secondary objective <span class="math" data-math="\mathbf{q}_{\text{avoid}}"></span> pushes joints away from their limits. In the comfortable middle of a joint's range, no force is applied. Near either limit (outer 25%), a linearly increasing push steers the joint back to safety:</p>
+					<div class="math-block" data-math="q_{\text{avoid},i} = \begin{cases} \dfrac{q_{\min,i} + m - q_i}{m} & q_i < q_{\min,i} + m \\[6pt] 0 & \text{otherwise} \\[6pt] -\dfrac{q_i - q_{\max,i} + m}{m} & q_i > q_{\max,i} - m \end{cases}"></div>
+					<p data-i18n-html="ik.info.limitDesc2">where <span class="math" data-math="m = 0.25 \,(q_{\max} - q_{\min})"></span> is the margin. Because this is projected through <span class="math" data-math="N"></span>, it can never compromise the primary IK task — it only uses the leftover degrees of freedom.</p>
+				</section>
+				<section class="info-section">
+					<h5 data-i18n="ik.info.lockTitle">Joint-Limit Locking</h5>
+					<p data-i18n-html="ik.info.lockDesc1">When a joint reaches its limit and the task gradient <span class="math" data-math="\mathbf{J}_i^\top \mathbf{e}"></span> would push it further, the joint is <em>locked</em>: its Jacobian column is zeroed so the remaining joints absorb the work. The locked joint's <span class="math" data-math="\Delta q"></span> is set to zero after all computations (including null-space), preventing any jitter from competing objectives.</p>
 				</section>
 			</div>
 		</dialog>

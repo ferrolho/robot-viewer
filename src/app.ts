@@ -116,6 +116,7 @@ for (const locale of LOCALES) {
     setupCategoryChips()
     showBrandGrid()
     renderMath(capabilityModal)
+    renderMath(ikModal)
   })
   langMenu.appendChild(item)
 }
@@ -186,6 +187,7 @@ document.querySelectorAll('#sidebar-right .panel-section .section-label').forEac
 const loaderModal = $<HTMLDialogElement>('loader-modal')
 const shortcutsModal = $<HTMLDialogElement>('shortcuts-modal')
 const capabilityModal = $<HTMLDialogElement>('capability-modal')
+const ikModal = $<HTMLDialogElement>('ik-modal')
 
 loaderModal.addEventListener('cancel', (e) => e.preventDefault())
 
@@ -210,6 +212,11 @@ $('capability-info-btn').addEventListener('click', () => {
   capabilityModal.showModal()
   renderMath(capabilityModal)
 })
+$('ik-close').addEventListener('click', () => ikModal.close())
+$('ik-info-btn').addEventListener('click', () => {
+  ikModal.showModal()
+  renderMath(ikModal)
+})
 
 shortcutsModal.addEventListener('click', (e) => {
   if (e.target === shortcutsModal) shortcutsModal.close()
@@ -217,6 +224,10 @@ shortcutsModal.addEventListener('click', (e) => {
 
 capabilityModal.addEventListener('click', (e) => {
   if (e.target === capabilityModal) capabilityModal.close()
+})
+
+ikModal.addEventListener('click', (e) => {
+  if (e.target === ikModal) ikModal.close()
 })
 
 /** Render all data-math attributes inside a container using KaTeX. */
