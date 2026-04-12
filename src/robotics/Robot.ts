@@ -1,7 +1,7 @@
 import * as robotMath from './math.ts'
 import { type Partial } from './math.ts'
 import * as la from './linalg.ts'
-import { SolverBuffers, mat4Multiply, mat4AxisAngle } from './linalg.ts'
+import { SolverBuffers, mat4Multiply, mat4AxisAngle, mat4Translation } from './linalg.ts'
 import * as THREE from 'three'
 import { ConvexGeometry } from 'three/addons/geometries/ConvexGeometry.js'
 
@@ -16,6 +16,8 @@ interface FkSeg {
   m: Float64Array
   /** Index into q vector, or -1 for a trailing static segment. */
   qIdx: number
+  /** True for prismatic (linear) joints. */
+  prismatic: boolean
   /** Joint axis in local frame (valid when qIdx >= 0). */
   ax: number; ay: number; az: number
   /** Joint angle (degrees) at the time the chain was captured. */
@@ -28,6 +30,7 @@ interface FkSeg {
 
 export interface RobotJoint {
   static: boolean
+  prismatic?: boolean  // true for prismatic (linear) joints; default revolute
   limits: { min: number; max: number }
   effort?: number  // max torque (Nm) from URDF <limit effort="..."/>
   axis: THREE.Vector3
@@ -846,12 +849,12 @@ export class Robot {
    *
    * Each chain is an array of segments. A segment with qIdx >= 0 represents a
    * joint: its `m` is the pre-multiplied static transforms up to (and including)
-   * the joint-origin transform; at runtime the segment contributes `m · R(axis, θ)`.
+   * the joint-origin transform; at runtime revolute segments contribute
+   * `m · R(axis, θ)` and prismatic segments contribute `m · T(axis, d)`.
    * A segment with qIdx === -1 is a trailing static transform.
    *
-   * The chain captures the current joint angles as reference so it can compute
-   * the correct rotation delta for any target configuration:
-   *   R_applied = R(axis, (q_target − refDeg) · DEG2RAD)
+   * The chain captures the current joint values as reference so it can compute
+   * the correct motion delta for any target configuration.
    * Since R(axis, a) · R(axis, b) = R(axis, a+b), the reference cancels out,
    * making the chain valid regardless of when it was built.
    */
@@ -899,6 +902,7 @@ export class Robot {
 
           segs.push({
             m: merged, qIdx,
+            prismatic: !!jInfo!.prismatic,
             ax: jInfo!.axis.x, ay: jInfo!.axis.y, az: jInfo!.axis.z,
             refDeg, mul, off,
           })
@@ -919,7 +923,7 @@ export class Robot {
           acc[6] !== 0 || acc[7] !== 0 || acc[8] !== 0 || acc[9] !== 0 ||
           acc[11] !== 0 || acc[12] !== 0 || acc[13] !== 0 || acc[14] !== 0 ||
           acc[0] !== 1 || acc[5] !== 1 || acc[10] !== 1 || acc[15] !== 1) {
-        segs.push({ m: Float64Array.from(acc), qIdx: -1, ax: 0, ay: 0, az: 0, refDeg: 0, mul: 1, off: 0 })
+        segs.push({ m: Float64Array.from(acc), qIdx: -1, prismatic: false, ax: 0, ay: 0, az: 0, refDeg: 0, mul: 1, off: 0 })
       }
 
       chains.push(segs)
@@ -977,8 +981,14 @@ export class Robot {
           T.set(tmp)
 
           if (seg.qIdx >= 0) {
-            // T = T * R(axis, mul · (q_desired − refDeg) · DEG2RAD)
-            mat4AxisAngle(R, seg.ax, seg.ay, seg.az, seg.mul * (q[seg.qIdx] - seg.refDeg) * DEG2RAD)
+            const delta = seg.mul * (q[seg.qIdx] - seg.refDeg)
+            if (seg.prismatic) {
+              // T = T * Translation(axis, delta)  (meters)
+              mat4Translation(R, seg.ax, seg.ay, seg.az, delta)
+            } else {
+              // T = T * R(axis, delta · DEG2RAD)
+              mat4AxisAngle(R, seg.ax, seg.ay, seg.az, delta * DEG2RAD)
+            }
             mat4Multiply(tmp, T, R)
             T.set(tmp)
           }
@@ -1000,12 +1010,15 @@ export class Robot {
   /**
    * Analytical geometric Jacobian for a single tip link.
    *
-   * For each revolute joint i in the kinematic chain to the tip:
+   * For each revolute joint i:
    *   J_linear[i]  = z_i × (p_ee − p_i)
    *   J_angular[i] = z_i
    *
+   * For each prismatic joint i:
+   *   J_linear[i]  = z_i
+   *   J_angular[i] = 0
+   *
    * where z_i is the joint axis in world frame and p_i, p_ee are world positions.
-   * This is O(n) cross products after one chain-only FK pass — no finite differences.
    */
   geometricJacobian(tipIndex = 0, partial: Partial = '', jointIndices?: number[]): number[][] {
     const indices = jointIndices ?? this._tipJointIndices[tipIndex]
@@ -1040,25 +1053,36 @@ export class Robot {
         continue
       }
 
+      const jInfo = this._kinematics.joints[jointName]
       const jointObj = this._jointObjMap[jointName] ?? this._root.getObjectByName(jointName)!
       // Joint axis is defined in the joint's local frame — transform to world
-      const localAxis = this._kinematics.joints[jointName].axis
       _rot.setFromMatrix4(jointObj.matrixWorld)
-      _z.copy(localAxis).applyMatrix3(_rot).normalize()
+      _z.copy(jInfo.axis).applyMatrix3(_rot).normalize()
       _p.setFromMatrixPosition(jointObj.matrixWorld)
 
-      // z_i × (p_ee − p_i)
-      _d.subVectors(pEe, _p)
-      const dx = _z.y * _d.z - _z.z * _d.y
-      const dy = _z.z * _d.x - _z.x * _d.z
-      const dz = _z.x * _d.y - _z.y * _d.x
-
-      if (partial === 'translational') {
-        cols[ci] = [dx, dy, dz]
-      } else if (partial === 'rotational') {
-        cols[ci] = [_z.x, _z.y, _z.z]
+      if (jInfo.prismatic) {
+        // Prismatic: linear = z_i (translation along axis), angular = 0
+        if (partial === 'translational') {
+          cols[ci] = [_z.x, _z.y, _z.z]
+        } else if (partial === 'rotational') {
+          cols[ci] = [0, 0, 0]
+        } else {
+          cols[ci] = [_z.x, _z.y, _z.z, 0, 0, 0]
+        }
       } else {
-        cols[ci] = [dx, dy, dz, _z.x, _z.y, _z.z]
+        // Revolute: linear = z_i × (p_ee − p_i), angular = z_i
+        _d.subVectors(pEe, _p)
+        const dx = _z.y * _d.z - _z.z * _d.y
+        const dy = _z.z * _d.x - _z.x * _d.z
+        const dz = _z.x * _d.y - _z.y * _d.x
+
+        if (partial === 'translational') {
+          cols[ci] = [dx, dy, dz]
+        } else if (partial === 'rotational') {
+          cols[ci] = [_z.x, _z.y, _z.z]
+        } else {
+          cols[ci] = [dx, dy, dz, _z.x, _z.y, _z.z]
+        }
       }
     }
 
@@ -1075,8 +1099,9 @@ export class Robot {
 
   /** Compute one Jacobian column by finite-difference perturbation (for mimic-resolved joints). */
   private _numericalJacobianColumn(tipIndex: number, jointIdx: number, partial: Partial): number[] {
-    const eps = 0.5 // degrees
     const jointName = this._joints[jointIdx]
+    const isPrismatic = !!this._kinematics.joints[jointName].prismatic
+    const eps = isPrismatic ? 0.001 : 0.5 // meters or degrees
     const origVal = this._q[jointIdx]
     const tipObj = this._getLink(this._tipLinks[tipIndex])!
 
@@ -1097,7 +1122,9 @@ export class Robot {
     this.setJointValue(jointName, origVal)
     this._root.updateMatrixWorld(true)
 
-    const scale = 1 / (2 * eps * THREE.MathUtils.DEG2RAD)
+    // Prismatic: delta/eps is already in m/m = unitless → scale by 1/(2*eps)
+    // Revolute: delta/eps needs deg→rad conversion → scale by 1/(2*eps*DEG2RAD)
+    const scale = isPrismatic ? 1 / (2 * eps) : 1 / (2 * eps * THREE.MathUtils.DEG2RAD)
     return Array.from(delta, v => v * scale)
   }
 
@@ -1146,52 +1173,111 @@ export class Robot {
 
       la.fromRows(this.geometricJacobian(tipIndex, partial, jointIndices), buf.J)
 
-      // JJt = J * J^T
-      la.multiplyABtInto(buf.JJt, buf.J, buf.J)
-
-      // Adaptive damping: increase near singularities
-      la.copyInto(buf.luWork, buf.JJt)
-      const sign = la.luDecomposeInPlace(buf.luWork, buf.pivots)
-      const det = la.luDet(buf.luWork, sign)
-      const w = Math.sqrt(Math.max(det, 0))
-      const dampLambda = w < manipThreshold
-        ? lambdaMax * (1 - (w / manipThreshold) ** 2)
-        : 0
-
-      // A = JJt + lambda*I
-      la.addScaledIdentityInto(buf.A, buf.JJt, Math.max(dampLambda, 1e-4))
-
-      // pinv = J^T * inv(A)
-      la.luDecomposeInPlace(buf.A, buf.pivots)
-      la.luInvertInto(buf.Ainv, buf.A, buf.pivots)
-      la.multiplyAtBInto(buf.pinv, buf.J, buf.Ainv)
-
-      // dq = alpha * pinv * error
-      la.matVecMultiplyInto(buf.dq, buf.pinv, buf.error)
-      la.vecScaleInPlace(buf.dq, alpha, nj)
-
-      // Null-space regularization: pull toward joint midpoints
-      if (hasNullSpace && qMid) {
-        // qDiff = qMid - q (in radians)
-        for (let k = 0; k < nj; k++) {
-          buf.qDiff[k] = (qMid[k] - this._q[jointIndices[k]]) * THREE.MathUtils.DEG2RAD
-        }
-        // nullProj = I - pinv * J
-        la.multiplyInto(buf.pinvJ!, buf.pinv, buf.J)
-        la.identityInto(buf.nullProj!)
-        la.subtractInto(buf.nullProj!, buf.nullProj!, buf.pinvJ!)
-        // dq += gain * nullProj * qDiff
-        la.matVecMultiplyInto(buf.nullStep!, buf.nullProj!, buf.qDiff)
-        for (let k = 0; k < nj; k++) buf.dq[k] += nullSpaceGain * buf.nullStep![k]
-      }
+      this._solveIkStep(buf, dim, nj, alpha, lambdaMax, manipThreshold, jointIndices, hasNullSpace, nullSpaceGain, qMid)
 
       for (let k = 0; k < nj; k++) {
         const ji = jointIndices[k]
-        this.setJointValue(this._joints[ji], this._q[ji] + buf.dq[k] * THREE.MathUtils.RAD2DEG)
+        // dq is in radians (revolute) or meters (prismatic)
+        const dqNative = this._kinematics.joints[this._joints[ji]].prismatic
+          ? buf.dq[k] : buf.dq[k] * THREE.MathUtils.RAD2DEG
+        this.setJointValue(this._joints[ji], this._q[ji] + dqNative)
       }
     }
 
     return iteration
+  }
+
+  /**
+   * One IK step: compute damped pseudo-inverse dq from the current J and error in buf.
+   *
+   * Joints at their limits are locked via a gradient check (J_col^T · error) to
+   * determine if the task wants to push them further into the limit. Locked joints
+   * have their Jacobian columns zeroed so the remaining joints absorb the work,
+   * and their dq is zeroed after null-space to prevent jitter from midpoint pull.
+   */
+  private _solveIkStep(
+    buf: SolverBuffers, dim: number, nj: number, alpha: number,
+    lambdaMax: number, manipThreshold: number,
+    jointIndices: number[], hasNullSpace: boolean, nullSpaceGain: number,
+    qMid: Float64Array | null,
+  ): void {
+    // Lock joints at limits where the gradient pushes further into the limit
+    let lockedMask = 0
+    for (let k = 0; k < nj; k++) {
+      const ji = jointIndices[k]
+      const joint = this._kinematics.joints[this._joints[ji]]
+      const q = this._q[ji]
+      const atMax = q >= joint.limits.max - 1e-6
+      const atMin = q <= joint.limits.min + 1e-6
+      if (atMax || atMin) {
+        // g = J_col^T · error — positive means joint wants to increase
+        let g = 0
+        for (let r = 0; r < dim; r++) g += buf.J.data[r * nj + k] * buf.error[r]
+        if ((atMax && g > 0) || (atMin && g < 0)) {
+          for (let r = 0; r < dim; r++) buf.J.data[r * nj + k] = 0
+          lockedMask |= (1 << k)
+        }
+      }
+    }
+
+    this._computeDq(buf, dim, nj, alpha, lambdaMax, manipThreshold)
+
+    // Null-space regularization: pull toward joint midpoints
+    if (hasNullSpace && qMid) {
+      for (let k = 0; k < nj; k++) {
+        const diff = qMid[k] - this._q[jointIndices[k]]
+        buf.qDiff[k] = this._kinematics.joints[this._joints[jointIndices[k]]].prismatic
+          ? diff : diff * THREE.MathUtils.DEG2RAD
+      }
+      la.multiplyInto(buf.pinvJ!, buf.pinv, buf.J)
+      la.identityInto(buf.nullProj!)
+      la.subtractInto(buf.nullProj!, buf.nullProj!, buf.pinvJ!)
+      la.matVecMultiplyInto(buf.nullStep!, buf.nullProj!, buf.qDiff)
+      for (let k = 0; k < nj; k++) buf.dq[k] += nullSpaceGain * buf.nullStep![k]
+    }
+
+    // Zero dq for locked joints so nothing (task or null-space) moves them
+    if (lockedMask) {
+      for (let k = 0; k < nj; k++) {
+        if (lockedMask & (1 << k)) buf.dq[k] = 0
+      }
+    }
+  }
+
+  /** Compute damped pseudo-inverse dq from J and error already in buf. */
+  private _computeDq(
+    buf: SolverBuffers, dim: number, nj: number, alpha: number,
+    lambdaMax: number, manipThreshold: number,
+  ): void {
+    la.multiplyABtInto(buf.JJt, buf.J, buf.J)
+
+    // Adaptive damping: increase near singularities
+    la.copyInto(buf.luWork, buf.JJt)
+    const sign = la.luDecomposeInPlace(buf.luWork, buf.pivots)
+    const det = la.luDet(buf.luWork, sign)
+    const w = Math.sqrt(Math.max(det, 0))
+    const dampLambda = w < manipThreshold
+      ? lambdaMax * (1 - (w / manipThreshold) ** 2)
+      : 0
+
+    la.addScaledIdentityInto(buf.A, buf.JJt, Math.max(dampLambda, 1e-4))
+    la.luDecomposeInPlace(buf.A, buf.pivots)
+    la.luInvertInto(buf.Ainv, buf.A, buf.pivots)
+    la.multiplyAtBInto(buf.pinv, buf.J, buf.Ainv)
+
+    la.matVecMultiplyInto(buf.dq, buf.pinv, buf.error)
+    la.vecScaleInPlace(buf.dq, alpha, nj)
+  }
+
+  /** Compute dq with fixed damping (for whole-body IK). */
+  private _computeDqFixed(buf: SolverBuffers, dim: number, nj: number, alpha: number, lambda: number): void {
+    la.multiplyABtInto(buf.JJt, buf.J, buf.J)
+    la.addScaledIdentityInto(buf.A, buf.JJt, lambda)
+    la.luDecomposeInPlace(buf.A, buf.pivots)
+    la.luInvertInto(buf.Ainv, buf.A, buf.pivots)
+    la.multiplyAtBInto(buf.pinv, buf.J, buf.Ainv)
+    la.matVecMultiplyInto(buf.dq, buf.pinv, buf.error)
+    la.vecScaleInPlace(buf.dq, alpha, nj)
   }
 
   /** Use translational-only IK when the tip's chain has fewer than 6 joints. */
@@ -1299,25 +1385,32 @@ export class Robot {
 
       if (maxTipError <= tolerance) break
 
-      // JJt = J * J^T
-      la.multiplyABtInto(buf.JJt, buf.J, buf.J)
+      // Lock joints at limits where the gradient pushes further into the limit
+      let lockedMask = 0
+      for (let c = 0; c < nj; c++) {
+        const ji = allJoints[c]
+        const joint = this._kinematics.joints[this._joints[ji]]
+        const q = this._q[ji]
+        const atMax = q >= joint.limits.max - 1e-6
+        const atMin = q <= joint.limits.min + 1e-6
+        if (atMax || atMin) {
+          let g = 0
+          for (let r = 0; r < totalDim; r++) g += buf.J.data[r * nj + c] * buf.error[r]
+          if ((atMax && g > 0) || (atMin && g < 0)) {
+            for (let r = 0; r < totalDim; r++) buf.J.data[r * nj + c] = 0
+            lockedMask |= (1 << c)
+          }
+        }
+      }
 
-      // A = JJt + lambda*I
-      la.addScaledIdentityInto(buf.A, buf.JJt, lambda)
-
-      // pinv = J^T * inv(A)
-      la.luDecomposeInPlace(buf.A, buf.pivots)
-      la.luInvertInto(buf.Ainv, buf.A, buf.pivots)
-      la.multiplyAtBInto(buf.pinv, buf.J, buf.Ainv)
-
-      // dq = alpha * pinv * error
-      la.matVecMultiplyInto(buf.dq, buf.pinv, buf.error)
-      la.vecScaleInPlace(buf.dq, alpha, nj)
+      this._computeDqFixed(buf, totalDim, nj, alpha, lambda)
 
       // Null-space regularization: pull toward joint midpoints
       if (nj > totalDim) {
         for (let c = 0; c < nj; c++) {
-          buf.qDiff[c] = (qMid[c] - this._q[allJoints[c]]) * THREE.MathUtils.DEG2RAD
+          const diff = qMid[c] - this._q[allJoints[c]]
+          buf.qDiff[c] = this._kinematics.joints[this._joints[allJoints[c]]].prismatic
+            ? diff : diff * THREE.MathUtils.DEG2RAD
         }
         la.multiplyInto(buf.pinvJ!, buf.pinv, buf.J)
         la.identityInto(buf.nullProj!)
@@ -1326,9 +1419,18 @@ export class Robot {
         for (let c = 0; c < nj; c++) buf.dq[c] += nullSpaceGain * buf.nullStep![c]
       }
 
+      // Zero dq for locked joints so nothing (task or null-space) moves them
+      if (lockedMask) {
+        for (let c = 0; c < nj; c++) {
+          if (lockedMask & (1 << c)) buf.dq[c] = 0
+        }
+      }
+
       for (let c = 0; c < nj; c++) {
         const ji = allJoints[c]
-        this.setJointValue(this._joints[ji], this._q[ji] + buf.dq[c] * THREE.MathUtils.RAD2DEG)
+        const dqNative = this._kinematics.joints[this._joints[ji]].prismatic
+          ? buf.dq[c] : buf.dq[c] * THREE.MathUtils.RAD2DEG
+        this.setJointValue(this._joints[ji], this._q[ji] + dqNative)
       }
     }
 
