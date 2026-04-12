@@ -109,6 +109,12 @@ Create [`ferrolho/robot-explorer-models`](https://github.com/ferrolho/robot-expl
 - [x] Fix mobile viewport with `dvh` units for bottom-positioned elements
 - [ ] Thumbnail generation for model list
 
+### Phase 13: IK Solver Improvements
+- [x] Prismatic joint support — correct Jacobian columns, FK translation, and unit handling in URDF adapter
+- [x] Joint-limit locking — gradient-based detection of saturated joints; zeroes their Jacobian columns so remaining joints absorb the work
+- [x] Null-space limit avoidance — dead-zone gradient replaces midpoint pull to avoid driving joints toward singularities at zero configuration
+- [x] IK educational info panel — interactive KaTeX-rendered explanation of the Jacobian, damped pseudo-inverse, null-space projection, and limit avoidance (i18n: EN, JA, ZH)
+
 ### Known Issues
 - [x] Closed-chain linkages (e.g. Robotiq parallel grippers) — mimic joints are now excluded from controllable DOFs and driven automatically by urdf-loader
 - [x] IK goal is only created for the first tipLink — robots with multiple end-effectors (hands, feet) only have one IK target

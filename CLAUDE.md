@@ -28,7 +28,8 @@ Single-page app using TypeScript (no framework), bundled with Vite.
 - `src/robotics/linalg.ts` — Lightweight linear algebra on flat `Float64Array` matrices (`Mat` type), LU solver, pre-allocated solver buffers
 - `src/robotics/math.ts` — Robotics math utilities (transform differentials, coordinate extraction)
 - `src/ModelLoader.ts` — Fetches model manifest from CDN, loads URDF + GLB meshes via `urdf-loader` and Three.js `GLTFLoader`
-- `src/robotics/IkSolver.ts` — IK solver type enum (Pseudo Inverse)
+- `src/robotics/IkSolver.ts` — IK solver type enum
+- IK solver features: damped least-squares pseudo-inverse with adaptive damping, prismatic + revolute joint support, gradient-based joint-limit locking, null-space limit avoidance (dead-zone, no midpoint pull)
 - `src/types.d.ts` — Type declarations for untyped dependencies
 - Three.js addons imported from `three/addons/...` (OrbitControls, TransformControls, GLTFLoader, STLExporter, ConvexGeometry)
 
@@ -75,5 +76,6 @@ Industrial control panel aesthetic — functional, precise, no decorative excess
 
 ## Known Limitations
 
-- Pseudo Inverse is the only IK solver currently available
+- Damped least-squares pseudo-inverse is the only IK solver currently available
 - Analytical IK (via `kinematics` package) is currently disabled — requires extracting DH-like geometry from URDF joint origins (not yet implemented)
+- Joint-limit locking uses a bitmask (`lockedMask |= 1 << k`), limiting it to 32 joints per IK chain

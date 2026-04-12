@@ -7,10 +7,10 @@ Browse 81+ robots from 35+ brands, loaded as URDF models from a [dedicated model
 ## Features
 
 - **Robot catalog** — 81+ URDF models from 35+ brands, organized in a two-level brand gallery with search and category filtering
-- **Forward / Inverse Kinematics** — drag IK gizmos to pose end-effectors in real time (Pseudo Inverse solver); supports multi-tip robots
+- **Forward / Inverse Kinematics** — drag IK gizmos to pose end-effectors in real time; supports both revolute and prismatic joints, multi-tip whole-body IK, null-space limit avoidance, and joint-limit locking for stable behavior at joint boundaries
 - **Manipulability ellipsoids** — velocity, acceleration, and force ellipsoids at the end-effector, computed from the Jacobian and joint-space inertia matrix
 - **Force polytopes** — visualize the achievable force set at the end-effector using URDF effort limits
-- **Capability info modal** — mathematical background for each visualization tier, rendered with KaTeX
+- **Educational info panels** — mathematical background for IK and capability visualizations, rendered with KaTeX
 - **Auto-frame camera** — automatically frames the camera on the loaded robot using precomputed viewbox data
 - **Center of mass** — visualize the robot's center of mass from URDF inertial data
 - **Reachability clouds** — sample random configurations to visualize the workspace
