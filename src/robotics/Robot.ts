@@ -1136,8 +1136,9 @@ export class Robot {
    * - Adaptive damping (Nakamura & Hanafusa): increases damping near singularities
    *   based on the manipulability measure w = sqrt(det(J·Jᵀ)).
    * - Null-space bias: when there are more joints than task DOFs (e.g. 7-DOF arm
-   *   with 6D task), projects a secondary objective (pull toward joint midpoints)
-   *   into the null space to escape singularities and avoid joint limits.
+   *   with 6D task), projects a limit-avoidance gradient into the null space.
+   *   Joints near limits are pushed toward the safe zone; joints in the
+   *   comfortable middle of their range receive no push.
    */
   private _solveIk(tipIndex: number, tfElements: ArrayLike<number>, jointIndices: number[], partial: Partial): number {
     const maxIterations = 50
@@ -1152,17 +1153,6 @@ export class Robot {
     const hasNullSpace = nj > dim
     const buf = this._ensureBuf(dim, nj)
 
-    // Precompute joint midpoints for null-space bias
-    if (hasNullSpace) {
-      for (let k = 0; k < nj; k++) {
-        const ji = jointIndices[k]
-        const joint = this._kinematics.joints[this._joints[ji]]
-        buf.qDiff[k] = (joint.limits.min + joint.limits.max) / 2 // store midpoints in qDiff temporarily
-      }
-    }
-    // Copy midpoints out so qDiff can be reused per-iteration
-    const qMid = hasNullSpace ? Float64Array.from(buf.qDiff.subarray(0, nj)) : null
-
     let iteration = 0
 
     for (; iteration < maxIterations; iteration++) {
@@ -1173,7 +1163,7 @@ export class Robot {
 
       la.fromRows(this.geometricJacobian(tipIndex, partial, jointIndices), buf.J)
 
-      this._solveIkStep(buf, dim, nj, alpha, lambdaMax, manipThreshold, jointIndices, hasNullSpace, nullSpaceGain, qMid)
+      this._solveIkStep(buf, dim, nj, alpha, lambdaMax, manipThreshold, jointIndices, hasNullSpace, nullSpaceGain)
 
       for (let k = 0; k < nj; k++) {
         const ji = jointIndices[k]
@@ -1199,7 +1189,6 @@ export class Robot {
     buf: SolverBuffers, dim: number, nj: number, alpha: number,
     lambdaMax: number, manipThreshold: number,
     jointIndices: number[], hasNullSpace: boolean, nullSpaceGain: number,
-    qMid: Float64Array | null,
   ): void {
     // Lock joints at limits where the gradient pushes further into the limit
     let lockedMask = 0
@@ -1210,7 +1199,6 @@ export class Robot {
       const atMax = q >= joint.limits.max - 1e-6
       const atMin = q <= joint.limits.min + 1e-6
       if (atMax || atMin) {
-        // g = J_col^T · error — positive means joint wants to increase
         let g = 0
         for (let r = 0; r < dim; r++) g += buf.J.data[r * nj + k] * buf.error[r]
         if ((atMax && g > 0) || (atMin && g < 0)) {
@@ -1222,13 +1210,10 @@ export class Robot {
 
     this._computeDq(buf, dim, nj, alpha, lambdaMax, manipThreshold)
 
-    // Null-space regularization: pull toward joint midpoints
-    if (hasNullSpace && qMid) {
-      for (let k = 0; k < nj; k++) {
-        const diff = qMid[k] - this._q[jointIndices[k]]
-        buf.qDiff[k] = this._kinematics.joints[this._joints[jointIndices[k]]].prismatic
-          ? diff : diff * THREE.MathUtils.DEG2RAD
-      }
+    // Null-space limit avoidance: push joints away from limits, no force in the
+    // comfortable middle of the range (avoids pulling toward singularities).
+    if (hasNullSpace) {
+      this._limitAvoidanceGradient(jointIndices, nj, buf.qDiff)
       la.multiplyInto(buf.pinvJ!, buf.pinv, buf.J)
       la.identityInto(buf.nullProj!)
       la.subtractInto(buf.nullProj!, buf.nullProj!, buf.pinvJ!)
@@ -1241,6 +1226,35 @@ export class Robot {
       for (let k = 0; k < nj; k++) {
         if (lockedMask & (1 << k)) buf.dq[k] = 0
       }
+    }
+  }
+
+  /**
+   * Compute a limit-avoidance gradient for null-space projection.
+   *
+   * Joints in the comfortable middle 50% of their range receive zero push.
+   * Joints in the outer 25% near either limit are pushed toward the safe zone,
+   * with force increasing linearly as the joint approaches the limit.
+   * Output is in Jacobian units (radians for revolute, meters for prismatic).
+   */
+  private _limitAvoidanceGradient(jointIndices: number[], nj: number, out: Float64Array): void {
+    for (let k = 0; k < nj; k++) {
+      const ji = jointIndices[k]
+      const joint = this._kinematics.joints[this._joints[ji]]
+      const q = this._q[ji]
+      const lo = joint.limits.min
+      const hi = joint.limits.max
+      const range = hi - lo
+      if (range < 1e-10) { out[k] = 0; continue }
+
+      const margin = range * 0.25
+      let push = 0
+      if (q < lo + margin) {
+        push = (lo + margin - q) / margin          // 0..1, strongest at lower limit
+      } else if (q > hi - margin) {
+        push = -((q - (hi - margin)) / margin)     // -1..0, strongest at upper limit
+      }
+      out[k] = joint.prismatic ? push * margin : push * margin * THREE.MathUtils.DEG2RAD
     }
   }
 
@@ -1331,13 +1345,6 @@ export class Robot {
     // Store goal elements references (column-major THREE.Matrix4.elements)
     const goalElements = goals.map(g => g.matrixWorld.elements)
 
-    // Precompute joint midpoints for null-space bias
-    const qMid = new Float64Array(nj)
-    for (let c = 0; c < nj; c++) {
-      const joint = this._kinematics.joints[this._joints[allJoints[c]]]
-      qMid[c] = (joint.limits.min + joint.limits.max) / 2
-    }
-
     const maxIterations = 100
     const tolerance = 1e-3
     const alpha = 0.5
@@ -1405,13 +1412,9 @@ export class Robot {
 
       this._computeDqFixed(buf, totalDim, nj, alpha, lambda)
 
-      // Null-space regularization: pull toward joint midpoints
+      // Null-space limit avoidance
       if (nj > totalDim) {
-        for (let c = 0; c < nj; c++) {
-          const diff = qMid[c] - this._q[allJoints[c]]
-          buf.qDiff[c] = this._kinematics.joints[this._joints[allJoints[c]]].prismatic
-            ? diff : diff * THREE.MathUtils.DEG2RAD
-        }
+        this._limitAvoidanceGradient(allJoints, nj, buf.qDiff)
         la.multiplyInto(buf.pinvJ!, buf.pinv, buf.J)
         la.identityInto(buf.nullProj!)
         la.subtractInto(buf.nullProj!, buf.nullProj!, buf.pinvJ!)
